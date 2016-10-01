@@ -1,3 +1,10 @@
+from database import ReferenceType
+
+
+def unhex(x):
+    return int(x, 16)
+
+
 class Prompt:
     def __init__(self, database):
         self.database = database
@@ -12,62 +19,45 @@ class Prompt:
             self.command = line[0]
             self.parameters = line[1:]
 
-            if (self.command == ''):
+            if self.command == '':
                 continue
-            elif (self.command in ('i', 'instructions')):
+            elif self.command in ('i', 'instructions'):
                 self._instructions()
-            elif (self.command in ('dr', 'direct_references')):
-                self._direct_references()
-            elif (self.command in ('ir', 'indirect_references')):
-                self._indirect_references()
-            elif (self.command in ('r', 'references')):
+            elif self.command in ('dr', 'direct_references'):
+                self._references(ReferenceType.DIRECT)
+            elif self.command in ('ir', 'indirect_references'):
+                self._references(ReferenceType.INDIRECT)
+            elif self.command in ('r', 'references'):
                 self._references()
-            elif (self.command in ('drb', 'directly_referenced_by')):
-                self._directly_referenced_by()
-            elif (self.command in ('irb', 'indirectly_referenced_by')):
-                self._indirectly_referenced_by()
-            elif (self.command in ('rb', 'referenced_by')):
+            elif self.command in ('drb', 'directly_referenced_by'):
+                self._referenced_by(ReferenceType.DIRECT)
+            elif self.command in ('irb', 'indirectly_referenced_by'):
+                self._referenced_by(ReferenceType.INDIRECT)
+            elif self.command in ('rb', 'referenced_by'):
                 self._referenced_by()
-            elif (self.command in ('q', 'exit', 'quit')):
+            elif self.command in ('s', 'subroutines'):
+                self._subroutines()
+            elif self.command in ('q', 'exit', 'quit'):
                 return
             else:
                 print('ERROR: unknown command "{}"'.format(self.command))
 
             print()
 
-    def unhex(self, x):
-        return int(x, 16)
-
-    def _direct_references(self):
-        address = self.parameters[0]
-        for reference in self.database.direct_references(self.unhex(address)):
-            print('${:06X}'.format(reference))
-
-    def _indirect_references(self):
-        address = self.parameters[0]
-        for reference in self.database.indirect_references(self.unhex(address)):
-            print('${:06X}'.format(reference))
-
-    def _references(self):
-        address = self.parameters[0]
-        for reference in self.database.references(self.unhex(address)):
-            print('${:06X}'.format(reference))
-
-    def _directly_referenced_by(self):
-        address = self.parameters[0]
-        for referenced_by in self.database.directly_referenced_by(self.unhex(address)):
-            print('${:06X}'.format(referenced_by))
-
-    def _indirectly_referenced_by(self):
-        address = self.parameters[0]
-        for referenced_by in self.database.indirectly_referenced_by(self.unhex(address)):
-            print('${:06X}'.format(referenced_by))
-
-    def _referenced_by(self):
-        address = self.parameters[0]
-        for referenced_by in self.database.referenced_by(self.unhex(address)):
-            print('${:06X}'.format(referenced_by))
-
     def _instructions(self):
-        for instruction in self.database.instructions(*map(self.unhex, self.parameters)):
+        for instruction in self.database.instructions(*map(unhex, self.parameters)):
             print('{:<20}// ${:06X}'.format(str(instruction), instruction.pc))
+
+    def _references(self, typ=None):
+        address = self.parameters[0]
+        for reference in self.database.references(unhex(address), typ):
+            print('${:06X}'.format(reference))
+
+    def _referenced_by(self, typ=None):
+        address = self.parameters[0]
+        for referenced_by in self.database.referenced_by(unhex(address), typ):
+            print('${:06X}'.format(referenced_by))
+
+    def _subroutines(self):
+        for subroutine in self.database.subroutines():
+            print('${:06X}'.format(subroutine))

@@ -2,6 +2,10 @@ from collections import namedtuple
 from enum import Enum
 
 
+class OpcodeCategory(tuple, Enum):
+    CALL = (0x20, 0x22, 0xFC)
+
+
 class AddressMode(Enum):
     IMPLIED = 0
     IMMEDIATE_M = 1
