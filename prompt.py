@@ -1,4 +1,5 @@
-from database import ReferenceType, VectorType
+from database import LabelType
+from instruction import ReferenceType
 
 
 def unhex(x):
@@ -21,10 +22,8 @@ class Prompt:
 
             if self.command == '':
                 continue
-            elif self.command in ('i', 'instructions'):
-                self._instructions()
-            elif self.command in ('v', 'vectors'):
-                self._vectors()
+            elif self.command in ('d', 'disassembly'):
+                self._disassembly()
             elif self.command in ('dr', 'direct_references'):
                 self._references(ReferenceType.DIRECT)
             elif self.command in ('ir', 'indirect_references'):
@@ -37,22 +36,26 @@ class Prompt:
                 self._referenced_by(ReferenceType.INDIRECT)
             elif self.command in ('rb', 'referenced_by'):
                 self._referenced_by()
+            elif self.command in ('l', 'labels'):
+                self._labels()
             elif self.command in ('s', 'subroutines'):
-                self._subroutines()
+                self._labels(LabelType.SUBROUTINE)
+            elif self.command in ('v', 'vectors'):
+                self._labels(LabelType.VECTOR)
             elif self.command in ('e', 'q', 'exit', 'quit'):
                 return
             else:
                 print('ERROR: unknown command "{}"'.format(self.command))
 
-            print()
-
-    def _instructions(self):
+    def _disassembly(self):
         for instruction in self.database.instructions(*map(unhex, self.parameters)):
-            print('{:<20}// ${:06X}'.format(str(instruction), instruction.pc))
+            if instruction.label:
+                print('\n{}:'.format(instruction.label))
+            print('  {:<20}// ${:06X}'.format(str(instruction), instruction.pc))
 
     def _vectors(self):
         for vector in self.database.vectors():
-            print('${:06X} ({})'.format(vector.pc, vector.type))
+            print('${:06X} ({})'.format(vector.pc, vector.type.name))
 
     def _references(self, typ=None):
         address = self.parameters[0]
@@ -64,6 +67,6 @@ class Prompt:
         for referenced_by in self.database.referenced_by(unhex(address), typ):
             print('${:06X}'.format(referenced_by))
 
-    def _subroutines(self):
-        for subroutine in self.database.subroutines():
-            print('${:06X}'.format(subroutine))
+    def _labels(self, types=None):
+        for name, pc in sorted(self.database.labels(types).items()):
+            print('{:<20}// ${:06X}'.format(name, pc))
