@@ -1,4 +1,4 @@
-from database import ReferenceType
+from database import ReferenceType, VectorType
 
 
 def unhex(x):
@@ -23,6 +23,8 @@ class Prompt:
                 continue
             elif self.command in ('i', 'instructions'):
                 self._instructions()
+            elif self.command in ('v', 'vectors'):
+                self._vectors()
             elif self.command in ('dr', 'direct_references'):
                 self._references(ReferenceType.DIRECT)
             elif self.command in ('ir', 'indirect_references'):
@@ -37,7 +39,7 @@ class Prompt:
                 self._referenced_by()
             elif self.command in ('s', 'subroutines'):
                 self._subroutines()
-            elif self.command in ('q', 'exit', 'quit'):
+            elif self.command in ('e', 'q', 'exit', 'quit'):
                 return
             else:
                 print('ERROR: unknown command "{}"'.format(self.command))
@@ -47,6 +49,10 @@ class Prompt:
     def _instructions(self):
         for instruction in self.database.instructions(*map(unhex, self.parameters)):
             print('{:<20}// ${:06X}'.format(str(instruction), instruction.pc))
+
+    def _vectors(self):
+        for vector in self.database.vectors():
+            print('${:06X} ({})'.format(vector.pc, vector.type))
 
     def _references(self, typ=None):
         address = self.parameters[0]
