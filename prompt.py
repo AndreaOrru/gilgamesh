@@ -61,9 +61,16 @@ class Prompt:
             print('ERROR: unknown command "{}"'.format(command))
 
     def _disassembly(self):
+        print('arch snes.cpu')
+        print("""
+macro seek(variable offset) {
+  origin ((offset & $7F0000) >> 1) | (offset & $7FFF)
+  base offset
+}\n""")
         for instruction in self.database.instructions(*map(unhex, self.parameters)):
             if instruction.label:
-                print('\n{}:'.format(instruction.label))
+                print('\nseek(0x{:06X})'.format(instruction.pc))
+                print('{}:'.format(instruction.label))
             print('  {:<20}// ${:06X}'.format(str(instruction), instruction.pc))
 
     def _vectors(self):

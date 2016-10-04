@@ -59,10 +59,12 @@ class Database:
     def _referenced_by_category(self, category):
         referenced_by = self.c.execute("""
             SELECT pointee
-            FROM instructions,
-                 references_
-            WHERE instructions.pc = references_.pointer
-              AND instructions.opcode IN {}
+            FROM instructions AS pointee,
+                 instructions AS pointer,
+                 references_  AS ref
+            WHERE pointee.pc = ref.pointee
+              AND pointer.pc = ref.pointer
+              AND pointer.opcode IN {}
         """.format(category))
 
         return map(lambda x: x.pointee, referenced_by.fetchall())
@@ -91,7 +93,6 @@ class Database:
             branch_destinations = self._referenced_by_category(OpcodeCategory.BRANCH)
 
             for jump_destination in jump_destinations:
-
                 labels['loc_{:06X}'.format(jump_destination)] = jump_destination
             for branch_destination in branch_destinations:
                 labels['loc_{:06X}'.format(branch_destination)] = branch_destination
