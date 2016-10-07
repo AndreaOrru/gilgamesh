@@ -1,9 +1,9 @@
 # flake8: noqa
 
 import re
-
 from enum import IntEnum
-from opcodes import AddressMode as Mode, OpcodeCategory, opcode_table
+
+from gilgamesh.opcodes import AddressMode as Mode, OpcodeCategory, opcode_table
 
 
 class ReferenceType(IntEnum):

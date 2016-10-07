@@ -3,8 +3,8 @@ from bidict import bidict
 from enum import Enum
 from collections import namedtuple
 
-from instruction import Instruction
-from opcodes import OpcodeCategory
+from gilgamesh.instruction import Instruction
+from gilgamesh.opcodes import OpcodeCategory
 
 
 class VectorType(Enum):
@@ -68,6 +68,18 @@ class Database:
         """.format(category))
 
         return map(lambda x: x.pointee, referenced_by.fetchall())
+
+    def unknown_branches(self):
+        branches = self.c.execute("""
+          SELECT *
+          FROM instructions
+          WHERE opcode IN {}
+        """.format(OpcodeCategory.BRANCH))
+
+        branches = map(lambda i: Instruction.from_row(self, i), branches.fetchall())
+        unknown_branches = filter(lambda x: self.label(x.unique_reference()) is None, branches)
+
+        return unknown_branches
 
     def label(self, address):
         try:

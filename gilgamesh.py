@@ -3,11 +3,13 @@
 
 import sys
 
-from database import Database
-from prompt import Prompt
+from gilgamesh.database import Database
+from gilgamesh.prompt import Prompt
 
 
 if __name__ == '__main__':
+    # TODO: Use argparse.
+
     database = Database(sys.argv[1])
     prompt = Prompt(database)
     prompt.run()
