@@ -19,16 +19,10 @@ class LabelType(Enum):
     VECTOR = 2
 
 
-def namedtuple_factory(cursor, row):
-    fields = [column[0] for column in cursor.description]
-    Row = namedtuple('Row', fields)
-    return Row(*row)
-
-
 class Database:
     def __init__(self, database_path):
         self.connection = sqlite3.connect(database_path)
-        self.connection.row_factory = namedtuple_factory
+        self.connection.row_factory = self._namedtuple_factory
         self.c = self.connection.cursor()
         self._labels = self.labels()
 
@@ -70,16 +64,20 @@ class Database:
         return map(lambda x: x.pointee, referenced_by.fetchall())
 
     def unknown_branches(self):
+        # Select all the branches that point to addresses that
+        # are not (yet) recognized as instructions.
         branches = self.c.execute("""
-          SELECT *
-          FROM instructions
-          WHERE opcode IN {}
+          SELECT branch.*
+          FROM instructions AS branch,
+               references_  AS ref
+          WHERE branch.opcode IN {}
+            AND ref.pointer = branch.pc
+            AND NOT EXISTS (SELECT 1
+                            FROM instructions
+                            WHERE pc = ref.pointee)
         """.format(OpcodeCategory.BRANCH))
 
-        branches = map(lambda i: Instruction.from_row(self, i), branches.fetchall())
-        unknown_branches = filter(lambda x: self.label(x.unique_reference()) is None, branches)
-
-        return unknown_branches
+        return map(lambda i: Instruction.from_row(self, i), branches.fetchall())
 
     def label(self, address):
         try:
@@ -94,8 +92,10 @@ class Database:
             return None
 
     def labels(self, types=None):
+        # Search for all the labels:
         if types is None:
             types = {LabelType.JUMP, LabelType.SUBROUTINE, LabelType.VECTOR}
+        # Search for just one label (accept a single object):
         elif isinstance(types, LabelType):
             types = {types}
 
@@ -124,3 +124,10 @@ class Database:
                     labels['irq_{:06X}'.format(vector.pc)] = vector.pc
 
         return labels
+
+    @staticmethod
+    def _namedtuple_factory(cursor, row):
+        # Create named tuples from tuples:
+        fields = [column[0] for column in cursor.description]
+        Row = namedtuple('Row', fields)
+        return Row(*row)
