@@ -50,14 +50,17 @@ class Instruction:
         self.size = size
         self.operand = operand
 
-    def __str__(self):
-        mnemonic = self.mnemonic
-        operand = self._format_operand()
-        return '{} {}'.format(mnemonic, operand) if operand else mnemonic
-
     @classmethod
     def from_row(cls, db, row):
         return cls(db, *row)
+
+    def __str__(self):
+        return self.format(False)
+
+    def format(self, pretty=True):
+        mnemonic = self.mnemonic
+        operand = self._format_operand(pretty)
+        return '{} {}'.format(mnemonic, operand) if operand else mnemonic
 
     @property
     def mnemonic(self):
@@ -98,11 +101,11 @@ class Instruction:
         else:
             return None
 
-    def _format_operand(self):
+    def _format_operand(self, pretty=True):
         operand = self._format_operand_table[self.address_mode](self.operand, self.size - 1)
 
         # Convert the address the instruction points to to a label, if there is one:
-        if self.is_control_flow:
+        if pretty and self.is_control_flow:
             reference = self.unique_reference
             if reference:
                 label = self._db.label(reference)

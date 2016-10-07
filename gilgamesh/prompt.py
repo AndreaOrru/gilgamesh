@@ -3,6 +3,7 @@ from contextlib import redirect_stdout
 
 from gilgamesh.database import LabelType
 from gilgamesh.instruction import ReferenceType
+from gilgamesh.snes_generator import SNESGenerator
 
 
 class Prompt:
@@ -36,7 +37,9 @@ class Prompt:
         if operation == '':
             return
         elif operation in ('d', 'disassembly'):
-            self._print_disassembly(*parameters)
+            self._print_disassembly()
+        elif operation in ('i', 'instructions'):
+            self._print_instructions(*parameters)
         elif operation in ('dr', 'direct_references'):
             self._print_references(ReferenceType.DIRECT, *parameters)
         elif operation in ('ir', 'indirect_references'):
@@ -63,13 +66,13 @@ class Prompt:
             # TODO: raise an exception and catch in self.run.
             sys.stderr.write('ERROR: unknown operation "{}"\n'.format(operation))
 
-    def _print_disassembly(self, *parameters):
-        self._print_disassembly_prologue()
+    def _print_disassembly(self):
+        snes_generator = SNESGenerator(self._db)
+        print(snes_generator.compile())
+
+    def _print_instructions(self, *parameters):
         for instruction in self._db.instructions(*map(self._unhex, parameters)):
-            if instruction.label:
-                print('\nseek(0x{:06X})'.format(instruction.pc))
-                print('{}:'.format(instruction.label))
-            print('  {:<20}// ${:06X}'.format(str(instruction), instruction.pc))
+            print('${:06X}    {}'.format(instruction.pc, str(instruction)))
 
     def _print_vectors(self):
         # TODO: have Vector be a class.
@@ -86,19 +89,11 @@ class Prompt:
 
     def _print_unknown_branches(self):
         for branch in self._db.unknown_branches():
-            print(branch)
+            print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
     def _print_labels(self, types=None):
         for name, pc in sorted(self._db.labels(types).items()):
-            print('{:<20}// ${:06X}'.format(name, pc))
-
-    @staticmethod
-    def _print_disassembly_prologue():
-        print("""arch snes.cpu
-macro seek(variable offset) {
-  origin ((offset & $7F0000) >> 1) | (offset & $7FFF)
-  base offset
-}\n""")
+            print('${:06X}    {}'.format(pc, name))
 
     @staticmethod
     def _unhex(x):

@@ -20,38 +20,38 @@ class LabelType(Enum):
 
 
 class Database:
-    def __init__(self, database_path):
-        self.connection = sqlite3.connect(database_path)
-        self.connection.row_factory = self._namedtuple_factory
-        self.c = self.connection.cursor()
+    def __init__(self, db_path):
+        self._connection = sqlite3.connect(db_path)
+        self._connection.row_factory = self._namedtuple_factory
+        self._c = self._connection.cursor()
         self._labels = self.labels()
 
     def instructions(self, start=0x000000, end=0xFFFFFF):
-        instructions = self.c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
+        instructions = self._c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
         return map(lambda i: Instruction.from_row(self, i), instructions.fetchall())
 
     def vectors(self):
         def vector_factory(vector):
             return type(vector)(vector.pc, VectorType(vector.type))
-        vectors = self.c.execute('SELECT * FROM vectors')
+        vectors = self._c.execute('SELECT * FROM vectors')
         return map(vector_factory, vectors.fetchall())
 
     def references(self, address, typ=None):
         if typ is None:
-            references = self.c.execute('SELECT pointee FROM references_ WHERE pointer=?', (address,))
+            references = self._c.execute('SELECT pointee FROM references_ WHERE pointer=?', (address,))
         else:
-            references = self.c.execute('SELECT pointee FROM references_ WHERE pointer=? AND type=?', (address, typ))
+            references = self._c.execute('SELECT pointee FROM references_ WHERE pointer=? AND type=?', (address, typ))
         return map(lambda x: x.pointee, references.fetchall())
 
     def referenced_by(self, address, typ=None):
         if typ is None:
-            referenced_by = self.c.execute('SELECT pointer FROM references_ WHERE pointee=?', (address,))
+            referenced_by = self._c.execute('SELECT pointer FROM references_ WHERE pointee=?', (address,))
         else:
-            referenced_by = self.c.execute('SELECT pointer FROM references_ WHERE pointee=? AND type=?', (address, typ))
+            referenced_by = self._c.execute('SELECT pointer FROM references_ WHERE pointee=? AND type=?', (address, typ))
         return map(lambda x: x.pointer, referenced_by.fetchall())
 
     def _referenced_by_category(self, category):
-        referenced_by = self.c.execute("""
+        referenced_by = self._c.execute("""
             SELECT pointee
             FROM instructions AS pointee,
                  instructions AS pointer,
@@ -66,7 +66,7 @@ class Database:
     def unknown_branches(self):
         # Select all the branches that point to addresses that
         # are not (yet) recognized as instructions.
-        branches = self.c.execute("""
+        branches = self._c.execute("""
           SELECT branch.*
           FROM instructions AS branch,
                references_  AS ref
