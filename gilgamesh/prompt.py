@@ -7,8 +7,9 @@ from gilgamesh.snes_generator import SNESGenerator
 
 
 class Prompt:
-    def __init__(self, db):
+    def __init__(self, db, rom):
         self._db = db
+        self._rom = rom
 
     def run(self):
         while True:
@@ -60,6 +61,8 @@ class Prompt:
             self._print_labels(LabelType.VECTOR)
         elif operation in ('ub', 'unknown_branches'):
             self._print_unknown_branches()
+        elif operation in ('b', 'bytes'):
+            self._print_bytes(*parameters)
         elif operation in ('e', 'q', 'exit', 'quit'):
             sys.exit()
         else:
@@ -90,6 +93,20 @@ class Prompt:
     def _print_unknown_branches(self):
         for branch in self._db.unknown_branches():
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
+
+    def _print_bytes(self, address, size='+1'):
+        address = self._unhex(address)
+        if size[0] != '+':
+            size = self._unhex(size) - address
+        else:
+            size = self._unhex(size)
+
+        for i in range(size):
+            byte = self._rom.read_byte(address + i)
+            if (i % 0x10) == 0:
+                print('{}${:06X}    '.format('\n' if i != 0 else '', address + i), end='')
+            print('{:02X}'.format(byte), end=' ')
+        print()
 
     def _print_labels(self, types=None):
         for name, pc in sorted(self._db.labels(types).items()):

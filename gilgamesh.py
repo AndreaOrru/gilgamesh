@@ -5,11 +5,13 @@ import sys
 
 from gilgamesh.database import Database
 from gilgamesh.prompt import Prompt
+from gilgamesh.rom import ROM
 
 
 if __name__ == '__main__':
     # TODO: Use argparse.
 
     database = Database(sys.argv[1])
-    prompt = Prompt(database)
+    rom = ROM(sys.argv[2])
+    prompt = Prompt(database, rom)
     prompt.run()
