@@ -25,7 +25,7 @@ class Prompt:
             except ValueError:
                 command = line
                 redirect_file = None
-            command = list(map(lambda x: x.strip(), command.split()))
+            command = [x.strip() for x in command.split()]
 
             if redirect_file:
                 with open(redirect_file, 'w') as f:
@@ -94,12 +94,12 @@ class Prompt:
         for branch in self._db.unknown_branches():
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
-    def _print_bytes(self, address, size='+1'):
+    def _print_bytes(self, address, end='+1'):
         address = self._unhex(address)
-        if size[0] != '+':
-            size = self._unhex(size) - address
+        if end[0] != '+':
+            size = self._unhex(end) - address
         else:
-            size = self._unhex(size)
+            size = self._unhex(end)
 
         for i in range(size):
             byte = self._rom.read_byte(address + i)
@@ -109,8 +109,8 @@ class Prompt:
         print()
 
     def _print_labels(self, types=None):
-        for name, pc in sorted(self._db.labels(types).items()):
-            print('${:06X}    {}'.format(pc, name))
+        for name, address in sorted(self._db.labels(types).items()):
+            print('${:06X}    {}'.format(address, name))
 
     @staticmethod
     def _unhex(x):

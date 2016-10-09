@@ -28,7 +28,7 @@ class Database:
 
     def instructions(self, start=0x000000, end=0xFFFFFF):
         instructions = self._c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
-        return map(lambda i: Instruction.from_row(self, i), instructions.fetchall())
+        return (Instruction.from_row(self, i) for i in instructions.fetchall())
 
     def vectors(self):
         def vector_factory(vector):
@@ -41,14 +41,14 @@ class Database:
             references = self._c.execute('SELECT pointee FROM references_ WHERE pointer=?', (address,))
         else:
             references = self._c.execute('SELECT pointee FROM references_ WHERE pointer=? AND type=?', (address, typ))
-        return map(lambda x: x.pointee, references.fetchall())
+        return (x.pointee for x in references.fetchall())
 
     def referenced_by(self, address, typ=None):
         if typ is None:
             referenced_by = self._c.execute('SELECT pointer FROM references_ WHERE pointee=?', (address,))
         else:
             referenced_by = self._c.execute('SELECT pointer FROM references_ WHERE pointee=? AND type=?', (address, typ))
-        return map(lambda x: x.pointer, referenced_by.fetchall())
+        return (x.pointer for x in referenced_by.fetchall())
 
     def _referenced_by_category(self, category):
         referenced_by = self._c.execute("""
@@ -61,7 +61,7 @@ class Database:
               AND pointer.opcode IN {}
         """.format(category))
 
-        return map(lambda x: x.pointee, referenced_by.fetchall())
+        return (x.pointee for x in referenced_by.fetchall())
 
     def unknown_branches(self):
         # Select all the branches that point to addresses that
@@ -77,7 +77,7 @@ class Database:
                             WHERE pc = ref.pointee)
         """.format(OpcodeCategory.BRANCH))
 
-        return map(lambda i: Instruction.from_row(self, i), branches.fetchall())
+        return (Instruction.from_row(self, i) for i in branches.fetchall())
 
     def label(self, address):
         try:
