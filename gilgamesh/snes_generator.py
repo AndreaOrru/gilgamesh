@@ -1,4 +1,10 @@
+from collections import namedtuple
+from itertools import groupby, tee, zip_longest
+
 from gilgamesh.code_generator import CodeGenerator
+
+
+Group = namedtuple('Group', ['value', 'length'])
 
 
 class SNESGenerator(CodeGenerator):
@@ -6,19 +12,90 @@ class SNESGenerator(CodeGenerator):
         buffer = ''
         buffer += self._generate_prologue()
 
-        for instruction in self._db.instructions():
-            if instruction.label:
-                buffer += '\nseek(0x{:06X})\n'.format(instruction.pc)
-                buffer += '{}:\n'.format(instruction.label)
-            buffer += '    {:<20}// ${:06X}\n'.format(instruction.format(), instruction.pc)
+        # Go through the instructions in consecutive pairs:
+        for i1, i2 in self._pairwise(self._db.instructions()):
+            # Print the instruction:
+            buffer += self._compile_instruction(i1)
+
+            # If there is data between this instruction and the next, print it:
+            if (i1.pc + i1.size) != i2.pc:
+                buffer += self._compile_data(i1.pc + i1.size, i2.pc)
+
+        # Compile the last instruction and any extra data:
+        buffer += self._compile_instruction(i2)
+        buffer += self._compile_data(i2.pc + i2.size)
 
         return buffer
+
+    def _compile_data(self, begin, end=None):
+        if begin >= self._rom.end_address:
+            return ''
+
+        data = self._rom.read_bytes(begin, end)
+        groups = []
+
+        # Iterate through the data in consecutive value groups:
+        for value, group in groupby(data):
+            length = self._iter_len(group)
+            # Keep track sequences of 32 consecutively equal values:
+            if length > 32:
+                groups.append(Group(value, length))
+            # Append anything else in the last element of the list (itself a list of values):
+            else:
+                try:
+                    groups[-1] += [value] * length
+                except (IndexError, TypeError):
+                    # If the list is empty or the last element is a Group:
+                    groups.append([value] * length)
+
+        # Generate the compilation output:
+        s = '\n'
+        for group in groups:
+            # If the element is a Group, use the "fill" directive:
+            if isinstance(group, Group):
+                s += '\nfill {}, ${:02X}\n\n'.format(group.length, group.value)
+            else:
+                # Otherwise just print sequences of 16 bytes:
+                for values in self._grouper(group, 0x10):
+                    s += 'db '
+                    s += ', '.join(map(lambda v: '${:02X}'.format(v), values))
+                    s += '\n'
+
+        return s
+
+    @staticmethod
+    def _compile_instruction(instruction):
+        s = ''
+        if instruction.label:
+            s += '\n{}:\n'.format(instruction.label)
+        s += '    {:<20}// ${:06X}\n'.format(instruction.format(), instruction.pc)
+
+        return s
+
+    @staticmethod
+    def _iter_len(iterator):
+        return sum(1 for x in iterator)
+
+    @staticmethod
+    def _pairwise(iterable):
+        a, b = tee(iterable)
+        next(b, None)
+        return zip(a, b)
+
+    @staticmethod
+    def _grouper(iterable, n, fillvalue=None):
+        args = [iter(iterable)] * n
+        groups = zip_longest(*args, fillvalue=fillvalue)
+        return (filter(lambda el: el is not None, group) for group in groups)
 
     @staticmethod
     def _generate_prologue():
         # FIXME: This will only work for LoROM.
         return """arch snes.cpu
+
 macro seek(variable offset) {
-    origin ((offset & $7F0000) >> 1) | (offset & $7F0000) & $7FFF)
-    base offset
-}\n"""
+  origin ((offset & $7F0000) >> 1) | (offset & $7FFF)
+  base offset
+}
+
+seek($008000)\n"""

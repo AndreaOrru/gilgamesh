@@ -70,7 +70,7 @@ class Prompt:
             sys.stderr.write('ERROR: unknown operation "{}"\n'.format(operation))
 
     def _print_disassembly(self):
-        snes_generator = SNESGenerator(self._db)
+        snes_generator = SNESGenerator(self._db, self._rom)
         print(snes_generator.compile())
 
     def _print_instructions(self, *parameters):
