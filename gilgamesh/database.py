@@ -26,6 +26,13 @@ class Database:
         self._c = self._connection.cursor()
         self._labels = self.labels()
 
+    def instruction(self, pc):
+        instructions = self._c.execute('SELECT * FROM instructions WHERE pc = ?', (pc,))
+        try:
+            return Instruction.from_row(self, instructions.fetchone())
+        except TypeError:
+            return None
+
     def instructions(self, start=0x000000, end=0xFFFFFF):
         instructions = self._c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
         return (Instruction.from_row(self, i) for i in instructions.fetchall())
@@ -52,7 +59,7 @@ class Database:
 
     def _referenced_by_category(self, category):
         referenced_by = self._c.execute("""
-            SELECT pointee
+            SELECT ref.pointee
             FROM instructions AS pointee,
                  instructions AS pointer,
                  references_  AS ref
@@ -63,21 +70,22 @@ class Database:
 
         return (x.pointee for x in referenced_by.fetchall())
 
-    def unknown_branches(self):
-        # Select all the branches that point to addresses that
-        # are not (yet) recognized as instructions.
+    def uncomplete_branches(self):
+        # Select all branches in the program:
         branches = self._c.execute("""
           SELECT branch.*
           FROM instructions AS branch,
                references_  AS ref
           WHERE branch.opcode IN {}
             AND ref.pointer = branch.pc
-            AND NOT EXISTS (SELECT 1
-                            FROM instructions
-                            WHERE pc = ref.pointee)
         """.format(OpcodeCategory.BRANCH))
 
-        return (Instruction.from_row(self, i) for i in branches.fetchall())
+        # Cast them to Instruction objects:
+        branches = (Instruction.from_row(self, i) for i in branches.fetchall())
+        # Select those that point to, or ar followed by, addresses that are not instructions:
+        uncomplete_branches = (i for i in branches if (self.instruction(i.pc + i.size) is None) or
+                                                      (self.instruction(i.unique_reference) is None))
+        return uncomplete_branches
 
     def label(self, address):
         try:

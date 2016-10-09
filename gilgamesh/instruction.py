@@ -54,6 +54,9 @@ class Instruction:
     def from_row(cls, db, row):
         return cls(db, *row)
 
+    def __lt__(self, other):
+        return self.pc < other.pc
+
     def __str__(self):
         return self.format(False)
 

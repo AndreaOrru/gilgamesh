@@ -59,8 +59,8 @@ class Prompt:
             self._print_labels(LabelType.SUBROUTINE)
         elif operation in ('v', 'vectors'):
             self._print_labels(LabelType.VECTOR)
-        elif operation in ('ub', 'unknown_branches'):
-            self._print_unknown_branches()
+        elif operation in ('ub', 'uncomplete_branches'):
+            self._print_uncomplete_branches()
         elif operation in ('b', 'bytes'):
             self._print_bytes(*parameters)
         elif operation in ('e', 'q', 'exit', 'quit'):
@@ -90,8 +90,8 @@ class Prompt:
         for referenced_by in self._db.referenced_by(self._unhex(address), typ):
             print('${:06X}'.format(referenced_by))
 
-    def _print_unknown_branches(self):
-        for branch in self._db.unknown_branches():
+    def _print_uncomplete_branches(self):
+        for branch in sorted(self._db.uncomplete_branches()):
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
     def _print_bytes(self, address, end='+1'):
