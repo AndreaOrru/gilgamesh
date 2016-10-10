@@ -74,6 +74,9 @@ class Prompt:
         print(snes_generator.compile())
 
     def _print_instructions(self, *parameters):
+        if len(parameters) == 1:
+            parameters = [parameters[0]] * 2
+
         for instruction in self._db.instructions(*map(self._unhex, parameters)):
             print('${:06X}    {}'.format(instruction.pc, str(instruction)))
 
@@ -97,11 +100,11 @@ class Prompt:
     def _print_bytes(self, address, end='+1'):
         address = self._unhex(address)
         if end[0] != '+':
-            size = self._unhex(end) - address
+            count = self._unhex(end) - address
         else:
-            size = self._unhex(end)
+            count = self._unhex(end)
 
-        for i in range(size):
+        for i in range(count):
             byte = self._rom.read_byte(address + i)
             if (i % 0x10) == 0:
                 print('{}${:06X}    '.format('\n' if i != 0 else '', address + i), end='')

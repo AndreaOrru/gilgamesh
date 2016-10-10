@@ -1,5 +1,5 @@
 from collections import namedtuple
-from enum import Enum
+from enum import Enum, IntEnum
 
 
 class OpcodeCategory(tuple, Enum):
@@ -8,7 +8,7 @@ class OpcodeCategory(tuple, Enum):
     BRANCH = (0x10, 0x30, 0x50, 0x70, 0x80, 0x82, 0x90, 0xB0, 0xD0, 0xF0)
 
 
-class AddressMode(Enum):
+class AddressMode(IntEnum):
     IMPLIED = 0
     IMMEDIATE_M = 1
     IMMEDIATE_I = 2
@@ -300,3 +300,35 @@ opcode_table = (
     Opcode(0xFE, 'inc', AddressMode.ABSOLUTE_INDEXED_X),
     Opcode(0xFF, 'sbc', AddressMode.ABSOLUTE_INDEXED_LONG),
 )
+
+
+size_table = [
+    1,     # IMPLIED
+    None,  # IMMEDIATE_M
+    None,  # IMMEDIATE_X
+    2,     # IMMEDIATE_8
+    2,     # RELATIVE
+    3,     # RELATIVE_LONG
+    2,     # DIRECT_PAGE
+    2,     # DIRECT_PAGE_INDEXED_X
+    2,     # DIRECT_PAGE_INDEXED_Y
+    2,     # DIRECT_PAGE_INDIRECT
+    2,     # DIRECT_PAGE_INDEXED_INDIRECT
+    2,     # DIRECT_PAGE_INDIRECT_INDEXED
+    2,     # DIRECT_PAGE_INDIRECT_LONG
+    2,     # DIRECT_PAGE_INDIRECT_INDEXED_LONG
+    3,     # ABSOLUTE
+    3,     # ABSOLUTE_INDEXED_X
+    3,     # ABSOLUTE_INDEXED_Y
+    4,     # ABSOLUTE_LONG
+    4,     # ABSOLUTE_INDEXED_LONG
+    2,     # STACK_RELATIVE
+    2,     # STACK_RELATIVE_INDIRECT_INDEXED
+    3,     # ABSOLUTE_INDIRECT
+    3,     # ABSOLUTE_INDIRECT_LONG
+    3,     # ABSOLUTE_INDEXED_INDIRECT
+    1,     # IMPLIED_ACCUMULATOR
+    3,     # MOVE
+    3,     # PEA
+    2,     # PEI_DIRECT_PAGE_INDIRECT
+]

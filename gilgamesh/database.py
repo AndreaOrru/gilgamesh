@@ -27,11 +27,8 @@ class Database:
         self._labels = self.labels()
 
     def instruction(self, pc):
-        instructions = self._c.execute('SELECT * FROM instructions WHERE pc = ?', (pc,))
-        try:
-            return Instruction.from_row(self, instructions.fetchone())
-        except TypeError:
-            return None
+        instruction = self._c.execute('SELECT * FROM instructions WHERE pc = ?', (pc,)).fetchone()
+        return None if (instruction is None) else Instruction.from_row(self, instruction)
 
     def instructions(self, start=0x000000, end=0xFFFFFF):
         instructions = self._c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
@@ -80,7 +77,7 @@ class Database:
             AND ref.pointer = branch.pc
         """.format(OpcodeCategory.BRANCH))
 
-        # Cast them to Instruction objects:
+        # Cast them into Instruction objects:
         branches = (Instruction.from_row(self, i) for i in branches.fetchall())
         # Select those that point to, or ar followed by, addresses that are not instructions:
         uncomplete_branches = (i for i in branches if (self.instruction(i.pc + i.size) is None) or

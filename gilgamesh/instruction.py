@@ -3,7 +3,7 @@
 import re
 from enum import IntEnum
 
-from gilgamesh.opcodes import AddressMode as Mode, OpcodeCategory, opcode_table
+from gilgamesh.opcodes import AddressMode as Mode, OpcodeCategory, opcode_table, size_table
 
 
 class ReferenceType(IntEnum):
@@ -43,11 +43,11 @@ class Instruction:
         Mode.PEI_DIRECT_PAGE_INDIRECT:          lambda x, s: '(${:02X})'.format(x),
     }
 
-    def __init__(self, db, pc, opcode, size, operand=None):
+    def __init__(self, db, pc, opcode, flags, operand=None):
         self._db = db
         self.pc = pc
         self.opcode = opcode_table[opcode]
-        self.size = size
+        self.flags = flags
         self.operand = operand
 
     @classmethod
@@ -64,6 +64,25 @@ class Instruction:
         mnemonic = self.mnemonic
         operand = self._format_operand(pretty)
         return '{} {}'.format(mnemonic, operand) if operand else mnemonic
+
+    @property
+    def i_flag(self):
+        return bool(self.flags & (2 << 3))
+
+    @property
+    def m_flag(self):
+        return bool(self.flags & (2 << 4))
+
+    @property
+    def size(self):
+        size = size_table[self.opcode.address_mode]
+        if size is None:
+            if self.opcode.address_mode == Mode.IMMEDIATE_M:
+                return 2 if self.m_flag else 3
+            elif self.opcode.address_mode == Mode.IMMEDIATE_I:
+                return 2 if self.i_flag else 3
+        else:
+            return size
 
     @property
     def mnemonic(self):
