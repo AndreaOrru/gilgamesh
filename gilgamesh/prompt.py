@@ -69,8 +69,10 @@ class Prompt:
             self._print_bytes(*parameters)
         elif operation in ('e', 'emulate'):
             self._emulate_incomplete_branches(*parameters)
-        elif operation in ('bl', 'blocks'):
-            self._print_blocks()
+        elif operation in ('fg', 'flow_graph'):
+            self._print_flow_graph()
+        elif operation in ('a', 'analyze'):
+            self._analyzer.analyze()
         elif operation in ('w', 'write'):
             self._analyzer.write_database()
         elif operation == 'wq':
@@ -89,11 +91,21 @@ class Prompt:
             for instruction in cpu.run(trace=True):
                 print('${:06X}    {}'.format(instruction.pc, str(instruction)))
             print()
+        # Reanalyze the ROM:
+        self._analyzer.analyze()
 
-    def _print_blocks(self):
-        for block in self._analyzer.blocks():
+    def _print_flow_graph(self):
+        blocks, edges, inv_edges = self._analyzer.flow_graph()
+
+        for block in blocks:
+            in_edges = sorted(inv_edges.get(block.start) or [])
+            print('in edges: ' + ', '.join('${:06X}'.format(e) for e in in_edges))
+
             for instruction in block:
                 print('${:06X}    {}'.format(instruction.pc, str(instruction)))
+
+            out_edges = sorted(edges.get(block.start) or [])
+            print('out edges: ' + ', '.join('${:06X}'.format(e) for e in out_edges))
             print()
 
     def _print_disassembly(self):

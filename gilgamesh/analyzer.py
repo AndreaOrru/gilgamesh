@@ -1,6 +1,8 @@
 from bidict import bidict
+from collections import defaultdict
 from enum import Enum
 
+from gilgamesh.block import Block
 from gilgamesh.database import VectorType
 from gilgamesh.instruction import Instruction
 from gilgamesh.opcodes import OpcodeCategory
@@ -16,10 +18,16 @@ class LabelType(Enum):
 class Analyzer:
     def __init__(self, db):
         self._db = db
-        self.regenerate_labels()
+        self.analyze()
+
+    def analyze(self):
+        self._labels = self.labels()
 
     def write_database(self):
         self._db.save()
+
+    def store_instruction(self, i):
+        self._db.store_instruction(i.pc, i.opcode.number, i.flags, i.operand)
 
     def instruction(self, pc):
         instruction = self._db.instruction(pc)
@@ -28,20 +36,6 @@ class Analyzer:
     def instructions(self, start=0x000000, end=0xFFFFFF):
         instructions = self._db.instructions(start, end)
         return (Instruction.from_row(self, i) for i in instructions)
-
-    def store_instruction(self, i):
-        self._db.store_instruction(i.pc, i.opcode.number, i.flags, i.operand)
-
-    def incomplete_branches(self):
-        # Get all the branches instructions:
-        branches = (Instruction.from_row(self, i) for i in self._db.branches())
-        # Select those that point to, or ar followed by, addresses that are not instructions:
-        incomplete_branches = (i for i in branches if (self.instruction(i.pc + i.size) is None) or
-                                                      (self.instruction(i.unique_reference) is None))
-        return incomplete_branches
-
-    def regenerate_labels(self):
-        self._labels = self.labels()
 
     def label(self, address):
         try:
@@ -89,13 +83,27 @@ class Analyzer:
 
         return labels
 
-    def blocks(self):
-        blocks = [[]]
+    def flow_graph(self):
+        blocks = [Block(self)]
+        edges = defaultdict(list)
+        inv_edges = defaultdict(list)
 
         for i1, i2 in pairwise(self.instructions()):
-            blocks[-1].append(i1)
+            current_block = blocks[-1]
+            current_block.add_instruction(i1)
             if ((i1.pc + i1.size) != i2.pc) or i1.is_control_flow or (i2.label is not None):
-                blocks.append([])
-        blocks[-1].append(i2)
+                for b in current_block.dominated_blocks:
+                    edges[current_block.start].append(b)
+                    inv_edges[b].append(current_block.start)
+                blocks.append(Block(self))
+        blocks[-1].add_instruction(i2)
 
-        return blocks
+        return blocks, edges, inv_edges
+
+    def incomplete_branches(self):
+        # Get all the branches instructions:
+        branches = (Instruction.from_row(self, i) for i in self._db.branches())
+        # Select those that point to, or ar followed by, addresses that are not instructions:
+        incomplete_branches = (i for i in branches if (self.instruction(i.pc + i.size) is None) or
+                                                      (self.instruction(i.unique_reference) is None))
+        return incomplete_branches
