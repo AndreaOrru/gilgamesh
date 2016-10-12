@@ -4,6 +4,7 @@ from enum import Enum
 from gilgamesh.database import VectorType
 from gilgamesh.instruction import Instruction
 from gilgamesh.opcodes import OpcodeCategory
+from gilgamesh.utils import pairwise
 
 
 class LabelType(Enum):
@@ -87,3 +88,11 @@ class Analyzer:
                     labels['irq_{:06X}'.format(vector.pc)] = vector.pc
 
         return labels
+
+    def blocks(self):
+        blocks = [[]]
+        for i1, i2 in pairwise(self.instructions()):
+            blocks[-1].append(i1)
+            if ((i1.pc + i1.size) != i2.pc) or i1.is_control_flow or (i2.label is not None):
+                blocks.append([])
+        return blocks

@@ -1,7 +1,8 @@
 from collections import namedtuple
-from itertools import groupby, tee, zip_longest
+from itertools import groupby
 
 from gilgamesh.code_generator import CodeGenerator
+from gilgamesh.utils import grouper, pairwise
 
 
 Group = namedtuple('Group', ['value', 'length'])
@@ -13,7 +14,7 @@ class SNESGenerator(CodeGenerator):
         buffer += self._generate_prologue()
 
         # Go through the instructions in consecutive pairs:
-        for i1, i2 in self._pairwise(self._analyzer.instructions()):
+        for i1, i2 in pairwise(self._analyzer.instructions()):
             # Print the instruction:
             buffer += self._compile_instruction(i1)
 
@@ -56,7 +57,7 @@ class SNESGenerator(CodeGenerator):
                 s += '\nfill {}, ${:02X}\n\n'.format(group.length, group.value)
             else:
                 # Otherwise just print sequences of 16 bytes:
-                for values in self._grouper(group, 0x10):
+                for values in grouper(group, 0x10):
                     s += 'db '
                     s += ', '.join(map(lambda v: '${:02X}'.format(v), values))
                     s += '\n'
@@ -75,18 +76,6 @@ class SNESGenerator(CodeGenerator):
     @staticmethod
     def _iter_len(iterator):
         return sum(1 for x in iterator)
-
-    @staticmethod
-    def _pairwise(iterable):
-        a, b = tee(iterable)
-        next(b, None)
-        return zip(a, b)
-
-    @staticmethod
-    def _grouper(iterable, n, fillvalue=None):
-        args = [iter(iterable)] * n
-        groups = zip_longest(*args, fillvalue=fillvalue)
-        return (filter(lambda el: el is not None, group) for group in groups)
 
     @staticmethod
     def _generate_prologue():

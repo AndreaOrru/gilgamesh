@@ -69,6 +69,8 @@ class Prompt:
             self._print_bytes(*parameters)
         elif operation in ('e', 'emulate'):
             self._emulate_incomplete_branches(*parameters)
+        elif operation in ('bl', 'blocks'):
+            self._print_blocks()
         elif operation in ('w', 'write'):
             self._analyzer.write_database()
         elif operation == 'wq':
@@ -85,6 +87,12 @@ class Prompt:
         for branch in self._analyzer.incomplete_branches():
             cpu = CPU(self._analyzer, self._rom, branch.pc, branch.flags)
             for instruction in cpu.run(trace=True):
+                print('${:06X}    {}'.format(instruction.pc, str(instruction)))
+            print()
+
+    def _print_blocks(self):
+        for block in self._analyzer.blocks():
+            for instruction in block:
                 print('${:06X}    {}'.format(instruction.pc, str(instruction)))
             print()
 
