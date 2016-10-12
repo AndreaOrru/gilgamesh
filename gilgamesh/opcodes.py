@@ -3,16 +3,16 @@ from enum import Enum, IntEnum
 
 
 class OpcodeCategory(tuple, Enum):
-    CALL = (0x20, 0x22, 0xFC)
-    JUMP = (0x4C, 0x5C, 0x6C, 0x7C, 0xDC)
     BRANCH = (0x10, 0x30, 0x50, 0x70, 0x80, 0x82, 0x90, 0xB0, 0xD0, 0xF0)
+    CALL = (0x20, 0x22, 0xFC)
     RETURN = (0x40, 0x60, 0x6B)
+    JUMP = (0x4C, 0x5C, 0x6C, 0x7C, 0xDC)
 
 
 class AddressMode(IntEnum):
     IMPLIED = 0
     IMMEDIATE_M = 1
-    IMMEDIATE_I = 2
+    IMMEDIATE_X = 2
     IMMEDIATE_8 = 3
     RELATIVE = 4
     RELATIVE_LONG = 5
@@ -204,9 +204,9 @@ opcode_table = (
     Opcode(0x9D, 'sta', AddressMode.ABSOLUTE_INDEXED_X),
     Opcode(0x9E, 'stz', AddressMode.ABSOLUTE_INDEXED_X),
     Opcode(0x9F, 'sta', AddressMode.ABSOLUTE_INDEXED_LONG),
-    Opcode(0xA0, 'ldy', AddressMode.IMMEDIATE_I),
+    Opcode(0xA0, 'ldy', AddressMode.IMMEDIATE_X),
     Opcode(0xA1, 'lda', AddressMode.DIRECT_PAGE_INDEXED_INDIRECT),
-    Opcode(0xA2, 'ldx', AddressMode.IMMEDIATE_I),
+    Opcode(0xA2, 'ldx', AddressMode.IMMEDIATE_X),
     Opcode(0xA3, 'lda', AddressMode.STACK_RELATIVE),
     Opcode(0xA4, 'ldy', AddressMode.DIRECT_PAGE),
     Opcode(0xA5, 'lda', AddressMode.DIRECT_PAGE),
@@ -236,7 +236,7 @@ opcode_table = (
     Opcode(0xBD, 'lda', AddressMode.ABSOLUTE_INDEXED_X),
     Opcode(0xBE, 'ldx', AddressMode.ABSOLUTE_INDEXED_Y),
     Opcode(0xBF, 'lda', AddressMode.ABSOLUTE_INDEXED_LONG),
-    Opcode(0xC0, 'cpy', AddressMode.IMMEDIATE_I),
+    Opcode(0xC0, 'cpy', AddressMode.IMMEDIATE_X),
     Opcode(0xC1, 'cmp', AddressMode.DIRECT_PAGE_INDEXED_INDIRECT),
     Opcode(0xC2, 'rep', AddressMode.IMMEDIATE_8),
     Opcode(0xC3, 'cmp', AddressMode.STACK_RELATIVE),
@@ -268,7 +268,7 @@ opcode_table = (
     Opcode(0xDD, 'cmp', AddressMode.ABSOLUTE_INDEXED_X),
     Opcode(0xDE, 'dec', AddressMode.ABSOLUTE_INDEXED_X),
     Opcode(0xDF, 'cmp', AddressMode.ABSOLUTE_INDEXED_LONG),
-    Opcode(0xE0, 'cpx', AddressMode.IMMEDIATE_I),
+    Opcode(0xE0, 'cpx', AddressMode.IMMEDIATE_X),
     Opcode(0xE1, 'sbc', AddressMode.DIRECT_PAGE_INDEXED_INDIRECT),
     Opcode(0xE2, 'sep', AddressMode.IMMEDIATE_8),
     Opcode(0xE3, 'sbc', AddressMode.STACK_RELATIVE),

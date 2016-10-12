@@ -13,7 +13,7 @@ class SNESGenerator(CodeGenerator):
         buffer += self._generate_prologue()
 
         # Go through the instructions in consecutive pairs:
-        for i1, i2 in self._pairwise(self._db.instructions()):
+        for i1, i2 in self._pairwise(self._analyzer.instructions()):
             # Print the instruction:
             buffer += self._compile_instruction(i1)
 

@@ -5,8 +5,8 @@ from gilgamesh.opcodes import AddressMode as Mode
 
 
 class CPU:
-    def __init__(self, db, rom, pc, flags):
-        self._db = db
+    def __init__(self, analyzer, rom, pc, flags):
+        self._analyzer = analyzer
         self._rom = rom
         self.pc = pc
         self.flags = flags
@@ -16,7 +16,7 @@ class CPU:
         opcode = self._rom.read_byte(self.pc)
 
         # Parse the instruction and its operand:
-        i = Instruction(self._db, self.pc, opcode, self.flags)
+        i = Instruction(self._analyzer, self.pc, opcode, self.flags)
         i.operand = self._rom.read_value(i.pc + 1, i.size - 1)
         # Advance the CPU's Program Counter:
         self.pc += i.size
@@ -24,9 +24,9 @@ class CPU:
         # Actually emulate the instruction:
         ref = self._dispatch_instruction(i)
         if trace:
-            self._db.store_instruction(i)
+            self._analyzer.store_instruction(i)
             if ref is not None:
-                self._db.store_reference(i.pc, ref)
+                self._analyzer._db.store_reference(i.pc, ref)
 
         return i
 
@@ -48,7 +48,7 @@ class CPU:
 
     def run(self, trace=False):
         yield self.execute(trace)
-        while (self.pc is not None) and self._db.instruction(self.pc) is None:
+        while (self.pc is not None) and self._analyzer.instruction(self.pc) is None:
             yield self.execute(trace)
 
     def _rep(self, i):
@@ -69,7 +69,7 @@ class CPU:
             return self._branch_always(i)
         else:
             branch_pc = self.pc + c_int8(i.operand).value
-            branch_cpu = CPU(self._db, self._rom, branch_pc, self.flags)
+            branch_cpu = CPU(self._analyzer, self._rom, branch_pc, self.flags)
             branch_cpu.run()
             return branch_pc
 
@@ -79,7 +79,7 @@ class CPU:
 
     def _call(self, i):
         call_pc = self._decode_address_operand(self.pc, i.operand, i.address_mode)
-        call_cpu = CPU(self._db, self._rom, call_pc, self.flags)
+        call_cpu = CPU(self._analyzer, self._rom, call_pc, self.flags)
         call_cpu.run()
         self.flags = call_cpu.flags
         return call_pc

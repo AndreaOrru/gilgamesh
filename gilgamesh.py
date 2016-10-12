@@ -3,6 +3,7 @@
 
 import sys
 
+from gilgamesh.analyzer import Analyzer
 from gilgamesh.database import Database
 from gilgamesh.prompt import Prompt
 from gilgamesh.rom import ROM
@@ -13,5 +14,8 @@ if __name__ == '__main__':
 
     database = Database(sys.argv[1])
     rom = ROM(sys.argv[2])
-    prompt = Prompt(database, rom)
+
+    analyzer = Analyzer(database)
+    prompt = Prompt(analyzer, rom)
+
     prompt.run()

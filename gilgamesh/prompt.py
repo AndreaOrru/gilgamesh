@@ -1,15 +1,16 @@
 import sys
 from contextlib import redirect_stdout
 
+from gilgamesh.analyzer import LabelType
+from gilgamesh.c_generator import CGenerator
 from gilgamesh.cpu import CPU
-from gilgamesh.database import LabelType
 from gilgamesh.instruction import ReferenceType
 from gilgamesh.snes_generator import SNESGenerator
 
 
 class Prompt:
-    def __init__(self, db, rom):
-        self._db = db
+    def __init__(self, analyzer, rom):
+        self._analyzer = analyzer
         self._rom = rom
 
     def run(self):
@@ -40,6 +41,8 @@ class Prompt:
             return
         elif operation in ('d', 'disassembly'):
             self._print_disassembly()
+        elif operation in ('dc', 'decompilation'):
+            self._print_decompilation()
         elif operation in ('i', 'instructions'):
             self._print_instructions(*parameters)
         elif operation in ('dr', 'direct_references'):
@@ -60,16 +63,16 @@ class Prompt:
             self._print_labels(LabelType.SUBROUTINE)
         elif operation in ('v', 'vectors'):
             self._print_labels(LabelType.VECTOR)
-        elif operation in ('ub', 'uncomplete_branches'):
-            self._print_uncomplete_branches()
+        elif operation in ('ib', 'incomplete_branches'):
+            self._print_incomplete_branches()
         elif operation in ('b', 'bytes'):
             self._print_bytes(*parameters)
         elif operation in ('e', 'emulate'):
-            self._emulate_uncomplete_branches(*parameters)
+            self._emulate_incomplete_branches(*parameters)
         elif operation in ('w', 'write'):
-            self._db.save()
+            self._analyzer.write_database()
         elif operation == 'wq':
-            self._db.save()
+            self._analyzer.write_database()
             sys.exit()
         elif operation in ('q', 'quit'):
             sys.exit()
@@ -77,39 +80,44 @@ class Prompt:
             # TODO: raise an exception and catch in self.run.
             sys.stderr.write('ERROR: unknown operation "{}"\n'.format(operation))
 
-    def _emulate_uncomplete_branches(self):
-        for branch in self._db.uncomplete_branches():
-            cpu = CPU(self._db, self._rom, branch.pc, branch.flags)
+    def _emulate_incomplete_branches(self):
+        # TODO: Move to analyzer.
+        for branch in self._analyzer.incomplete_branches():
+            cpu = CPU(self._analyzer, self._rom, branch.pc, branch.flags)
             for instruction in cpu.run(trace=True):
                 print('${:06X}    {}'.format(instruction.pc, str(instruction)))
             print()
 
     def _print_disassembly(self):
-        snes_generator = SNESGenerator(self._db, self._rom)
+        snes_generator = SNESGenerator(self._analyzer, self._rom)
         print(snes_generator.compile())
+
+    def _print_decompilation(self):
+        c_generator = CGenerator(self._analyzer, self._rom)
+        print(c_generator.compile())
 
     def _print_instructions(self, *parameters):
         if len(parameters) == 1:
             parameters = [parameters[0]] * 2
 
-        for instruction in self._db.instructions(*map(self._unhex, parameters)):
+        for instruction in self._analyzer.instructions(*map(self._unhex, parameters)):
             print('${:06X}    {}'.format(instruction.pc, str(instruction)))
 
     def _print_vectors(self):
         # TODO: have Vector be a class.
-        for vector in self._db.vectors():
+        for vector in self._analyzer._db.vectors():
             print('${:06X} ({})'.format(vector.pc, vector.type.name))
 
     def _print_references(self, address, typ=None):
-        for reference in self._db.references(self._unhex(address), typ):
+        for reference in self._analyzer._db.references(self._unhex(address), typ):
             print('${:06X}'.format(reference))
 
     def _print_referenced_by(self, address, typ=None):
-        for referenced_by in self._db.referenced_by(self._unhex(address), typ):
+        for referenced_by in self._analyzer._db.referenced_by(self._unhex(address), typ):
             print('${:06X}'.format(referenced_by))
 
-    def _print_uncomplete_branches(self):
-        for branch in sorted(self._db.uncomplete_branches()):
+    def _print_incomplete_branches(self):
+        for branch in sorted(self._analyzer.incomplete_branches()):
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
     def _print_bytes(self, address, end='+1'):
@@ -127,7 +135,7 @@ class Prompt:
         print()
 
     def _print_labels(self, types=None):
-        for name, address in sorted(self._db.labels(types).items()):
+        for name, address in sorted(self._analyzer.labels(types).items()):
             print('${:06X}    {}'.format(address, name))
 
     @staticmethod
