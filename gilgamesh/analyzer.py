@@ -91,8 +91,11 @@ class Analyzer:
 
     def blocks(self):
         blocks = [[]]
+
         for i1, i2 in pairwise(self.instructions()):
             blocks[-1].append(i1)
             if ((i1.pc + i1.size) != i2.pc) or i1.is_control_flow or (i2.label is not None):
                 blocks.append([])
+        blocks[-1].append(i2)
+
         return blocks
