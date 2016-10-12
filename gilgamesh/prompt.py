@@ -1,6 +1,7 @@
 import sys
 from contextlib import redirect_stdout
 
+from gilgamesh.cpu import CPU
 from gilgamesh.database import LabelType
 from gilgamesh.instruction import ReferenceType
 from gilgamesh.snes_generator import SNESGenerator
@@ -63,11 +64,25 @@ class Prompt:
             self._print_uncomplete_branches()
         elif operation in ('b', 'bytes'):
             self._print_bytes(*parameters)
-        elif operation in ('e', 'q', 'exit', 'quit'):
+        elif operation in ('e', 'emulate'):
+            self._emulate_uncomplete_branches(*parameters)
+        elif operation in ('w', 'write'):
+            self._db.save()
+        elif operation == 'wq':
+            self._db.save()
+            sys.exit()
+        elif operation in ('q', 'quit'):
             sys.exit()
         else:
             # TODO: raise an exception and catch in self.run.
             sys.stderr.write('ERROR: unknown operation "{}"\n'.format(operation))
+
+    def _emulate_uncomplete_branches(self):
+        for branch in self._db.uncomplete_branches():
+            cpu = CPU(self._db, self._rom, branch.pc, branch.flags)
+            for instruction in cpu.run(trace=True):
+                print('${:06X}    {}'.format(instruction.pc, str(instruction)))
+            print()
 
     def _print_disassembly(self):
         snes_generator = SNESGenerator(self._db, self._rom)

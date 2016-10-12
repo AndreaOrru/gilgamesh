@@ -16,11 +16,23 @@ class ROM:
             address = self.lorom_to_pc(address)
         return self._rom[address]
 
-    def read_bytes(self, start, end=None):
+    def read_bytes(self, start, count=None, end=None):
         start = self.lorom_to_pc(start)
-        end = len(self) if (end is None) else self.lorom_to_pc(end)
+
+        if count is None:
+            end = len(self) if (end is None) else self.lorom_to_pc(end)
+        else:
+            end = start + count
+
         for i in range(start, end):
             yield self.read_byte(i, False)
+
+    def read_value(self, start, byte_count):
+        data = self.read_bytes(start, count=byte_count)
+        value = 0
+        for i, byte in enumerate(data):
+            value += byte << (i * 8)
+        return value
 
     @staticmethod
     def lorom_to_pc(address):

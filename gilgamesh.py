@@ -9,7 +9,7 @@ from gilgamesh.rom import ROM
 
 
 if __name__ == '__main__':
-    # TODO: Use argparse.
+    # TODO: Use argparse/click.
 
     database = Database(sys.argv[1])
     rom = ROM(sys.argv[2])

@@ -23,15 +23,15 @@ class SNESGenerator(CodeGenerator):
 
         # Compile the last instruction and any extra data:
         buffer += self._compile_instruction(i2)
-        buffer += self._compile_data(i2.pc + i2.size)
+        buffer += self._compile_data(i2.pc + i2.size, end=None)
 
         return buffer
 
-    def _compile_data(self, begin, end=None):
+    def _compile_data(self, begin, end):
         if begin >= self._rom.end_address:
             return ''
 
-        data = self._rom.read_bytes(begin, end)
+        data = self._rom.read_bytes(begin, end=end)
         groups = []
 
         # Iterate through the data in consecutive value groups:

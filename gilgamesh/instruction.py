@@ -109,8 +109,12 @@ class Instruction:
         return self.opcode.number in OpcodeCategory.BRANCH
 
     @property
+    def is_return(self):
+        return self.opcode.number in OpcodeCategory.RETURN
+
+    @property
     def is_control_flow(self):
-        return self.is_call or self.is_jump or self.is_branch
+        return self.is_call or self.is_jump or self.is_branch or self.is_return
 
     @property
     def unique_reference(self):

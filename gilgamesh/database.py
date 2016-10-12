@@ -3,7 +3,7 @@ from bidict import bidict
 from enum import Enum
 from collections import namedtuple
 
-from gilgamesh.instruction import Instruction
+from gilgamesh.instruction import Instruction, ReferenceType
 from gilgamesh.opcodes import OpcodeCategory
 
 
@@ -24,7 +24,20 @@ class Database:
         self._connection = sqlite3.connect(db_path)
         self._connection.row_factory = self._namedtuple_factory
         self._c = self._connection.cursor()
-        self._labels = self.labels()
+        self.regenerate_labels()
+
+    def save(self):
+        self._connection.commit()
+
+    def store_instruction(self, i):
+        self._c.execute('INSERT OR IGNORE INTO instructions VALUES(?, ?, ?, ?)', (
+            i.pc, i.opcode.number, i.flags, i.operand
+        ))
+
+    def store_reference(self, pointer, pointee, typ=ReferenceType.DIRECT):
+        self._c.execute('INSERT OR IGNORE INTO references_ VALUES(?, ?, ?)', (
+            pointer, pointee, typ
+        ))
 
     def instruction(self, pc):
         instruction = self._c.execute('SELECT * FROM instructions WHERE pc = ?', (pc,)).fetchone()
@@ -129,6 +142,9 @@ class Database:
                     labels['irq_{:06X}'.format(vector.pc)] = vector.pc
 
         return labels
+
+    def regenerate_labels(self):
+        self._labels = self.labels()
 
     @staticmethod
     def _namedtuple_factory(cursor, row):
