@@ -1,5 +1,5 @@
 from bidict import bidict
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from enum import Enum
 
 from gilgamesh.block import Block
@@ -85,20 +85,41 @@ class Analyzer:
 
     def flow_graph(self):
         blocks = [Block(self)]
-        edges = defaultdict(list)
-        inv_edges = defaultdict(list)
+        edges = defaultdict(set)
+        inv_edges = defaultdict(set)
 
         for i1, i2 in pairwise(self.instructions()):
             current_block = blocks[-1]
             current_block.add_instruction(i1)
             if ((i1.pc + i1.size) != i2.pc) or i1.is_control_flow or (i2.label is not None):
                 for b in current_block.dominated_blocks:
-                    edges[current_block.start].append(b)
-                    inv_edges[b].append(current_block.start)
+                    edges[current_block.start].add(b)
+                    inv_edges[b].add(current_block.start)
                 blocks.append(Block(self))
         blocks[-1].add_instruction(i2)
 
+        blocks = OrderedDict((b.start, b) for b in blocks)
         return blocks, edges, inv_edges
+
+    def functions(self):
+        blocks, edges, inv_edges = self.flow_graph()
+        subroutines = self.labels({LabelType.SUBROUTINE, LabelType.VECTOR})
+
+        functions = []
+        for subroutine in subroutines.values():
+            functions.append(self._bfs(edges, subroutine))
+
+        return functions
+
+    def _bfs(self, edges, start):
+        visited = set()
+        queue = [start]
+        while queue:
+            block = queue.pop(0)
+            if block not in visited:
+                visited.add(block)
+                queue.extend(edges[block] - visited)
+        return visited
 
     def incomplete_branches(self):
         # Get all the branches instructions:

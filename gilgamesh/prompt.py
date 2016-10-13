@@ -69,6 +69,8 @@ class Prompt:
             self._print_bytes(*parameters)
         elif operation in ('e', 'emulate'):
             self._emulate_incomplete_branches(*parameters)
+        elif operation in ('f', 'functions'):
+            self._print_functions()
         elif operation in ('fg', 'flow_graph'):
             self._print_flow_graph()
         elif operation in ('a', 'analyze'):
@@ -97,7 +99,7 @@ class Prompt:
     def _print_flow_graph(self):
         blocks, edges, inv_edges = self._analyzer.flow_graph()
 
-        for block in blocks:
+        for block in blocks.values():
             in_edges = sorted(inv_edges.get(block.start) or [])
             print('in edges: ' + ', '.join('${:06X}'.format(e) for e in in_edges))
 
@@ -106,6 +108,12 @@ class Prompt:
 
             out_edges = sorted(edges.get(block.start) or [])
             print('out edges: ' + ', '.join('${:06X}'.format(e) for e in out_edges))
+            print()
+
+    def _print_functions(self):
+        for function in self._analyzer.functions():
+            for block in sorted(function):
+                print('${:06X}'.format(block))
             print()
 
     def _print_disassembly(self):
