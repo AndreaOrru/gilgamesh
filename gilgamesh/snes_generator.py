@@ -2,7 +2,8 @@ from collections import namedtuple
 from itertools import groupby
 
 from gilgamesh.code_generator import CodeGenerator
-from gilgamesh.utils import grouper, pairwise
+from gilgamesh.utils import grouper
+from gilgamesh.utils import pairwise
 
 
 Group = namedtuple('Group', ['value', 'length'])

@@ -1,5 +1,6 @@
 from bidict import bidict
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
+from collections import OrderedDict
 from enum import Enum
 
 from gilgamesh.block import Block

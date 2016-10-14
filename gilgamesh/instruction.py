@@ -3,7 +3,10 @@
 import re
 from enum import IntEnum
 
-from gilgamesh.opcodes import AddressMode, OpcodeCategory, opcode_table, size_table
+from gilgamesh.opcodes import AddressMode
+from gilgamesh.opcodes import OpcodeCategory
+from gilgamesh.opcodes import opcode_table
+from gilgamesh.opcodes import size_table
 
 
 class ReferenceType(IntEnum):

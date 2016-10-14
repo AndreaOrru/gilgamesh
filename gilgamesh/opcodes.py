@@ -1,8 +1,10 @@
 from collections import namedtuple
-from enum import Enum, IntEnum
+from enum import Enum
+from enum import IntEnum
 
 
 class OpcodeCategory(tuple, Enum):
+    """Tuples of opcodes belonging to some meaningful categories."""
     BRANCH = (0x10, 0x30, 0x50, 0x70, 0x80, 0x82, 0x90, 0xB0, 0xD0, 0xF0)
     CALL = (0x20, 0x22, 0xFC)
     RETURN = (0x40, 0x60, 0x6B)
@@ -10,6 +12,7 @@ class OpcodeCategory(tuple, Enum):
 
 
 class AddressMode(IntEnum):
+    """All types of possible addressing modes."""
     IMPLIED = 0
     IMMEDIATE_M = 1
     IMMEDIATE_X = 2

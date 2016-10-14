@@ -1,4 +1,5 @@
-from itertools import tee, zip_longest
+from itertools import tee
+from itertools import zip_longest
 
 
 def grouper(iterable, n):
