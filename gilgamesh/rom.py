@@ -1,4 +1,6 @@
 class ROM:
+    """Super Nintendo ROM abstraction."""
+
     # TODO: don't assume it's a LoROM.
 
     def __init__(self, rom_file):
@@ -34,7 +36,7 @@ class ROM:
         If end is also not given, read till the very end of the ROM.
 
         Args:
-            start: The ddress of the first byte, in SNES format.
+            start: The address of the first byte, in SNES format.
             count: The number of bytes to read.
             end: The address of the final byte to read (not included).
 

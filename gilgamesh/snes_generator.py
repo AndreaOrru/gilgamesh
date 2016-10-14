@@ -11,7 +11,7 @@ Group = namedtuple('Group', ['value', 'length'])
 class SNESGenerator(CodeGenerator):
     def compile(self):
         buffer = ''
-        buffer += self._generate_prologue()
+        buffer += self._compile_prologue()
 
         # Go through the instructions in consecutive pairs:
         for i1, i2 in pairwise(self._analyzer.instructions()):
@@ -28,11 +28,20 @@ class SNESGenerator(CodeGenerator):
 
         return buffer
 
-    def _compile_data(self, begin, end):
-        if begin >= self._rom.end_address:
+    def _compile_data(self, start, end):
+        """Generate assembly directives for blocks of data.
+
+        Args:
+            start: The address of the first byte of the block.
+            end: The address of the last byte (not included).
+
+        Returns:
+            The compiled data as a string.
+        """
+        if start >= self._rom.end_address:
             return ''
 
-        data = self._rom.read_bytes(begin, end=end)
+        data = self._rom.read_bytes(start, end=end)
         groups = []
 
         # Iterate through the data in consecutive value groups:
@@ -66,6 +75,14 @@ class SNESGenerator(CodeGenerator):
 
     @staticmethod
     def _compile_instruction(instruction):
+        """Generate assembly directives for an instruction.
+
+        Args:
+            instruction: An object of type of Instruction.
+
+        Returns:
+            The compiled instruction as a string.
+        """
         s = ''
         if instruction.label:
             s += '\n{}:\n'.format(instruction.label)
@@ -75,10 +92,23 @@ class SNESGenerator(CodeGenerator):
 
     @staticmethod
     def _iter_len(iterator):
+        """Calculate the length of a (finite) iterator.
+
+        Args:
+            iterator: An iterator object.
+
+        Returns:
+            The length of the iterator.
+        """
         return sum(1 for x in iterator)
 
     @staticmethod
-    def _generate_prologue():
+    def _compile_prologue():
+        """Generate necessary directives to set up the assembler.
+
+        Returns:
+           A string with the directives.
+        ."""
         # FIXME: This will only work for LoROM.
         return """arch snes.cpu
 
