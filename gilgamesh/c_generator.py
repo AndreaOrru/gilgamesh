@@ -45,9 +45,21 @@ class CGenerator(CodeGenerator):
 
     def compile(self):
         buffer = ''
-        for i in self._analyzer.instructions():
-            buffer += self._compile_instruction(i)
+        for function in self._analyzer.functions():
+            buffer += self._compile_function(function)
         return buffer
+
+    def _compile_function(self, function):
+        s = ''
+
+        s += 'void {}()\n'.format(function[0].first.label)
+        s += '{\n'
+        for block in function:
+            for instruction in block:
+                s += self._compile_instruction(instruction)
+        s += '}\n\n'
+
+        return s
 
     def _compile_instruction(self, i):
         s = ''

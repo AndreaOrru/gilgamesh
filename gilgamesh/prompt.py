@@ -122,8 +122,8 @@ class Prompt:
 
     def _print_functions(self):
         for function in self._analyzer.functions():
-            for block in sorted(function):
-                print('${:06X}'.format(block))
+            for block in function:
+                print('${:06X}'.format(block.start))
             print()
 
     def _print_disassembly(self):

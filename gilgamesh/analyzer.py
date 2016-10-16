@@ -108,7 +108,7 @@ class Analyzer:
 
         functions = []
         for subroutine in subroutines.values():
-            functions.append(self._bfs(edges, subroutine))
+            functions.append([blocks[b] for b in sorted(self._bfs(edges, subroutine))])
 
         return functions
 
