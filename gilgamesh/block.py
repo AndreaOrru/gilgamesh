@@ -1,5 +1,5 @@
 class Block:
-    """A basic block of instructions. that are always executed exactly once, in order.
+    """A basic block of instructions that are always executed exactly once, in order.
 
     Attributes:
         instructions: A list of the instructions in the block.

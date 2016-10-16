@@ -9,11 +9,15 @@ from gilgamesh.snes_generator import SNESGenerator
 
 
 class Prompt:
+    """Command interpreter."""
+
     def __init__(self, analyzer, rom):
         self._analyzer = analyzer
         self._rom = rom
 
     def run(self):
+        """Run the command interpreter."""
+
         while True:
             print('>>> ', end='')
             line = input().strip()
@@ -37,6 +41,12 @@ class Prompt:
                 self._dispatch_command(command[0], command[1:])
 
     def _dispatch_command(self, operation, parameters):
+        """Dispatch the execution of the command to the right method.
+
+        Args:
+            operation: String containing the name of the command.
+            parameters: List containing the parameters for the command.
+        """
         if operation == '':
             return
         elif operation in ('d', 'disassembly'):
@@ -149,6 +159,14 @@ class Prompt:
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
     def _print_bytes(self, address, end='+1'):
+        """Print a hex dump of a region of memory.
+
+        Args:
+            address: The initial address of the region.
+
+        Returns:
+
+        """
         address = self._unhex(address)
         if end[0] != '+':
             count = self._unhex(end) - address

@@ -43,7 +43,7 @@ class CPU:
             self._analyzer._db.store_reference(i.pc, ref)
 
     def _dispatch_instruction(self, i):
-        """Dispatch the execution of the instruction to the right emulation function.
+        """Dispatch the execution of the instruction to the right emulation method.
 
         Args:
             i: The instruction.

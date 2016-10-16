@@ -10,6 +10,8 @@ Group = namedtuple('Group', ['value', 'length'])
 
 
 class SNESGenerator(CodeGenerator):
+    """Code generator for the bass SNES assembler."""
+
     def compile(self):
         buffer = ''
         buffer += self._compile_prologue()

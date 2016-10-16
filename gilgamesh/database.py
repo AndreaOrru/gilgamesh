@@ -7,7 +7,7 @@ from gilgamesh.opcodes import OpcodeCategory
 
 
 class VectorType(Enum):
-    """Types of possible vectors."""
+    """Types of vectors."""
     RESET = 0
     NMI = 1
     IRQ = 2

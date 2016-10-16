@@ -10,11 +10,21 @@ from gilgamesh.opcodes import size_table
 
 
 class ReferenceType(IntEnum):
+    """Types of reference."""
     DIRECT = 0
     INDIRECT = 1
 
 
 class Instruction:
+    """A CPU instruction.
+
+    Attributes:
+        pc: Program Counter.
+        opcode: The Opcode tuple associated with the instruction.
+        flags: Value of the P register just before the instruction.
+        operand: The instruction's operand, or None.
+    """
+
     _format_operand_table = [
         lambda x,s: '',                         # IMPLIED
         lambda x,s: '#${:0{}X}'.format(x, 2*s), # IMMEDIATE_M
@@ -55,6 +65,15 @@ class Instruction:
 
     @classmethod
     def from_row(cls, analyzer, row):
+        """Construct an Instruction object from a SQLite Instruction row.
+
+        Args:
+            analyzer: Instance of Analyzer.
+            row: The associated SQLite Instruction row.
+
+        Returns:
+            A new Instruction object.
+        """
         return cls(analyzer, *row)
 
     def __lt__(self, other):
@@ -70,14 +89,17 @@ class Instruction:
 
     @property
     def x_flag(self):
+        """The boolean value of the P.x flag."""
         return bool(self.flags & (2 << 3))
 
     @property
     def m_flag(self):
+        """The boolean value of the P.m flag."""
         return bool(self.flags & (2 << 4))
 
     @property
     def size(self):
+        """The size of the instruction in bytes, including opcode and operands."""
         size = size_table[self.opcode.address_mode]
         if size is None:
             if self.opcode.address_mode == AddressMode.IMMEDIATE_M:
@@ -89,38 +111,49 @@ class Instruction:
 
     @property
     def mnemonic(self):
+        """The human readable name of the instruction."""
         return self.opcode.mnemonic
 
     @property
     def address_mode(self):
+        """The addressing mode of the instruction."""
         return self.opcode.address_mode
 
     @property
     def label(self):
+        """The instruction label if it exists, or None."""
         return self._analyzer.label(self.pc)
 
     @property
     def is_call(self):
+        """True if the instruction is any JSR."""
         return self.opcode.number in OpcodeCategory.CALL
 
     @property
     def is_jump(self):
+        """True if the instruction is any JMP."""
         return self.opcode.number in OpcodeCategory.JUMP
 
     @property
     def is_branch(self):
+        """True if the instruction is any branch (Bxx, BRA, BRL)."""
         return self.opcode.number in OpcodeCategory.BRANCH
 
     @property
     def is_return(self):
+        """True if the instruction is RTS/RTL/RTI."""
         return self.opcode.number in OpcodeCategory.RETURN
 
     @property
     def is_control_flow(self):
+        """True if the instruction acts on control flow."""
         return self.is_call or self.is_jump or self.is_branch or self.is_return
 
     @property
     def unique_reference(self):
+        """The single direct memory address that the instruction referes to.
+        None if there are no references or more than one reference.
+        """
         # TODO: export references inside analyzer:
         indirect = list(self._analyzer._db.references(self.pc, ReferenceType.INDIRECT))
         direct = list(self._analyzer._db.references(self.pc, ReferenceType.DIRECT))
