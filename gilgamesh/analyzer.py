@@ -11,46 +11,97 @@ from gilgamesh.utils import pairwise
 
 
 class LabelType(Enum):
+    """Types of labels."""
     JUMP = 0
     SUBROUTINE = 1
     VECTOR = 2
 
 
 class Analyzer:
+    """Static analyzer for the ROM's code and data flow."""
+
     def __init__(self, db):
         self._db = db
         self.analyze()
 
     def analyze(self):
+        """Reanalyze the ROM and regenerate the labels."""
         self._labels = self.labels()
 
     def write_database(self):
+        """Save the database changes to disk."""
         self._db.save()
 
     def store_instruction(self, i):
+        """Store a new instruction into the database.
+
+        Args:
+            i: The instruction to be stored.
+        """
         self._db.store_instruction(i.pc, i.opcode.number, i.flags, i.operand)
 
     def instruction(self, pc):
+        """Search for an instruction in the database.
+
+        Args:
+            pc: The address of the instruction.
+
+        Returns:
+            The corresponding Instruction object, or None
+        """
         instruction = self._db.instruction(pc)
         return None if (instruction is None) else Instruction.from_row(self, instruction)
 
     def instructions(self, start=0x000000, end=0xFFFFFF):
+        """Search for a instructions inside an address interval.
+
+        Args:
+            start: The start of the interval.
+            end: The end of the interval (included).
+
+        Returns:
+            An iterator over all the Instruction objects in the range.
+        """
         instructions = self._db.instructions(start, end)
         return (Instruction.from_row(self, i) for i in instructions)
 
     def label(self, address):
+        """Search for a label for the given address.
+
+        Args:
+            address: The address to search for.
+
+        Returns:
+            The associated label, or None if no one could be found.
+        """
         try:
             return self._labels.inv[address]
         except KeyError:
             return None
 
     def label_address(self, label):
-        try:
-            return self._labels[label]
-        except KeyError:
-            return None
+        """Search for the address associated with a label.
+
+        Args:
+            label: The label to search for.
+
+        Returns:
+            The associated address.
+
+        Raises:
+            KeyError if no associated address could be found.
+        """
+        return self._labels[label]
 
     def labels(self, types=None):
+        """Generate all the labels in the program.
+
+        Args:
+            types: A set of LabelTypes, or None for all of them.
+
+        Returns:
+            A bidirectional dictionary from labels to addresses and viceversa.
+        """
         # Search for all the labels:
         if types is None:
             types = {LabelType.JUMP, LabelType.SUBROUTINE, LabelType.VECTOR}
@@ -85,6 +136,13 @@ class Analyzer:
         return labels
 
     def flow_graph(self):
+        """Generate a Control Flow Graph of the program.
+
+        Returns:
+            blocks: An ordered dictionary of all the Blocks.
+            edges: A dictionary of all the directed edges between blocks.
+            inv_edges: A dictionary of all the inverted directed edges.
+        """
         blocks = [Block(self)]
         edges = defaultdict(set)
         inv_edges = defaultdict(set)
@@ -103,6 +161,11 @@ class Analyzer:
         return blocks, edges, inv_edges
 
     def functions(self):
+        """Generate all the functions in the program.
+
+        Returns:
+            A list of all the functions.
+        """
         blocks, edges, inv_edges = self.flow_graph()
         subroutines = self.labels({LabelType.SUBROUTINE, LabelType.VECTOR})
 
@@ -113,6 +176,15 @@ class Analyzer:
         return functions
 
     def _bfs(self, edges, start):
+        """Run BFS on a Control Flow Graph.
+
+        Args:
+            edges: The edges of the graph.
+            start: The block from which to start the search.
+
+        Returns:
+            A set of the visited blocks.
+        """
         visited = set()
         queue = [start]
         while queue:
@@ -123,6 +195,14 @@ class Analyzer:
         return visited
 
     def incomplete_branches(self):
+        """Search for all the incomplete branches in the program.
+
+        "Incomplete branches" are defined as branches for which at least one
+        of the two possible control flows have not been executed at runtime.
+
+        Returns:
+            A generator expression of all the incomplete branches.
+        """
         # Get all the branches instructions:
         branches = (Instruction.from_row(self, i) for i in self._db.branches())
         # Select those that point to, or ar followed by, addresses that are not instructions:

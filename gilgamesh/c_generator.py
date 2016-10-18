@@ -27,16 +27,16 @@ class CGenerator(CodeGenerator):
         lambda x,s: 'mem_w(D + 0x{:02x}) + Y'.format(x), # DIRECT_PAGE_INDIRECT_INDEXED
         lambda x,s: 'mem_l(0x{:02x})'.format(x),         # DIRECT_PAGE_INDIRECT_LONG
         lambda x,s: 'mem_l(0x{:02x})'.format(x),         # DIRECT_PAGE_INDIRECT_INDEXED_LONG
-        lambda x,s: '0x{:04x}'.format(x),                # ABSOLUTE
-        lambda x,s: '0x{:04x} + X'.format(x),            # ABSOLUTE_INDEXED_X
-        lambda x,s: '0x{:04x} + Y'.format(x),            # ABSOLUTE_INDEXED_Y
+        lambda x,s: 'B + 0x{:04x}'.format(x),            # ABSOLUTE
+        lambda x,s: 'B + 0x{:04x} + X'.format(x),        # ABSOLUTE_INDEXED_X
+        lambda x,s: 'B + 0x{:04x} + Y'.format(x),        # ABSOLUTE_INDEXED_Y
         lambda x,s: '0x{:06x}'.format(x),                # ABSOLUTE_LONG
         lambda x,s: '0x{:06x} + X'.format(x),            # ABSOLUTE_INDEXED_LONG
         lambda x,s: 'S + 0x{:02x}'.format(x),            # STACK_RELATIVE
         lambda x,s: 'mem_w(S + 0x{:02x}) + Y'.format(x), # STACK_RELATIVE_INDIRECT_INDEXED
-        lambda x,s: 'mem_w(0x{:04x})'.format(x),         # ABSOLUTE_INDIRECT
+        lambda x,s: 'mem_w(B + 0x{:04x})'.format(x),     # ABSOLUTE_INDIRECT
         lambda x,s: 'mem_l(0x{:06x})'.format(x),         # ABSOLUTE_INDIRECT_LONG
-        lambda x,s: 'mem_w(0x{:04x} + X)'.format(x),     # ABSOLUTE_INDEXED_INDIRECT
+        lambda x,s: 'mem_w(B + 0x{:04x} + X)'.format(x), # ABSOLUTE_INDEXED_INDIRECT
         lambda x,s: '',                                  # IMPLIED_ACCUMULATOR
         lambda x,s: '0x{:02X}, 0x{:02X}'.format(x & 0xFF, x >> 8),  # MOVE
         lambda x,s: '0x{:04X}'.format(x),                # PEA
@@ -44,20 +44,30 @@ class CGenerator(CodeGenerator):
     ]
 
     def compile(self):
-        buffer = ''
-        for function in self._analyzer.functions():
+        functions = self._analyzer.functions()
+
+        buffer = self._compile_prologue()
+
+        for function in functions:
+            buffer += self._compile_prototype(function)
+
+        for function in functions:
             buffer += self._compile_function(function)
+
         return buffer
+
+    def _compile_prototype(self, function):
+        return 'void {}();\n'.format(function[0].first.label)
 
     def _compile_function(self, function):
         s = ''
 
-        s += 'void {}()\n'.format(function[0].first.label)
+        s += '\nvoid {}()\n'.format(function[0].first.label)
         s += '{\n'
         for block in function:
             for instruction in block:
                 s += self._compile_instruction(instruction)
-        s += '}\n\n'
+        s += '}\n'
 
         return s
 
@@ -66,13 +76,29 @@ class CGenerator(CodeGenerator):
 
         if i.label:
             s += '{}:\n'.format(i.label)
-        s += '    {}{}({});\n'.format(i.mnemonic.upper(),
-                                     self._format_postfix(i),
-                                     self._format_operand(i))
+
+        formatted = self._format_instruction(i)
+        if formatted:
+            s += '    {}\n'.format(formatted, i.pc)
+
         return s
 
-    def _format_postfix(self, i):
-        s = ''
+    def _format_instruction(self, i):
+        s = i.mnemonic.upper()
+
+        if i.mnemonic in ('sep', 'rep', 'sei', 'xce', 'cli'):
+            s = '// ' + s
+        elif i.is_jump or i.mnemonic == 'bra':
+            return 'goto {};'.format(self._format_operand(i))
+        elif i.is_call:
+            return '{}();'.format(self._format_operand(i))
+        elif i.is_return:
+            return 'return;'
+        elif i.mnemonic in ('inc', 'dec'):
+            return s + '_{}'.format('b(A.l);' if i.m_flag else 'w(A.w);')
+        elif i.mnemonic in ('inx', 'iny', 'dex', 'dey'):
+            reg = s[-1]
+            return s[:-1] + 'C_{1}({0}.{2});'.format(reg, *(('b', 'l') if i.x_flag else ('w', 'w')))
 
         if i.address_mode in (AddressMode.IMMEDIATE_M,
                               AddressMode.IMMEDIATE_X,
@@ -84,9 +110,16 @@ class CGenerator(CodeGenerator):
         elif i.mnemonic in self.X_BOUND:
             s += '_b' if i.x_flag else '_w'
 
+        s += '({});'.format(self._format_operand(i))
+
         return s
 
     def _format_operand(self, i):
+        if i.mnemonic == 'php':
+            return '{}, {}'.format(int(i.m_flag), int(i.x_flag))
+        elif i.mnemonic == 'phk':
+            return '0x{:02x}'.format(i.pc >> 16)
+
         s = self._format_operand_table[i.address_mode](i.operand, i.size - 1)
 
         if i.is_control_flow:
@@ -94,6 +127,16 @@ class CGenerator(CodeGenerator):
             if reference:
                 label = self._analyzer.label(reference)
                 if label:
-                    s = re.sub('0x[A-F0-9]+', label, s)
+                    # FIXME: Hackish...
+                    s = re.sub('0x[a-f0-9]+', label, s)
+                    s = s.replace('B + ', '')
 
         return s
+
+    def _compile_prologue(self):
+        return """#include "w65816.hpp"
+
+Register A, X, Y, S, D;
+uint32_t B = 0;
+Flags P;
+uint8_t mem[0x20000];\n\n"""

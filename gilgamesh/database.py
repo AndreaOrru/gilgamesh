@@ -70,7 +70,7 @@ class Database:
             end: The end of the interval (included).
 
         Returns:
-            An iterator over all the instruction rows in the given range.
+            An iterator over all the instruction rows in the range.
         """
         instructions = self._c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
         return instructions.fetchall()

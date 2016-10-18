@@ -13,8 +13,7 @@ class SNESGenerator(CodeGenerator):
     """Code generator for the bass SNES assembler."""
 
     def compile(self):
-        buffer = ''
-        buffer += self._compile_prologue()
+        buffer = self._compile_prologue()
 
         # Go through the instructions in consecutive pairs:
         for i1, i2 in pairwise(self._analyzer.instructions()):
