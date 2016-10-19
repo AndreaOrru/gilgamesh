@@ -65,6 +65,9 @@ class CGenerator(CodeGenerator):
         s += '\nvoid {}()\n'.format(function[0].first.label)
         s += '{\n'
         for block in function:
+            if function[0] is not block:
+                s += '\n'
+
             for instruction in block:
                 s += self._compile_instruction(instruction)
         s += '}\n'

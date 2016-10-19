@@ -100,7 +100,7 @@ class Prompt:
         # TODO: Move to analyzer.
         for branch in self._analyzer.incomplete_branches():
             cpu = CPU(self._analyzer, self._rom, branch.pc, branch.flags)
-            for instruction in cpu.run(trace=True):
+            for instruction in cpu.run():
                 print('${:06X}    {}'.format(instruction.pc, str(instruction)))
             print()
         # Reanalyze the ROM:

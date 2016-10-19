@@ -14,19 +14,23 @@ class SNESGenerator(CodeGenerator):
 
     def compile(self):
         buffer = self._compile_prologue()
+        blocks = self._analyzer.flow_graph()[0].values()
 
-        # Go through the instructions in consecutive pairs:
-        for i1, i2 in pairwise(self._analyzer.instructions()):
-            # Print the instruction:
-            buffer += self._compile_instruction(i1)
+        # Go through the blocks in consecutive pairs:
+        for b1, b2 in pairwise(blocks):
+            # Print the block's instructions:
+            for i in b1:
+                buffer += self._compile_instruction(i)
+            buffer += '\n'
 
-            # If there is data between this instruction and the next, print it:
-            if (i1.pc + i1.size) != i2.pc:
-                buffer += self._compile_data(i1.pc + i1.size, i2.pc)
+            # If there is data between this block and the next, print it:
+            if b1.end != b2.start:
+                buffer += self._compile_data(b1.end, b2.start)
 
         # Compile the last instruction and any extra data:
-        buffer += self._compile_instruction(i2)
-        buffer += self._compile_data(i2.pc + i2.size, end=None)
+        for i in b2:
+            buffer += self._compile_instruction(i)
+        buffer += self._compile_data(b2.end, end=None)
 
         return buffer
 
@@ -87,7 +91,10 @@ class SNESGenerator(CodeGenerator):
         """
         s = ''
         if instruction.label:
-            s += '\n{}:\n'.format(instruction.label)
+            # FIXME: Not reliable.
+            if instruction.label[:4] != 'loc_':
+                s += '\n'
+            s += '{}:\n'.format(instruction.label)
         s += '    {:<20}// ${:06X}\n'.format(instruction.format(), instruction.pc)
 
         return s
@@ -119,4 +126,4 @@ macro seek(variable offset) {
   base offset
 }
 
-seek($008000)\n"""
+seek($008000)\n\n"""

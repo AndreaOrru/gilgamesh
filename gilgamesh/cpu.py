@@ -42,6 +42,8 @@ class CPU:
         if ref is not None:
             self._analyzer._db.store_reference(i.pc, ref)
 
+        return i
+
     def _dispatch_instruction(self, i):
         """Dispatch the execution of the instruction to the right emulation method.
 
@@ -70,9 +72,9 @@ class CPU:
         """Run the emulation till a known instruction is found.
 
         Logs the executed instructions into the database."""
-        self.execute()
+        yield self.execute()
         while (self.pc is not None) and self._analyzer.instruction(self.pc) is None:
-            self.execute()
+            yield self.execute()
 
     def _rep(self, i):
         """Emulate the REP instruction.
