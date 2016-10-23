@@ -73,6 +73,8 @@ class Prompt:
             self._print_labels(LabelType.SUBROUTINE)
         elif operation in ('v', 'vectors'):
             self._print_labels(LabelType.VECTOR)
+        elif operation in ('dma', 'dma_transfers'):
+            self._print_dma_transfers()
         elif operation in ('ib', 'incomplete_branches'):
             self._print_incomplete_branches()
         elif operation in ('b', 'bytes'):
@@ -145,6 +147,13 @@ class Prompt:
         # TODO: have Vector be a class.
         for vector in self._analyzer._db.vectors():
             print('${:06X} ({})'.format(vector.pc, vector.type.name))
+
+    def _print_dma_transfers(self):
+        # TODO: have DMATransfer be a class.
+        for d in self._analyzer._db.dma_transfers():
+            print('${:06X}    ${:06X} -> {} ({} bytes)'.format(
+                d.pc, d.source, d.destination.name, d.bytes
+            ))
 
     def _print_references(self, address, typ=None):
         for reference in self._analyzer._db.references(self._unhex(address), typ):

@@ -13,6 +13,13 @@ class VectorType(Enum):
     IRQ = 2
 
 
+class DMADestinationType(Enum):
+    """Types of DMA memory destinations."""
+    VRAM = 0
+    CGRAM = 1
+    OAM = 2
+
+
 class Database:
     """Abstraction on top of database queries/operations."""
 
@@ -150,6 +157,13 @@ class Database:
         """.format(OpcodeCategory.BRANCH))
 
         return branches.fetchall()
+
+    def dma_transfers(self):
+        # TODO: DMATransfer should be a class.
+        def dma_factory(d):
+            return type(d)(d.pc, d.source, DMADestinationType(d.destination), d.bytes)
+        dma = self._c.execute('SELECT * FROM dma')
+        return map(dma_factory, dma.fetchall())
 
     @staticmethod
     def _namedtuple_factory(cursor, row):
