@@ -1,3 +1,7 @@
+#ifndef __SNES_HPP
+#define __SNES_HPP
+
+
 enum HardwareRegisters
 {
     INIDISP  = 0x2100,
@@ -192,4 +196,7 @@ enum HardwareRegisters
     A2A7L    = 0x4378,
     A2A7     = 0x4379,
     NTRL7    = 0x437A,
-}
+};
+
+
+#endif
