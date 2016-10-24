@@ -83,9 +83,10 @@ class CGenerator(CodeGenerator):
         if i.label:
             s += '{}:\n'.format(i.label)
 
+        # FIXME: Same PC might be doing different DMA transfers.
         dma = self._dma_transfers.get(i.pc)
         if dma is not None:
-            comment = '  // DMA: ${:06X} -> {} ({} bytes)'.format(
+            comment = '  // DMA: ${:06X} -> {} (${:X} bytes)'.format(
                 dma.source, dma.destination.name, dma.bytes)
 
         s += '    {}{}\n'.format(self._format_instruction(i), comment)

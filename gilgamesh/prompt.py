@@ -79,6 +79,8 @@ class Prompt:
             self._print_incomplete_branches()
         elif operation in ('b', 'bytes'):
             self._print_bytes(*parameters)
+        elif operation in ('bc', 'bytes_c_array'):
+            self._print_bytes(*parameters, c_array=True)
         elif operation in ('e', 'emulate'):
             self._emulate_incomplete_branches(*parameters)
         elif operation in ('f', 'functions'):
@@ -151,7 +153,7 @@ class Prompt:
     def _print_dma_transfers(self):
         # TODO: have DMATransfer be a class.
         for d in self._analyzer._db.dma_transfers():
-            print('${:06X}    ${:06X} -> {} ({} bytes)'.format(
+            print('${:06X}    ${:06X} -> {} (${:X} bytes)'.format(
                 d.pc, d.source, d.destination.name, d.bytes
             ))
 
@@ -167,7 +169,7 @@ class Prompt:
         for branch in sorted(self._analyzer.incomplete_branches()):
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
-    def _print_bytes(self, address, end='+1'):
+    def _print_bytes(self, address, end='+1', c_array=False):
         """Print a hex dump of a region of memory.
 
         Args:
@@ -182,12 +184,27 @@ class Prompt:
         else:
             count = self._unhex(end)
 
+        if c_array:
+            return self._print_bytes_c(address, count)
+
         for i in range(count):
             byte = self._rom.read_byte(address + i)
             if (i % 0x10) == 0:
                 print('{}${:06X}    '.format('\n' if i != 0 else '', address + i), end='')
             print('{:02X}'.format(byte), end=' ')
         print()
+
+    def _print_bytes_c(self, start, count):
+        print('uint8_t array = {', end='')
+
+        for i in range(count):
+            byte = self._rom.read_byte(start + i)
+            if (i % 0x10) == 0:
+                print('\n    ', end='')
+            print('0x{:02X}'.format(byte), end=', ')
+
+        print('\n};')
+
 
     def _print_labels(self, types=None):
         for name, address in sorted(self._analyzer.labels(types).items()):
