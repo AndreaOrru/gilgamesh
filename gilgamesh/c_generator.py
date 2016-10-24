@@ -144,7 +144,8 @@ class CGenerator(CodeGenerator):
         return s
 
     def _compile_prologue(self):
-        return """#include "w65816.hpp"
+        return """#include "snes.hpp"
+#include "w65816.hpp"
 
 Register A, X, Y, S, D;
 uint32_t B = 0;
