@@ -7,7 +7,6 @@ from gilgamesh.opcodes import AddressMode
 from gilgamesh.opcodes import OpcodeCategory
 from gilgamesh.opcodes import opcode_table
 from gilgamesh.opcodes import size_table
-from gilgamesh.registers import registers
 
 
 class ReferenceType(IntEnum):
@@ -172,10 +171,7 @@ class Instruction:
         if pretty:
             reference = self.unique_reference
             if reference:
-                try:
-                    label = '{' + registers.get(reference) + '}'
-                except TypeError:
-                    label = self._analyzer.label(reference)
+                label = self._analyzer.label(reference)
                 if label:
                     operand = re.sub('\$[A-F0-9]+', label, operand)
 

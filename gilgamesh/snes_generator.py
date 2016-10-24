@@ -1,9 +1,11 @@
+import re
 from collections import namedtuple
 from itertools import groupby
 
 from gilgamesh.code_generator import CodeGenerator
 from gilgamesh.utils import grouper
 from gilgamesh.utils import pairwise
+from gilgamesh.registers import registers
 
 
 Group = namedtuple('Group', ['value', 'length'])
@@ -79,23 +81,35 @@ class SNESGenerator(CodeGenerator):
 
         return s
 
-    @staticmethod
-    def _compile_instruction(instruction):
+    def _compile_instruction(self, i):
         """Generate assembly directives for an instruction.
 
         Args:
-            instruction: An object of type of Instruction.
+            i: An object of type of Instruction.
 
         Returns:
             The compiled instruction as a string.
         """
         s = ''
-        if instruction.label:
+        if i.label:
             # FIXME: Not reliable.
-            if instruction.label[:4] != 'loc_':
+            if i.label[:4] != 'loc_':
                 s += '\n'
-            s += '{}:\n'.format(instruction.label)
-        s += '    {:<20}// ${:06X}\n'.format(instruction.format(), instruction.pc)
+            s += '{}:\n'.format(i.label)
+        s += '    {:<20}// ${:06X}\n'.format(self._format_instruction(i), i.pc)
+
+        return s
+
+    def _format_instruction(self, i):
+        s = i.format()
+
+        reference = i.unique_reference
+        if reference:
+            register = registers.get(reference)
+            if register:
+                s = re.sub('\$[A-F0-9]+', '{' + register + '}', s)
+                if i.size == 4:
+                    s = s.replace(i.mnemonic, i.mnemonic + '.l')
 
         return s
 
