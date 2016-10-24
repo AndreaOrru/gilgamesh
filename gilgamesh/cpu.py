@@ -72,7 +72,7 @@ class CPU:
         """Run the emulation till a known instruction is found.
 
         Logs the executed instructions into the database."""
-        yield self.execute()
+        self.execute()
         while (self.pc is not None) and self._analyzer.instruction(self.pc) is None:
             yield self.execute()
 

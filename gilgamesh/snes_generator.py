@@ -120,6 +120,7 @@ class SNESGenerator(CodeGenerator):
         ."""
         # FIXME: This will only work for LoROM.
         return """arch snes.cpu
+include "w65816.inc"
 
 macro seek(variable offset) {
   origin ((offset & $7F0000) >> 1) | (offset & $7FFF)

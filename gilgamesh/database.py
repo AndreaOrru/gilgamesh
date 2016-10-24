@@ -162,7 +162,7 @@ class Database:
         # TODO: DMATransfer should be a class.
         def dma_factory(d):
             return type(d)(d.pc, d.source, DMADestinationType(d.destination), d.bytes)
-        dma = self._c.execute('SELECT * FROM dma')
+        dma = self._c.execute('SELECT * FROM dma ORDER BY pc')
         return map(dma_factory, dma.fetchall())
 
     @staticmethod

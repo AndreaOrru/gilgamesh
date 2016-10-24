@@ -4,6 +4,7 @@ import re
 
 from gilgamesh.code_generator import CodeGenerator
 from gilgamesh.opcodes import AddressMode
+from gilgamesh.registers import registers
 
 
 class CGenerator(CodeGenerator):
@@ -45,6 +46,7 @@ class CGenerator(CodeGenerator):
 
     def compile(self):
         functions = self._analyzer.functions()
+        self._dma_transfers = {d.pc: d for d in self._analyzer._db.dma_transfers()}
 
         buffer = self._compile_prologue()
 
@@ -76,13 +78,17 @@ class CGenerator(CodeGenerator):
 
     def _compile_instruction(self, i):
         s = ''
+        comment = ''
 
         if i.label:
             s += '{}:\n'.format(i.label)
 
-        formatted = self._format_instruction(i)
-        if formatted:
-            s += '    {}\n'.format(formatted, i.pc)
+        dma = self._dma_transfers.get(i.pc)
+        if dma is not None:
+            comment = '  // DMA: ${:06X} -> {} ({} bytes)'.format(
+                dma.source, dma.destination.name, dma.bytes)
+
+        s += '    {}{}\n'.format(self._format_instruction(i), comment)
 
         return s
 
@@ -125,14 +131,15 @@ class CGenerator(CodeGenerator):
 
         s = self._format_operand_table[i.address_mode](i.operand, i.size - 1)
 
-        if i.is_control_flow:
-            reference = i.unique_reference
-            if reference:
+        reference = i.unique_reference
+        if reference:
+            label = registers.get(reference)
+            if label is None:
                 label = self._analyzer.label(reference)
-                if label:
-                    # FIXME: Hackish...
-                    s = re.sub('0x[a-f0-9]+', label, s)
-                    s = s.replace('B + ', '')
+            if label:
+                # FIXME: Hackish...
+                s = re.sub('0x[a-f0-9]+', label, s)
+                s = s.replace('B + ', '')
 
         return s
 

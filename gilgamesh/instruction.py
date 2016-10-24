@@ -7,6 +7,7 @@ from gilgamesh.opcodes import AddressMode
 from gilgamesh.opcodes import OpcodeCategory
 from gilgamesh.opcodes import opcode_table
 from gilgamesh.opcodes import size_table
+from gilgamesh.registers import registers
 
 
 class ReferenceType(IntEnum):
@@ -168,10 +169,13 @@ class Instruction:
         operand = self._format_operand_table[self.address_mode](self.operand, self.size - 1)
 
         # Convert the address the instruction points to to a label, if there is one:
-        if pretty and self.is_control_flow:
+        if pretty:
             reference = self.unique_reference
             if reference:
-                label = self._analyzer.label(reference)
+                try:
+                    label = '{' + registers.get(reference) + '}'
+                except TypeError:
+                    label = self._analyzer.label(reference)
                 if label:
                     operand = re.sub('\$[A-F0-9]+', label, operand)
 
