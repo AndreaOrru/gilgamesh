@@ -104,8 +104,8 @@ class CGenerator(CodeGenerator):
             return '{}();'.format(self._format_operand(i))
         elif i.is_return:
             return 'return;'
-        elif i.mnemonic in ('inc', 'dec'):
-            return s + '_{}'.format('b(A.l);' if i.m_flag else 'w(A.w);')
+        elif i.mnemonic in ('inc', 'dec') and i.address_mode == AddressMode.IMPLIED_ACCUMULATOR:
+            return s + '_b(A.l);' if i.m_flag else '_w(A.w);'
         elif i.mnemonic in ('inx', 'iny', 'dex', 'dey'):
             reg = s[-1]
             return s[:-1] + 'C_{1}({0}.{2});'.format(reg, *(('b', 'l') if i.x_flag else ('w', 'w')))

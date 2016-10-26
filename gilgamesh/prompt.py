@@ -195,7 +195,7 @@ class Prompt:
         print()
 
     def _print_bytes_c(self, start, count):
-        print('uint8_t array = {', end='')
+        print('uint8_t array[] = {', end='')
 
         for i in range(count):
             byte = self._rom.read_byte(start + i)
