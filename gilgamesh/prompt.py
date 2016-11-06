@@ -1,5 +1,6 @@
 """Command interpreter."""
 
+import readline
 import sys
 from contextlib import redirect_stdout
 
@@ -19,10 +20,10 @@ class Prompt:
 
     def run(self):
         """Run the command interpreter."""
+        readline.parse_and_bind('')
 
         while True:
-            print('>>> ', end='')
-            line = input().strip()
+            line = input('>>> ').strip()
 
             # Redirect output to a file:
             try:
