@@ -35,9 +35,11 @@ struct Register
 {
     union
     {
-        uint16_t w = 0;
+        uint16_t w;
         struct { uint8_t l, h; };
     };
+
+    Register(uint16_t w = 0) : w(w) {}
 
     inline operator unsigned() const { return w; }
     inline auto operator   = (unsigned i) -> unsigned { return w   = i; }
@@ -88,7 +90,7 @@ alwaysinline uint8_t& mem_b(uint32_t i)
         return mem[i];
 
     // TODO: Raise an exception.
-    return mem[0];
+    return mem[0xFFFE];
 }
 
 alwaysinline uint16_t& mem_w(uint32_t i)
@@ -101,7 +103,7 @@ alwaysinline uint16_t& mem_w(uint32_t i)
         return *((uint16_t*)&mem[i]);
 
     // TODO: Raise an exception.
-    return *((uint16_t*)&mem[0]);
+    return *((uint16_t*)&mem[0xFFFE]);
 }
 
 alwaysinline uint24_t& mem_l(uint32_t i)
@@ -114,7 +116,7 @@ alwaysinline uint24_t& mem_l(uint32_t i)
         return *((uint24_t*)&mem[i]);
 
     // TODO: Raise an exception.
-    return *((uint24_t*)&mem[0]);
+    return *((uint24_t*)&mem[0xFFFE]);
 }
 
 #define BCS(l)  if  (P.c) goto l
