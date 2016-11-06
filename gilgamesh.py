@@ -3,7 +3,6 @@
 """Gilgamesh, the definitive reverse engineering tool for SNES."""
 
 import argparse
-import sys
 
 from gilgamesh.analyzer import Analyzer
 from gilgamesh.database import Database
@@ -19,8 +18,7 @@ if __name__ == '__main__':
 
     database = Database(args.database)
     rom = ROM(args.rom)
-
     analyzer = Analyzer(database)
-    prompt = Prompt(analyzer, rom)
 
+    prompt = Prompt(analyzer, rom)
     prompt.run()
