@@ -1,9 +1,12 @@
+# pylint: disable=too-few-public-methods
+"Interface for code generators."
+
 from abc import ABC
 from abc import abstractmethod
 
 
 class CodeGenerator(ABC):
-    """Interface for a code generator."""
+    """Interface for code generators."""
 
     def __init__(self, analyzer, rom):
         self._analyzer = analyzer

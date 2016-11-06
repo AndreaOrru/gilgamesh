@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=C0103
 """Gilgamesh, the definitive reverse engineering tool for SNES."""
 
 import argparse

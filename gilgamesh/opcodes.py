@@ -1,3 +1,5 @@
+"""Opcode tables."""
+
 from collections import namedtuple
 from enum import Enum
 from enum import IntEnum

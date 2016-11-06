@@ -1,3 +1,5 @@
+"""Name of SNES hardware registers."""
+
 registers = {
     0x2100: 'INIDISP',
     0x2101: 'OBSEL',

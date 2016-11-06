@@ -1,3 +1,5 @@
+"""Database abstraction."""
+
 import sqlite3
 from collections import namedtuple
 from enum import Enum
@@ -79,7 +81,8 @@ class Database:
         Returns:
             An iterator over all the instruction rows in the range.
         """
-        instructions = self._c.execute('SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
+        instructions = self._c.execute(
+            'SELECT * FROM instructions WHERE pc >= ? AND pc <= ?', (start, end))
         return instructions.fetchall()
 
     def vectors(self):
@@ -100,9 +103,11 @@ class Database:
             An iterator over all the referenced addresses.
         """
         if typ is None:
-            references = self._c.execute('SELECT pointee FROM references_ WHERE pointer=?', (address,))
+            references = self._c.execute(
+                'SELECT pointee FROM references_ WHERE pointer=?', (address,))
         else:
-            references = self._c.execute('SELECT pointee FROM references_ WHERE pointer=? AND type=?', (address, typ))
+            references = self._c.execute(
+                'SELECT pointee FROM references_ WHERE pointer=? AND type=?', (address, typ))
         return (x.pointee for x in references.fetchall())
 
     def referenced_by(self, address, typ=None):
@@ -116,9 +121,11 @@ class Database:
             An iterator over all the addresses that point to the given address.
         """
         if typ is None:
-            referenced_by = self._c.execute('SELECT pointer FROM references_ WHERE pointee=?', (address,))
+            referenced_by = self._c.execute(
+                'SELECT pointer FROM references_ WHERE pointee=?', (address,))
         else:
-            referenced_by = self._c.execute('SELECT pointer FROM references_ WHERE pointee=? AND type=?', (address, typ))
+            referenced_by = self._c.execute(
+                'SELECT pointer FROM references_ WHERE pointee=? AND type=?', (address, typ))
         return (x.pointer for x in referenced_by.fetchall())
 
     def _referenced_by_category(self, category):

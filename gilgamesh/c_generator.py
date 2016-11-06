@@ -1,4 +1,4 @@
-# flake8: noqa
+# pylint: disable=bad-whitespace
 
 import re
 
@@ -58,7 +58,8 @@ class CGenerator(CodeGenerator):
 
         return buffer
 
-    def _compile_prototype(self, function):
+    @staticmethod
+    def _compile_prototype(function):
         return 'void {}();\n'.format(function[0].first.label)
 
     def _compile_function(self, function):
@@ -144,7 +145,8 @@ class CGenerator(CodeGenerator):
 
         return s
 
-    def _compile_prologue(self):
+    @staticmethod
+    def _compile_prologue():
         return """#include "snes.hpp"
 #include "w65816.hpp"
 

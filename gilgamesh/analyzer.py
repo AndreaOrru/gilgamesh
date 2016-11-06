@@ -1,7 +1,10 @@
-from bidict import bidict
+"""Static analyzer."""
+
 from collections import defaultdict
 from collections import OrderedDict
 from enum import Enum
+
+from bidict import bidict
 
 from gilgamesh.block import Block
 from gilgamesh.database import VectorType
@@ -166,7 +169,7 @@ class Analyzer:
         Returns:
             A list of all the functions.
         """
-        blocks, edges, inv_edges = self.flow_graph()
+        blocks, edges, _ = self.flow_graph()
         subroutines = self.labels({LabelType.SUBROUTINE, LabelType.VECTOR})
 
         functions = []
@@ -175,7 +178,8 @@ class Analyzer:
 
         return functions
 
-    def _bfs(self, edges, start):
+    @staticmethod
+    def _bfs(edges, start):
         """Run BFS on a Control Flow Graph.
 
         Args:

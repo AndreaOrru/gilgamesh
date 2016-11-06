@@ -1,3 +1,5 @@
+"""Basic block of instructions."""
+
 class Block:
     """A basic block of instructions that are always executed exactly once, in order.
 

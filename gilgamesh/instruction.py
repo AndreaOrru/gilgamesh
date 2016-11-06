@@ -1,4 +1,5 @@
-# flake8: noqa
+# pylint: disable=bad-whitespace
+"""CPU instruction."""
 
 import re
 from enum import IntEnum
@@ -173,6 +174,6 @@ class Instruction:
             if reference:
                 label = self._analyzer.label(reference)
                 if label:
-                    operand = re.sub('\$[A-F0-9]+', label, operand)
+                    operand = re.sub(r'\$[A-F0-9]+', label, operand)
 
         return operand

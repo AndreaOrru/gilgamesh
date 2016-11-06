@@ -1,3 +1,5 @@
+"""Minimal abstraction of a R65816 processor."""
+
 from ctypes import c_int8, c_int16
 
 from gilgamesh.instruction import Instruction

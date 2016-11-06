@@ -1,3 +1,5 @@
+"""Super Nintendo ROM."""
+
 class ROM:
     """Super Nintendo ROM abstraction."""
 

@@ -1,3 +1,5 @@
+"""SNES code generator."""
+
 import re
 from collections import namedtuple
 from itertools import groupby
@@ -76,7 +78,7 @@ class SNESGenerator(CodeGenerator):
                 # Otherwise just print sequences of 16 bytes:
                 for values in grouper(group, 0x10):
                     s += 'db '
-                    s += ', '.join(map(lambda v: '${:02X}'.format(v), values))
+                    s += ', '.join(('${:02X}'.format(v) for v in values))
                     s += '\n'
 
         return s
@@ -100,14 +102,15 @@ class SNESGenerator(CodeGenerator):
 
         return s
 
-    def _format_instruction(self, i):
+    @staticmethod
+    def _format_instruction(i):
         s = i.format()
 
         reference = i.unique_reference
         if reference:
             register = registers.get(reference)
             if register:
-                s = re.sub('\$[A-F0-9]+', '{' + register + '}', s)
+                s = re.sub(r'\$[A-F0-9]+', '{' + register + '}', s)
                 if i.size == 4:
                     s = s.replace(i.mnemonic, i.mnemonic + '.l')
 

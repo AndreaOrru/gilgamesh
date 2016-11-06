@@ -1,3 +1,5 @@
+"""Generic utility functions."""
+
 from itertools import tee
 from itertools import zip_longest
 
