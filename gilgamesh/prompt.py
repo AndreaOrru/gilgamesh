@@ -188,14 +188,6 @@ class Prompt:
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
     def _print_bytes(self, address, end='+1', c_array=False):
-        """Print a hex dump of a region of memory.
-
-        Args:
-            address: The initial address of the region.
-
-        Returns:
-
-        """
         address = self._unhex(address)
         if end[0] != '+':
             count = self._unhex(end) - address
