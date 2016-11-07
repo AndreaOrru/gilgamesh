@@ -68,7 +68,6 @@ class Prompt:
             'dma': lambda: self._print_dma_transfers(),
             'ib':  lambda: self._print_incomplete_branches(),
             'b':   lambda: self._print_bytes(*parameters),
-            'bc':  lambda: self._print_bytes(*parameters, c_array=True),
             'e':   lambda: self._emulate_incomplete_branches(*parameters),
             'f':   lambda: self._print_functions(),
             'fg':  lambda: self._print_flow_graph(),
@@ -105,8 +104,7 @@ class Prompt:
   v                Vectors
 
   dma              DMA transfers
-  b  [START] [(+SIZE)|END]  Bytes
-  bc [START] [(+SIZE)|END]  Bytes as C array
+  b [START] [(+SIZE)|END]  Bytes
 
   a                Analyze
   e                Emulate
@@ -187,15 +185,12 @@ class Prompt:
         for branch in sorted(self._analyzer.incomplete_branches()):
             print('${:06X}    {} -> ${:06X}'.format(branch.pc, str(branch), branch.unique_reference))
 
-    def _print_bytes(self, address, end='+1', c_array=False):
+    def _print_bytes(self, address, end='+1'):
         address = self._unhex(address)
         if end[0] != '+':
             count = self._unhex(end) - address
         else:
             count = self._unhex(end)
-
-        if c_array:
-            return self._print_bytes_c(address, count)
 
         for i in range(count):
             byte = self._rom.read_byte(address + i)
@@ -203,18 +198,6 @@ class Prompt:
                 print('{}${:06X}    '.format('\n' if i != 0 else '', address + i), end='')
             print('{:02X}'.format(byte), end=' ')
         print()
-
-    def _print_bytes_c(self, start, count):
-        print('uint8_t array[] = {', end='')
-
-        for i in range(count):
-            byte = self._rom.read_byte(start + i)
-            if (i % 0x10) == 0:
-                print('\n    ', end='')
-            print('0x{:02X}'.format(byte), end=', ')
-
-        print('\n};')
-
 
     def _print_labels(self, types=None):
         for name, address in sorted(self._analyzer.labels(types).items()):
