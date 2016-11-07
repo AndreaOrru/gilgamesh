@@ -88,35 +88,35 @@ class Prompt:
     @staticmethod
     def help():
         print("""List of commands:
-  i    Instructions
-  d    Disassembly
-  dc   Decompilation
+  i [START] [END]  Instructions
+  d                Disassembly
+  dc               Decompilation
 
-  r    References
-  dr   Direct references
-  ir   Indirect references
+  r  ADDRESS       References
+  dr ADDRESS       Direct references
+  ir ADDRESS       Indirect references
 
-  rb   Referenced by
-  drb  Directly referenced by
-  irb  Indirectly referenced by
+  rb  ADDRESS      Referenced by
+  drb ADDRESS      Directly referenced by
+  irb ADDRESS      Indirectly referenced by
 
-  l    Labels
-  s    Subroutines
-  v    Vectors
+  l                Labels
+  s                Subroutines
+  v                Vectors
 
-  dma  DMA transfers
-  b    Bytes
-  bc   Bytes as C array
+  dma              DMA transfers
+  b  [START] [(+SIZE)|END]  Bytes
+  bc [START] [(+SIZE)|END]  Bytes as C array
 
-  a    Analyze
-  e    Emulate
-  ib   Incomplete branches
-  f    Functions
-  fg   Flow graph
+  a                Analyze
+  e                Emulate
+  ib               Incomplete branches
+  f                Functions
+  fg               Flow graph
 
-  w    Write
-  wq   Write and quit
-  q    Quit""")
+  w                Write
+  wq               Write and quit
+  q                Quit""")
 
     def _emulate_incomplete_branches(self):
         # TODO: Move to analyzer.
