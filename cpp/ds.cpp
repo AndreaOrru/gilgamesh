@@ -1,20 +1,40 @@
 #include "ds.hpp"
 
+MapEntry* convertMap(const MapEntry* src, int bytes)
+{
+    MapEntry* dest = new MapEntry[bytes / sizeof(MapEntry)];
 
-uint32_t* convertTiles(uint8_t* src, int bytes)
+    for (int y = 0; y < 16; y++)
+        for (int x = 0; x < 16; x++)
+        {
+            MapEntry e = src[y*32 + x];
+
+            dest[2 * (y*32 + x)]      = e;
+            dest[2 * (y*32 + x) + 1]  = { .tile = (uint8_t)(e.tile + 1),  .attr = e.attr };
+            dest[2 * (y*32 + x) + 32] = { .tile = (uint8_t)(e.tile + 16), .attr = e.attr };
+            dest[2 * (y*32 + x) + 33] = { .tile = (uint8_t)(e.tile + 17), .attr = e.attr };
+        }
+
+    return dest;
+}
+
+uint32_t* convertTiles(const uint8_t* src, int bytes)
 {
     uint32_t* dest = new uint32_t[bytes / 4];
 
-    while (bytes > 0)
+    int i = 0;
+    int j = 0;
+
+    while (i < bytes)
     {
         for (int y = 0; y < 8; y++)
         {
             uint32_t line = 0;
 
-            uint32_t line1 = src[0];       // Plane 1.
-            uint32_t line2 = src[1];       // Plane 2.
-            uint32_t line3 = src[16];      // Plane 3.
-            uint32_t line4 = src[16 + 1];  // Plane 4.
+            uint32_t line1 = src[i + 0];   // Plane 1.
+            uint32_t line2 = src[i + 1];   // Plane 2.
+            uint32_t line3 = src[i + 16];  // Plane 3.
+            uint32_t line4 = src[i + 17];  // Plane 4.
 
             for (int x = 0; x < 8; x++)
             {
@@ -31,11 +51,10 @@ uint32_t* convertTiles(uint8_t* src, int bytes)
                 line4 >>= 1;
             }
 
-            *dest++ = line;
-            src += 2;
+            dest[j++] = line;
+            i += 2;
         }
-
-        bytes -= 16;
+        i += 16;
     }
 
     return dest;
