@@ -1,3 +1,4 @@
+# pylint: disable=unnecessary-lambda
 """Command interpreter."""
 
 import readline
@@ -50,58 +51,72 @@ class Prompt:
             operation: String containing the name of the command.
             parameters: List containing the parameters for the command.
         """
-        if operation == '':
-            return
-        elif operation in ('d', 'disassembly'):
-            self._print_disassembly()
-        elif operation in ('dc', 'decompilation'):
-            self._print_decompilation()
-        elif operation in ('i', 'instructions'):
-            self._print_instructions(*parameters)
-        elif operation in ('dr', 'direct_references'):
-            self._print_references(ReferenceType.DIRECT, *parameters)
-        elif operation in ('ir', 'indirect_references'):
-            self._print_references(ReferenceType.INDIRECT, *parameters)
-        elif operation in ('r', 'references'):
-            self._print_references(*parameters)
-        elif operation in ('drb', 'directly_referenced_by'):
-            self._print_referenced_by(ReferenceType.DIRECT, *parameters)
-        elif operation in ('irb', 'indirectly_referenced_by'):
-            self._print_referenced_by(ReferenceType.INDIRECT, *parameters)
-        elif operation in ('rb', 'referenced_by'):
-            self._print_referenced_by(*parameters)
-        elif operation in ('l', 'labels'):
-            self._print_labels(*parameters)
-        elif operation in ('s', 'subroutines'):
-            self._print_labels(LabelType.SUBROUTINE)
-        elif operation in ('v', 'vectors'):
-            self._print_labels(LabelType.VECTOR)
-        elif operation in ('dma', 'dma_transfers'):
-            self._print_dma_transfers()
-        elif operation in ('ib', 'incomplete_branches'):
-            self._print_incomplete_branches()
-        elif operation in ('b', 'bytes'):
-            self._print_bytes(*parameters)
-        elif operation in ('bc', 'bytes_c_array'):
-            self._print_bytes(*parameters, c_array=True)
-        elif operation in ('e', 'emulate'):
-            self._emulate_incomplete_branches(*parameters)
-        elif operation in ('f', 'functions'):
-            self._print_functions()
-        elif operation in ('fg', 'flow_graph'):
-            self._print_flow_graph()
-        elif operation in ('a', 'analyze'):
-            self._analyzer.analyze()
-        elif operation in ('w', 'write'):
-            self._analyzer.write_database()
-        elif operation == 'wq':
-            self._analyzer.write_database()
-            sys.exit()
-        elif operation in ('q', 'quit'):
-            sys.exit()
+        function = {
+            '':    lambda: None,
+            'd':   lambda: self._print_disassembly(),
+            'dc':  lambda: self._print_decompilation(),
+            'i':   lambda: self._print_instructions(*parameters),
+            'dr':  lambda: self._print_references(ReferenceType.DIRECT, *parameters),
+            'ir':  lambda: self._print_references(ReferenceType.INDIRECT, *parameters),
+            'r':   lambda: self._print_references(*parameters),
+            'drb': lambda: self._print_referenced_by(ReferenceType.DIRECT, *parameters),
+            'irb': lambda: self._print_referenced_by(ReferenceType.INDIRECT, *parameters),
+            'rb':  lambda: self._print_referenced_by(*parameters),
+            'l':   lambda: self._print_labels(*parameters),
+            's':   lambda: self._print_labels(LabelType.SUBROUTINE),
+            'v':   lambda: self._print_labels(LabelType.VECTOR),
+            'dma': lambda: self._print_dma_transfers(),
+            'ib':  lambda: self._print_incomplete_branches(),
+            'b':   lambda: self._print_bytes(*parameters),
+            'bc':  lambda: self._print_bytes(*parameters, c_array=True),
+            'e':   lambda: self._emulate_incomplete_branches(*parameters),
+            'f':   lambda: self._print_functions(),
+            'fg':  lambda: self._print_flow_graph(),
+            'a':   lambda: self._analyzer.analyze(),
+            'h':   lambda: self.help(),
+            'w':   lambda: self._analyzer.write_database(),
+            'wq':  lambda: [self._analyzer.write_database(), sys.exit()],
+            'q':   lambda: sys.exit(),
+        }.get(operation)
+
+        if function:
+            function()
         else:
-            # TODO: raise an exception and catch in self.run.
             sys.stderr.write('ERROR: unknown operation "{}"\n'.format(operation))
+            sys.stderr.write('Type "h" for help.\n')
+
+    @staticmethod
+    def help():
+        print("""List of commands:
+  i    Instructions
+  d    Disassembly
+  dc   Decompilation
+
+  r    References
+  dr   Direct references
+  ir   Indirect references
+
+  rb   Referenced by
+  drb  Directly referenced by
+  irb  Indirectly referenced by
+
+  l    Labels
+  s    Subroutines
+  v    Vectors
+
+  dma  DMA transfers
+  b    Bytes
+  bc   Bytes as C array
+
+  a    Analyze
+  e    Emulate
+  ib   Incomplete branches
+  f    Functions
+  fg   Flow graph
+
+  w    Write
+  wq   Write and quit
+  q    Quit""")
 
     def _emulate_incomplete_branches(self):
         # TODO: Move to analyzer.
