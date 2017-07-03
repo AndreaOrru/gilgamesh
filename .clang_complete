@@ -1,0 +1,8 @@
+-std=c++14
+
+-Wall
+-Wextra
+
+-I/usr/local/opt/qt/include
+-I/usr/local/opt/qt/include/QtGui
+-I/usr/local/opt/qt/include/QtWidgets
