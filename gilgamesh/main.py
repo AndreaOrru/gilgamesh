@@ -2,11 +2,14 @@
 
 import click
 
+from .app import App
+
 
 @click.command()
 @click.argument("rom", type=click.Path(exists=True))
 def run(rom: str):
-    print("Hello, world!")
+    app = App(rom)
+    app.cmdloop()
 
 
 if __name__ == "__main__":
