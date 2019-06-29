@@ -23,6 +23,7 @@ setup(
             "isort",
             "pdbpp",
             "virtualenvwrapper",
+            "pytest",
         ]
     },
 )
