@@ -64,6 +64,8 @@ class CPU:
 
     def call(self, instruction: Instruction) -> None:
         target = instruction.absolute_argument
+        self.log.add_subroutine(target, self.state.p)
+
         cpu = self.copy()
         cpu.subroutine = target
         cpu.pc = target

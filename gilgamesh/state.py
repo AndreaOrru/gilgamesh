@@ -1,11 +1,15 @@
+from typing import Optional
+
 M_BIT = 5
 X_BIT = 4
 
 
 class State:
-    def __init__(self, p=0b0000_0000, m=0, x=0):
-        self.p = p
-        if not p:
+    def __init__(self, p=0b0011_0000, m: Optional[int] = None, x: Optional[int] = None):
+        if (m is None) and (x is None):
+            self.p = p
+        else:
+            assert (m is not None) and (x is not None)
             self.p = m << M_BIT
             self.p |= x << X_BIT
 

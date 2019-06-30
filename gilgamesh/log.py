@@ -1,5 +1,7 @@
 from typing import Dict, List, Set
 
+from sortedcontainers import SortedDict
+
 from .cpu import CPU
 from .instruction import Instruction, InstructionID
 from .rom import ROM
@@ -12,7 +14,8 @@ class Log:
 
         self.instructions: Set[InstructionID] = set()
         self.entry_points: List[InstructionID] = []
-        self.subroutines: Dict[int, Subroutine] = {}
+        self.subroutines: Dict[int, Subroutine] = SortedDict()
+        self.labels: Dict[str, Subroutine] = {}
 
         self.add_subroutine(self.rom.reset_vector, label="reset")
         self.add_subroutine(self.rom.nmi_vector, label="nmi")
@@ -27,10 +30,15 @@ class Log:
         subroutine = self.subroutines[instruction.subroutine]
         subroutine.add_instruction(instruction)
 
-    def add_subroutine(self, pc: int, p: int = 0b0000_0000, label: str = "") -> None:
+    def add_subroutine(self, pc: int, p: int = 0b0011_0000, label: str = "") -> None:
         if not label:
             label = "sub_{:06X}".format(pc)
-        self.subroutines[pc] = Subroutine(pc, label)
+
+        subroutine = self.subroutines.get(pc)
+        if subroutine is None:
+            subroutine = Subroutine(pc, label)
+            self.subroutines[pc] = subroutine
+            self.labels[label] = subroutine
         self.entry_points.append(InstructionID(pc, p, pc))
 
     def is_visited(self, instruction_id: InstructionID) -> bool:

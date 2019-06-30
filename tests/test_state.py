@@ -4,11 +4,11 @@ from gilgamesh.state import State
 
 
 class StateTestCase(TestCase):
-    def test_defaults_to_16bits(self):
+    def test_defaults_to_8bits(self):
         state = State()
-        self.assertEqual(state.m, 0)
-        self.assertEqual(state.x, 0)
-        self.assertEqual(state.p, 0b0000_0000)
+        self.assertEqual(state.m, 1)
+        self.assertEqual(state.x, 1)
+        self.assertEqual(state.p, 0b0011_0000)
 
     def test_sizes(self):
         state = State(0b0011_0000)

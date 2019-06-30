@@ -124,3 +124,80 @@ class Instruction:
     @property
     def is_sep_rep(self) -> bool:
         return self.operation in (Op.SEP, Op.REP)
+
+    @property
+    def argument_string(self) -> str:
+        if self.address_mode == AddressMode.IMPLIED:
+            return ""
+
+        elif self.address_mode == AddressMode.IMPLIED_ACCUMULATOR:
+            return "a"
+
+        assert self.argument is not None
+        assert self.argument_size is not None
+
+        if self.address_mode in (
+            AddressMode.IMMEDIATE_M,
+            AddressMode.IMMEDIATE_X,
+            AddressMode.IMMEDIATE_8,
+        ):
+            return "#${:0{}X}".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode in (
+            AddressMode.RELATIVE,
+            AddressMode.RELATIVE_LONG,
+            AddressMode.DIRECT_PAGE,
+            AddressMode.ABSOLUTE,
+            AddressMode.ABSOLUTE_LONG,
+            AddressMode.STACK_ABSOLUTE,
+        ):
+            return "${:0{}X}".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode in (
+            AddressMode.DIRECT_PAGE_INDEXED_X,
+            AddressMode.ABSOLUTE_INDEXED_X,
+            AddressMode.ABSOLUTE_INDEXED_LONG,
+        ):
+            return "${:0{}X},x".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode in (
+            AddressMode.DIRECT_PAGE_INDEXED_Y,
+            AddressMode.ABSOLUTE_INDEXED_Y,
+        ):
+            return "${:0{}X},y".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode in (
+            AddressMode.DIRECT_PAGE_INDIRECT,
+            AddressMode.ABSOLUTE_INDIRECT,
+            AddressMode.PEI_DIRECT_PAGE_INDIRECT,
+        ):
+            return "(${:0{}X})".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode in (
+            AddressMode.DIRECT_PAGE_INDIRECT_LONG,
+            AddressMode.ABSOLUTE_INDIRECT_LONG,
+        ):
+            return "[${:0{}X}]".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode in (
+            AddressMode.DIRECT_PAGE_INDEXED_INDIRECT,
+            AddressMode.ABSOLUTE_INDEXED_INDIRECT,
+        ):
+            return "(${:0{}X},x)".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode == AddressMode.DIRECT_PAGE_INDIRECT_INDEXED:
+            return "(${:0{}X}),y".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode == AddressMode.DIRECT_PAGE_INDIRECT_INDEXED_LONG:
+            return "[${:0{}X}],y".format(self.argument, self.argument_size * 2)
+
+        elif self.address_mode == AddressMode.STACK_RELATIVE:
+            return "${:02X},s".format(self.argument)
+
+        elif self.address_mode == AddressMode.STACK_RELATIVE_INDIRECT_INDEXED:
+            return "(${:02X},s),y".format(self.argument)
+
+        elif self.address_mode == AddressMode.MOVE:
+            return "{:02X},{:02X}".format(self.argument & 0xFF, self.argument >> 8)
+
+        assert False

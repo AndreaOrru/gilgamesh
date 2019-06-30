@@ -15,10 +15,10 @@ class SimpleTestCase(TestCase):
         self.log = Log(self.rom)
 
     def test_initial_entry_points(self):
-        self.assertIn((0x8000, 0b0000_0000, 0x8000), self.log.entry_points)
+        self.assertIn((0x8000, 0b0011_0000, 0x8000), self.log.entry_points)
         self.assertEqual(self.log.subroutines[0x8000].label, "reset")
 
-        self.assertIn((0x0000, 0b0000_0000, 0x0000), self.log.entry_points)
+        self.assertIn((0x0000, 0b0011_0000, 0x0000), self.log.entry_points)
         self.assertEqual(self.log.subroutines[0x0000].label, "nmi")
 
 

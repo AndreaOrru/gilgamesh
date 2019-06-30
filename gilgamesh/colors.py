@@ -9,5 +9,5 @@ MAGENTA = "\033[35m"
 CYAN = "\033[36m"
 
 
-def print(text: str, *args, **kwargs) -> None:
-    print_formatted_text(HTML(text.format(*args, **kwargs)))
+def print_html(html: str = "") -> None:
+    print_formatted_text(HTML(html))
