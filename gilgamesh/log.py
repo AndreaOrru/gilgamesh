@@ -6,7 +6,7 @@ from .rom import ROM
 from .subroutine import Subroutine
 
 
-class Analysis:
+class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
 
@@ -17,7 +17,7 @@ class Analysis:
         self.add_subroutine(self.rom.reset_vector, label="reset")
         self.add_subroutine(self.rom.nmi_vector, label="nmi")
 
-    def run(self) -> None:
+    def analyze(self) -> None:
         for pc, p, subroutine in self.entry_points:
             cpu = CPU(self, pc, p, subroutine)
             cpu.run()

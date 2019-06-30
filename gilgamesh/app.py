@@ -1,7 +1,7 @@
 from cmd import Cmd
 
-from .analysis import Analysis
 from .colors import NORMAL, YELLOW, print
+from .log import Log
 from .rom import ROM
 
 
@@ -11,7 +11,7 @@ class App(Cmd):
     def __init__(self, rom_path: str):
         super().__init__()
         self.rom = ROM(rom_path)
-        self.analysis = Analysis(self.rom)
+        self.log = Log(self.rom)
 
     def do_rom(self, _):
         """Show general information on the ROM."""
@@ -24,7 +24,16 @@ class App(Cmd):
 
     def do_analyze(self, _):
         """Run the analysis on the ROM."""
-        self.analysis.run()
+        self.log.analyze()
+
+    def do_subroutines(self, _):
+        """List all known subroutines."""
+        for subroutine in self.log.subroutines.values():
+            print("${:06X}  <green>{}</green>", subroutine.pc, subroutine.label)
+
+    def do_debug(self, _) -> None:
+        """Debug Gilgamesh itself."""
+        breakpoint()  # noqa
 
     def do_EOF(self, _) -> bool:
         """Quit the application."""

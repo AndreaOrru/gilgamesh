@@ -6,9 +6,9 @@ from .state import State
 
 
 class CPU:
-    def __init__(self, analysis, pc: int, p: int, subroutine: int):
-        self.analysis = analysis
-        self.rom = analysis.rom
+    def __init__(self, log, pc: int, p: int, subroutine: int):
+        self.log = log
+        self.rom = log.rom
         self.pc = pc
         self.state = State(p)
         self.subroutine = subroutine
@@ -30,14 +30,14 @@ class CPU:
     def step(self) -> bool:
         if self.is_ram(self.pc):
             return False
-        if self.analysis.is_visited(self.instruction_id):
+        if self.log.is_visited(self.instruction_id):
             return False
 
         opcode = self.rom.read_byte(self.pc)
         argument = self.rom.read_address(self.pc + 1)
 
         instruction = Instruction(*self.instruction_id, opcode, argument)
-        self.analysis.add_instruction(instruction)
+        self.log.add_instruction(instruction)
 
         return self.execute(instruction)
 
