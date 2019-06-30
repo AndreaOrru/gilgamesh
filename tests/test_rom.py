@@ -40,7 +40,7 @@ class ROMTestCase(ABC):
         self.assertListEqual(self.rom.read(0xFFC0, 4), [ord(x) for x in "TEST"])
 
 
-class LoROMTest(ROMTestCase, TestCase):
+class LoROMTestCase(ROMTestCase, TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rom = ROM(assemble("lorom.asm"))
@@ -54,7 +54,7 @@ class LoROMTest(ROMTestCase, TestCase):
         self.assertEqual(self.rom._translate(0x808000), 0x000000)
 
 
-class HiROMTest(ROMTestCase, TestCase):
+class HiROMTestCase(ROMTestCase, TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rom = ROM(assemble("hirom.asm"))
