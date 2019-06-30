@@ -34,7 +34,8 @@ class LoopTestCase(TestCase):
         self.log.analyze()
         self.assertEqual(len(self.log.instructions), 1)
 
-        instruction = self.log.instructions.popitem()[1]
+        subroutine = self.log.subroutines[0x8000]
+        instruction = subroutine.instructions.popitem()[1]
         self.assertEqual(instruction.pc, 0x8000)
         self.assertEqual(instruction.name, "jmp")
         self.assertEqual(instruction.absolute_argument, 0x8000)

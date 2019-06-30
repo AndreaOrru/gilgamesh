@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from .cpu import CPU
 from .instruction import Instruction, InstructionID
@@ -10,7 +10,7 @@ class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
 
-        self.instructions: Dict[InstructionID, Instruction] = {}
+        self.instructions: Set[InstructionID] = set()
         self.entry_points: List[InstructionID] = []
         self.subroutines: Dict[int, Subroutine] = {}
 
@@ -23,7 +23,9 @@ class Log:
             cpu.run()
 
     def add_instruction(self, instruction: Instruction) -> None:
-        self.instructions[instruction.id] = instruction
+        self.instructions.add(instruction.id)
+        subroutine = self.subroutines[instruction.subroutine]
+        subroutine.add_instruction(instruction)
 
     def add_subroutine(self, pc: int, p: int = 0b0000_0000, label: str = "") -> None:
         if not label:
