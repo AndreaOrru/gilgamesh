@@ -63,14 +63,16 @@ class App(Cmd):
         print_html(s)
 
     def do_disassembly(self, _) -> None:
-        s = ""
+        s = f"<red>{self.subroutine}</red>:\n"
         subroutine = self.log.labels[self.subroutine]
         for pc, instruction in subroutine.instructions.items():
-            disassembly = "<green>{}</green> {:16}".format(
-                instruction.name, instruction.argument_string, pc
-            )
+            operation = "<green>{:4}</green>".format(instruction.name)
+            if instruction.argument_alias:
+                argument = "<red>{:16}</red>".format(instruction.argument_alias)
+            else:
+                argument = "{:16}".format(instruction.argument_string)
             comment = "<grey>; ${:06X}</grey>".format(pc)
-            s += f"{disassembly}{comment}\n"
+            s += f"  {operation}{argument}{comment}\n"
         print_html(s)
 
     def do_debug(self, _) -> None:

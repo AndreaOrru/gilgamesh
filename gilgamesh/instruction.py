@@ -9,7 +9,10 @@ InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
 
 
 class Instruction:
-    def __init__(self, pc: int, p: int, subroutine: int, opcode: int, argument: int):
+    def __init__(
+        self, log, pc: int, p: int, subroutine: int, opcode: int, argument: int
+    ):
+        self.log = log
         self.pc = pc
         self.state = State(p)
         self.subroutine = subroutine
@@ -201,3 +204,14 @@ class Instruction:
             return "{:02X},{:02X}".format(self.argument & 0xFF, self.argument >> 8)
 
         assert False
+
+    @property
+    def argument_alias(self) -> Optional[str]:
+        if self.is_control:
+            target = self.absolute_argument
+            if target is not None:
+                try:
+                    return self.log.subroutines[target].label
+                except KeyError:
+                    return None
+        return None
