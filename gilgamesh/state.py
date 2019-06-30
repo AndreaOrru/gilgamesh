@@ -3,10 +3,11 @@ X_BIT = 4
 
 
 class State:
-    def __init__(self, m=0, x=0):
-        self.p = 0b0000_0000
-        self.p |= m << M_BIT
-        self.p |= x << X_BIT
+    def __init__(self, p=0b0000_0000, m=0, x=0):
+        self.p = p
+        if not p:
+            self.p = m << M_BIT
+            self.p |= x << X_BIT
 
     @property
     def m(self) -> int:
@@ -23,3 +24,12 @@ class State:
     @property
     def x_size(self) -> int:
         return 1 if self.x else 2
+
+    def set(self, p: int) -> None:
+        p &= (1 << M_BIT) | (1 << X_BIT)
+        self.p |= p
+
+    def reset(self, p: int) -> None:
+        p &= (1 << M_BIT) | (1 << X_BIT)
+        p = ~p & 0xFF
+        self.p &= p

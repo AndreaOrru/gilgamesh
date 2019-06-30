@@ -28,7 +28,7 @@ class ROMTestCase(ABC):
         self.assertEqual(self.rom.reset_vector, 0x8000)
 
     def test_nmi_vector(self):
-        self.assertEqual(self.rom.nmi_vector, 0x9000)
+        self.assertEqual(self.rom.nmi_vector, 0x0000)
 
     def test_read(self):
         byte = ord("T")

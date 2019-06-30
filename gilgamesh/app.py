@@ -1,5 +1,6 @@
 from cmd import Cmd
 
+from .analysis import Analysis
 from .colors import NORMAL, YELLOW, print
 from .rom import ROM
 
@@ -10,6 +11,7 @@ class App(Cmd):
     def __init__(self, rom_path: str):
         super().__init__()
         self.rom = ROM(rom_path)
+        self.analysis = Analysis(self.rom)
 
     def do_rom(self, _):
         """Show general information on the ROM."""
@@ -19,6 +21,10 @@ class App(Cmd):
         print("<green>Vectors:</green>")
         print("  <green>RESET:</green>  ${:06X}", self.rom.reset_vector)
         print("  <green>NMI:</green>    ${:06X}", self.rom.nmi_vector)
+
+    def do_analyze(self, _):
+        """Run the analysis on the ROM."""
+        self.analysis.run()
 
     def do_EOF(self, _) -> bool:
         """Quit the application."""

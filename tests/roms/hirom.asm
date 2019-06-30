@@ -23,7 +23,7 @@ rom_size:
 
 org $C0FFEA
 nmi_vector:
-  dw $9000
+  dw $0000
 
 org $C0FFFC
 reset_vector:
