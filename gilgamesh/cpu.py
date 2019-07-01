@@ -46,12 +46,12 @@ class CPU:
 
         if instruction.is_return:
             return False
+        elif instruction.is_call:
+            return self.call(instruction)
         elif instruction.is_jump:
-            self.jump(instruction)
+            return self.jump(instruction)
         elif instruction.is_branch:
             self.branch(instruction)
-        elif instruction.is_call:
-            self.call(instruction)
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
 
@@ -65,8 +65,10 @@ class CPU:
         cpu.pc = target
         cpu.run()
 
-    def call(self, instruction: Instruction) -> None:
+    def call(self, instruction: Instruction) -> bool:
         target = instruction.absolute_argument
+        if target is None:
+            return False
         self.log.add_reference(instruction.pc, target)
         self.log.add_subroutine(target, self.state.p)
 
@@ -74,11 +76,15 @@ class CPU:
         cpu.subroutine = target
         cpu.pc = target
         cpu.run()
+        return True
 
-    def jump(self, instruction: Instruction) -> None:
+    def jump(self, instruction: Instruction) -> bool:
         target = instruction.absolute_argument
+        if target is None:
+            return False
         self.log.add_reference(instruction.pc, target)
         self.pc = target
+        return True
 
     def sep_rep(self, instruction: Instruction) -> None:
         if instruction.operation == Op.SEP:
