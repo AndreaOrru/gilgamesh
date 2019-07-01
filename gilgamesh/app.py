@@ -37,7 +37,8 @@ class App(Cmd):
         self.log.analyze()
 
     def complete_subroutine(self, text: str, *args) -> List[str]:
-        return [x for x in self.log.subroutines_by_label if x.startswith(text)]
+        text = text.lower()
+        return [x for x in self.log.subroutines_by_label if x.lower().startswith(text)]
 
     def do_subroutine(self, label: str) -> None:
         """Select which subroutine to inspect."""
