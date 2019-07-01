@@ -58,12 +58,16 @@ class CPU:
         return True
 
     def branch(self, instruction: Instruction) -> None:
+        target = instruction.absolute_argument
+        self.log.add_reference(instruction.pc, target)
+
         cpu = self.copy()
-        cpu.pc = instruction.absolute_argument
+        cpu.pc = target
         cpu.run()
 
     def call(self, instruction: Instruction) -> None:
         target = instruction.absolute_argument
+        self.log.add_reference(instruction.pc, target)
         self.log.add_subroutine(target, self.state.p)
 
         cpu = self.copy()
@@ -72,7 +76,9 @@ class CPU:
         cpu.run()
 
     def jump(self, instruction: Instruction) -> None:
-        self.pc = instruction.absolute_argument
+        target = instruction.absolute_argument
+        self.log.add_reference(instruction.pc, target)
+        self.pc = target
 
     def sep_rep(self, instruction: Instruction) -> None:
         if instruction.operation == Op.SEP:

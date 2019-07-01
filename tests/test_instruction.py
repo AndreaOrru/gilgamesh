@@ -8,8 +8,8 @@ class InstructionTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         instruction_id = InstructionID(pc=0x000000, p=0b0000_0000, subroutine=0x000000)
-        cls.brl = Instruction(*instruction_id, opcode=0x82, argument=0xFFFD)
-        cls.lda = Instruction(*instruction_id, opcode=0xA9, argument=0x1234)
+        cls.brl = Instruction(None, *instruction_id, opcode=0x82, argument=0xFFFD)
+        cls.lda = Instruction(None, *instruction_id, opcode=0xA9, argument=0x1234)
 
     def test_name(self):
         self.assertEqual(self.brl.name, "brl")

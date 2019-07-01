@@ -4,6 +4,7 @@ from typing import List, Optional
 from .colors import NORMAL, YELLOW, print_html
 from .log import Log
 from .rom import ROM
+from .subroutine import Subroutine
 
 
 class App(Cmd):
@@ -13,11 +14,11 @@ class App(Cmd):
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
 
-        self.subroutine: Optional[str] = None
+        self.subroutine: Optional[Subroutine] = None
 
     @property
     def prompt(self) -> str:  # noqa
-        prompt = "" if (self.subroutine is None) else f"[{self.subroutine}]"
+        prompt = "" if (self.subroutine is None) else f"[{self.subroutine.label}]"
         return f"{YELLOW}{prompt}>{NORMAL} "
 
     def do_rom(self, _) -> None:
@@ -36,16 +37,16 @@ class App(Cmd):
         self.log.analyze()
 
     def complete_subroutine(self, text: str, *args) -> List[str]:
-        return [x for x in self.log.labels.keys() if x.startswith(text)]
+        return [x for x in self.log.labels if x.startswith(text)]
 
-    def do_subroutine(self, arg: str) -> None:
+    def do_subroutine(self, label: str) -> None:
         """Select which subroutine to inspect."""
-        if not arg:
+        if not label:
             self.subroutine = None
-        elif arg in self.log.labels:
-            self.subroutine = arg
+        elif label in self.log.subroutines_by_label:
+            self.subroutine = self.log.subroutines_by_label[label]
         else:
-            print('*** No subroutine named "{}"', arg)
+            print('*** No subroutine named "{}"', label)
 
     def complete_list(self, *args) -> List[str]:
         return ["subroutines"]
@@ -63,9 +64,14 @@ class App(Cmd):
         print_html(s)
 
     def do_disassembly(self, _) -> None:
-        s = f"<red>{self.subroutine}</red>:\n"
-        subroutine = self.log.labels[self.subroutine]
-        for pc, instruction in subroutine.instructions.items():
+        if not self.subroutine:
+            return print("*** No selected subroutine")
+
+        s = ""
+        for pc, instruction in self.subroutine.instructions.items():
+            label = self.log.labels_by_pc.get(pc)
+            if label:
+                s += f"<red>{label}</red>:\n"
             operation = "<green>{:4}</green>".format(instruction.name)
             if instruction.argument_alias:
                 argument = "<red>{:16}</red>".format(instruction.argument_alias)

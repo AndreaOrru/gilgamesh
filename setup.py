@@ -10,7 +10,7 @@ setup(
     author_email="andrea@orru.io",
     packages=find_packages(),
     python_requires=">=3.7",
-    install_requires=["click", "prompt-toolkit", "sortedcontainers"],
+    install_requires=["bidict", "click", "prompt-toolkit", "sortedcontainers"],
     extras_require={
         "dev": [
             "autoflake",

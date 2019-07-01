@@ -210,8 +210,5 @@ class Instruction:
         if self.is_control:
             target = self.absolute_argument
             if target is not None:
-                try:
-                    return self.log.subroutines[target].label
-                except KeyError:
-                    return None
+                return self.log.labels_by_pc.get(target)
         return None
