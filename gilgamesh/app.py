@@ -41,7 +41,10 @@ class App(Cmd):
         return [x for x in self.log.subroutines_by_label if x.lower().startswith(text)]
 
     def do_subroutine(self, label: str) -> None:
-        """Select which subroutine to inspect."""
+        """Usage: subroutine LABEL
+
+  Select which subroutine to inspect.
+        """
         if not label:
             self.subroutine = None
         elif label in self.log.subroutines_by_label:
@@ -53,6 +56,13 @@ class App(Cmd):
         return ["subroutines"]
 
     def do_list(self, arg: str) -> None:
+        """Usage: list COMMAND
+
+  List entities.
+
+Commands:
+  subroutines  List all subroutines.
+        """
         if arg == "subroutines":
             self._do_list_subroutines()
         else:
@@ -65,6 +75,7 @@ class App(Cmd):
         print_html(s)
 
     def do_disassembly(self, _) -> None:
+        """Show disassembly of selected subroutine."""
         if not self.subroutine:
             return print("*** No selected subroutine")
 
