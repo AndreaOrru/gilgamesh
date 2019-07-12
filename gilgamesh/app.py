@@ -1,9 +1,9 @@
-from typing import Iterable, Optional
+from typing import List, Optional
 
 from prompt_toolkit import HTML
 
 from .log import Log
-from .repl import Repl, argument, command, print_html
+from .repl import Repl, argument, command, print_error, print_html
 from .rom import ROM
 from .subroutine import Subroutine
 
@@ -23,8 +23,15 @@ class App(Repl):
             return super().prompt
         return HTML("<yellow>" + f"[{self.subroutine.label}]> " + "</yellow>")
 
-    def complete_subroutine(self) -> Iterable[str]:
-        return self.log.subroutines_by_label.keys()
+    def complete_subroutine(self) -> List[str]:
+        return sorted(self.log.subroutines_by_label.keys())
+
+    def complete_label(self) -> List[str]:
+        subroutines = self.complete_subroutine()
+        if not self.subroutine:
+            return subroutines
+        local_labels = sorted(self.subroutine.local_labels.keys())
+        return local_labels + subroutines
 
     @command
     def do_analyze(self) -> None:
@@ -35,11 +42,11 @@ class App(Repl):
     def do_disassembly(self) -> None:
         """Show disassembly of selected subroutine."""
         if not self.subroutine:
-            return self.error("No selected subroutine.")
+            return print_error("No selected subroutine.")
 
         s = ""
         for pc, instruction in self.subroutine.instructions.items():
-            label = self.log.labels_by_pc.get(pc)
+            label = self.log.get_label(pc, self.subroutine.pc)
             if label:
                 s += f"<red>{label}</red>:\n"
             operation = "<green>{:4}</green>".format(instruction.name)
@@ -65,6 +72,13 @@ class App(Repl):
         print_html(s)
 
     @command
+    @argument("old", complete_label)
+    @argument("new")
+    def do_rename(self, old: str, new: str) -> None:
+        """Rename a label or subroutine."""
+        self.log.rename_label(old, new, self.subroutine and self.subroutine.pc)
+
+    @command
     def do_rom(self) -> None:
         """Show general information on the ROM."""
         s = ""
@@ -85,4 +99,4 @@ class App(Repl):
         elif label in self.log.subroutines_by_label:
             self.subroutine = self.log.subroutines_by_label[label]
         else:
-            self.error("No such subroutine.")
+            print_error("No such subroutine.")

@@ -59,7 +59,7 @@ class CPU:
 
     def branch(self, instruction: Instruction) -> None:
         target = instruction.absolute_argument
-        self.log.add_reference(instruction.pc, target)
+        self.log.add_reference(instruction, target)
 
         cpu = self.copy()
         cpu.pc = target
@@ -69,7 +69,7 @@ class CPU:
         target = instruction.absolute_argument
         if target is None:
             return False
-        self.log.add_reference(instruction.pc, target)
+        self.log.add_reference(instruction, target)
         self.log.add_subroutine(target, self.state.p)
 
         cpu = self.copy()
@@ -82,7 +82,7 @@ class CPU:
         target = instruction.absolute_argument
         if target is None:
             return False
-        self.log.add_reference(instruction.pc, target)
+        self.log.add_reference(instruction, target)
         self.pc = target
         return True
 

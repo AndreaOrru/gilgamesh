@@ -86,6 +86,10 @@ class Instruction:
         return None
 
     @property
+    def label(self) -> Optional[str]:
+        return self.log.get_label(self.pc, self.subroutine)
+
+    @property
     def is_branch(self) -> bool:
         return self.operation in (
             Op.BCC,
@@ -210,5 +214,5 @@ class Instruction:
         if self.is_control:
             target = self.absolute_argument
             if target is not None:
-                return self.log.labels_by_pc.get(target)
+                return self.log.get_label(target, self.subroutine)
         return None
