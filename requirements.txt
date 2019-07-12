@@ -1,0 +1,5 @@
+bidict
+cached-property
+click
+git+https://github.com/prompt-toolkit/python-prompt-toolkit.git@nested-completer
+sortedcontainers

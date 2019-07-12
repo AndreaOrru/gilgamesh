@@ -1,0 +1,11 @@
+autoflake
+black
+bpython
+epc
+flake8
+flake8-mypy
+importmagic
+isort
+pdbpp
+pytest
+virtualenvwrapper

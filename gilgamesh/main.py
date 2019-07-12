@@ -9,8 +9,8 @@ from .app import App
 @click.argument("rom", type=click.Path(exists=True))
 def run(rom: str):
     app = App(rom)
-    app.cmdloop()
+    app.run()
 
 
 if __name__ == "__main__":
-    run()
+    run(prog_name="gilgamesh")
