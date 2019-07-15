@@ -4,7 +4,7 @@ from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
 
 
-class InstructionTestCase(TestCase):
+class InstructionTest(TestCase):
     @classmethod
     def setUpClass(cls):
         instruction_id = InstructionID(pc=0x000000, p=0b0000_0000, subroutine=0x000000)

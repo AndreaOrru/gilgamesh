@@ -1,3 +1,4 @@
+from abc import ABC
 from unittest import TestCase
 
 from gilgamesh.log import Log
@@ -6,13 +7,18 @@ from gilgamesh.rom import ROM
 from .test_rom import assemble
 
 
-class SimpleTestCase(TestCase):
+class LogTest(ABC):
     @classmethod
     def setUpClass(cls):
-        cls.rom = ROM(assemble("lorom.asm"))
+        cls.rom = ROM(assemble(cls.asm))
 
     def setUp(self):
         self.log = Log(self.rom)
+        self.log.analyze()
+
+
+class LoROMTest(LogTest, TestCase):
+    asm = "lorom.asm"
 
     def test_initial_entry_points(self):
         self.assertIn((0x8000, 0b0011_0000, 0x8000), self.log.entry_points)
@@ -22,14 +28,8 @@ class SimpleTestCase(TestCase):
         self.assertEqual(self.log.subroutines[0x0000].label, "nmi")
 
 
-class LoopTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rom = ROM(assemble("infinite_loop.asm"))
-
-    def setUp(self):
-        self.log = Log(self.rom)
-        self.log.analyze()
+class InfiniteLoopTest(LogTest, TestCase):
+    asm = "infinite_loop.asm"
 
     def test_instructions(self):
         self.assertEqual(len(self.log.instructions), 1)
@@ -41,14 +41,8 @@ class LoopTestCase(TestCase):
         self.assertEqual(instruction.absolute_argument, 0x8000)
 
 
-class StateChangeTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rom = ROM(assemble("state_change.asm"))
-
-    def setUp(self):
-        self.log = Log(self.rom)
-        self.log.analyze()
+class StateChangeTest(LogTest, TestCase):
+    asm = "state_change.asm"
 
     def test_instructions(self):
         self.assertEqual(len(self.log.instructions), 7)
@@ -73,14 +67,8 @@ class StateChangeTestCase(TestCase):
         self.assertEqual(ldx.argument_size, 2)
 
 
-class ElidableStateChangeTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rom = ROM(assemble("elidable_state_change.asm"))
-
-    def setUp(self):
-        self.log = Log(self.rom)
-        self.log.analyze()
+class ElidableStateChangeTest(LogTest, TestCase):
+    asm = "elidable_state_change.asm"
 
     def test_instructions(self):
         self.assertEqual(len(self.log.instructions), 10)
@@ -94,14 +82,8 @@ class ElidableStateChangeTestCase(TestCase):
         self.assertEqual(change.x, None)
 
 
-class JumpInsideSubroutineTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rom = ROM(assemble("jump_inside_subroutine.asm"))
-
-    def setUp(self):
-        self.log = Log(self.rom)
-        self.log.analyze()
+class JumpInsideSubroutineTest(LogTest, TestCase):
+    asm = "jump_inside_subroutine.asm"
 
     def test_sub_state_change(self):
         sub = self.log.subroutines[0x8016]

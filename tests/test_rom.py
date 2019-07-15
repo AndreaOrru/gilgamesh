@@ -22,7 +22,7 @@ def assemble(filename: str) -> str:
     return rom
 
 
-class ROMTestCase(ABC):
+class ROMTest(ABC):
     def test_size(self):
         self.assertEqual(self.rom.size, 2048)
 
@@ -45,7 +45,7 @@ class ROMTestCase(ABC):
         self.assertListEqual(self.rom.read(0xFFC0, 4), [ord(x) for x in "TEST"])
 
 
-class LoROMTestCase(ROMTestCase, TestCase):
+class LoROMTest(ROMTest, TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rom = ROM(assemble("lorom.asm"))
@@ -59,7 +59,7 @@ class LoROMTestCase(ROMTestCase, TestCase):
         self.assertEqual(self.rom._translate(0x808000), 0x000000)
 
 
-class HiROMTestCase(ROMTestCase, TestCase):
+class HiROMTest(ROMTest, TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rom = ROM(assemble("hirom.asm"))

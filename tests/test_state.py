@@ -3,7 +3,7 @@ from unittest import TestCase
 from gilgamesh.state import State, StateChange
 
 
-class StateTestCase(TestCase):
+class StateTest(TestCase):
     def test_repr(self):
         state = State(m=1, x=1)
         self.assertEqual(repr(state), "<State: M=1, X=1>")
@@ -50,7 +50,7 @@ class StateTestCase(TestCase):
         self.assertEqual(state.x, 0)
 
 
-class StateChangeTestCase(TestCase):
+class StateChangeTest(TestCase):
     def test_repr(self):
         change = StateChange()
         self.assertEqual(repr(change), "<StateChange: None>")
