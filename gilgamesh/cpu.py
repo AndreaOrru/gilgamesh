@@ -1,4 +1,5 @@
 from copy import copy
+from typing import List, Tuple
 
 from .instruction import Instruction, InstructionID
 from .opcodes import AddressMode, Op
@@ -13,6 +14,7 @@ class CPU:
         self.state = State(p)
         self.state_assertion = StateChange()
         self.state_change = StateChange()
+        self.state_stack: List[Tuple[State, StateChange]] = []
         self.subroutine = subroutine
 
     @property
@@ -48,7 +50,7 @@ class CPU:
     def execute(self, instruction: Instruction) -> bool:
         self.pc += instruction.size
 
-        self.derive_state_assertion(instruction)
+        self._derive_state_assertion(instruction)
 
         if instruction.is_return:
             self.log.add_subroutine_state(self.subroutine, self.state_change)
@@ -63,6 +65,10 @@ class CPU:
             self.branch(instruction)
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
+        elif instruction.operation == Op.PHP:
+            self.push_state()
+        elif instruction.operation == Op.PLP:
+            self.pop_state()
 
         return True
 
@@ -80,14 +86,14 @@ class CPU:
             return False
 
         self.log.add_reference(instruction, target)
-        self.log.add_subroutine(target, self.state.p)
+        self.log.add_subroutine(target)
 
         cpu = self.copy()
         cpu.subroutine = target
         cpu.pc = target
         cpu.run()
 
-        known = self.propagate_subroutine_state(target)
+        known = self._propagate_subroutine_state(target)
         return known
 
     def jump(self, instruction: Instruction) -> bool:
@@ -108,11 +114,17 @@ class CPU:
             self.state_change.reset(arg)
         self.state_change.apply_assertion(self.state_assertion)
 
+    def push_state(self) -> None:
+        self.state_stack.append((copy(self.state), copy(self.state_change)))
+
+    def pop_state(self) -> None:
+        self.state, self.state_change = self.state_stack.pop()
+
     @staticmethod
     def is_ram(address: int) -> bool:
         return (address <= 0x001FFF) or (0x7E0000 <= address <= 0x7FFFFF)
 
-    def derive_state_assertion(self, instruction: Instruction) -> None:
+    def _derive_state_assertion(self, instruction: Instruction) -> None:
         if (
             instruction.address_mode == AddressMode.IMMEDIATE_M
             and self.state_change.m is None
@@ -124,7 +136,7 @@ class CPU:
         ):
             self.state_assertion.x = self.state.x
 
-    def propagate_subroutine_state(self, subroutine: int) -> bool:
+    def _propagate_subroutine_state(self, subroutine: int) -> bool:
         state_changes = self.log.get_subroutine_states(subroutine)
         if len(state_changes) != 1:
             return False

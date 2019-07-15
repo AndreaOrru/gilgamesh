@@ -73,7 +73,22 @@ class ElidableStateChangeTest(LogTest, TestCase):
     def test_instructions(self):
         self.assertEqual(len(self.log.instructions), 10)
 
-    def test_sub_state_change(self):
+    def test_sub_state_change_elided(self):
+        sub = self.log.subroutines[0x800A]
+        self.assertEqual(len(sub.state_changes), 1)
+
+        change = next(iter(sub.state_changes))
+        self.assertEqual(change.m, None)
+        self.assertEqual(change.x, None)
+
+
+class PhpPlpTest(LogTest, TestCase):
+    asm = "php_plp.asm"
+
+    def test_instructions(self):
+        self.assertEqual(len(self.log.instructions), 9)
+
+    def test_sub_state_change_elided(self):
         sub = self.log.subroutines[0x800A]
         self.assertEqual(len(sub.state_changes), 1)
 
