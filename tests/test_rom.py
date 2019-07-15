@@ -1,4 +1,5 @@
 from abc import ABC
+from os import remove
 from os.path import dirname, join, splitext
 from subprocess import call
 from unittest import TestCase
@@ -13,6 +14,10 @@ def rom_path(filename: str) -> str:
 def assemble(filename: str) -> str:
     asm = rom_path(filename)
     rom = splitext(asm)[0] + ".sfc"
+    try:
+        remove(rom)
+    except FileNotFoundError:
+        pass
     call(["asar", asm, rom])
     return rom
 

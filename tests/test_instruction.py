@@ -11,6 +11,10 @@ class InstructionTestCase(TestCase):
         cls.brl = Instruction(None, *instruction_id, opcode=0x82, argument=0xFFFD)
         cls.lda = Instruction(None, *instruction_id, opcode=0xA9, argument=0x1234)
 
+    def test_repr(self):
+        self.assertEqual(repr(self.brl), "<BRL $FFFD>")
+        self.assertEqual(repr(self.lda), "<LDA #$1234>")
+
     def test_name(self):
         self.assertEqual(self.brl.name, "brl")
         self.assertEqual(self.lda.name, "lda")

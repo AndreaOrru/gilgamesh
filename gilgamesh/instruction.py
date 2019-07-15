@@ -19,6 +19,12 @@ class Instruction:
         self.opcode = opcode
         self._argument = argument
 
+    def __repr__(self) -> str:
+        return "<{}{}>".format(
+            self.name.upper(),
+            f" {self.argument_string}" if self.argument_string else "",
+        )
+
     @property
     def id(self) -> InstructionID:
         return InstructionID(self.pc, self.state.p, self.subroutine)

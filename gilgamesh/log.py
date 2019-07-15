@@ -7,6 +7,7 @@ from sortedcontainers import SortedDict
 from .cpu import CPU
 from .instruction import Instruction, InstructionID
 from .rom import ROM
+from .state import StateChange
 from .subroutine import Subroutine
 
 
@@ -49,6 +50,15 @@ class Log:
 
         if entry_point:
             self.entry_points.append(InstructionID(pc, p, pc))
+
+    def add_subroutine_state(
+        self, subroutine_pc: int, state_change: StateChange
+    ) -> None:
+        subroutine = self.subroutines[subroutine_pc]
+        subroutine.state_changes.add(state_change)
+
+    def get_subroutine_states(self, subroutine_pc: int) -> Set[StateChange]:
+        return self.subroutines[subroutine_pc].state_changes
 
     def add_reference(self, instruction: Instruction, target: int) -> None:
         self.references[target].add((instruction.pc, instruction.subroutine))

@@ -1,8 +1,9 @@
-from typing import Dict
+from typing import Dict, Set
 
 from sortedcontainers import SortedDict
 
 from .instruction import Instruction
+from .state import StateChange
 
 
 class Subroutine:
@@ -11,6 +12,7 @@ class Subroutine:
         self.pc = pc
         self.label = label
         self.instructions: Dict[int, Instruction] = SortedDict()
+        self.state_changes: Set[StateChange] = set()
 
     @property
     def local_labels(self) -> Dict[str, int]:
