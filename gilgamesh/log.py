@@ -17,7 +17,7 @@ class Log:
 
         self.entry_points: List[InstructionID] = []
         self.local_labels: DefaultDict[int, Dict[str, int]] = defaultdict(bidict)
-        self.instructions: Set[InstructionID] = set()
+        self.instructions: DefaultDict[int, Set[InstructionID]] = defaultdict(set)
         self.subroutines: Dict[int, Subroutine] = SortedDict()
         self.subroutines_by_label: Dict[str, Subroutine] = {}
         self.references: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
@@ -32,7 +32,7 @@ class Log:
         self._generate_labels()
 
     def add_instruction(self, instruction: Instruction) -> None:
-        self.instructions.add(instruction.id)
+        self.instructions[instruction.pc].add(instruction.id)
         subroutine = self.subroutines[instruction.subroutine]
         subroutine.add_instruction(instruction)
 
@@ -85,7 +85,8 @@ class Log:
             local_labels[new] = local_labels.pop(old)
 
     def is_visited(self, instruction_id: InstructionID) -> bool:
-        return instruction_id in self.instructions
+        elements = self.instructions.get(instruction_id.pc, set())
+        return instruction_id in elements
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():
