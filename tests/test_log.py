@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from gilgamesh.log import Log
 from gilgamesh.rom import ROM
+from gilgamesh.state import StateChange
 
 from .test_rom import assemble
 
@@ -106,3 +107,15 @@ class JumpInsideSubroutineTest(LogTest, TestCase):
 
         change = next(iter(sub.state_changes))
         self.assertEqual(change.m, 0)
+
+
+class UnknownJumpTest(LogTest, TestCase):
+    asm = "unknown_jump.asm"
+
+    def test_sub_state_change_unknown(self):
+        sub = self.log.subroutines[0x800B]
+
+        self.assertSetEqual(sub.state_changes, {StateChange(unknown=True)})
+
+        reset = self.log.subroutines_by_label["reset"]
+        self.assertNotIn(0x8005, reset.instructions)

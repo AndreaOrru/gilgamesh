@@ -1,6 +1,8 @@
 from copy import copy
 from typing import List, Tuple
 
+from typing_extensions import Literal
+
 from .instruction import Instruction, InstructionID
 from .opcodes import AddressMode, Op
 from .state import State, StateChange
@@ -56,7 +58,7 @@ class CPU:
             self.log.add_subroutine_state(self.subroutine, self.state_change)
             return False
         elif instruction.is_interrupt:
-            return False
+            return self._unknown_subroutine_state()
         elif instruction.is_call:
             return self.call(instruction)
         elif instruction.is_jump:
@@ -83,7 +85,7 @@ class CPU:
     def call(self, instruction: Instruction) -> bool:
         target = instruction.absolute_argument
         if target is None:
-            return False
+            return self._unknown_subroutine_state()
 
         self.log.add_reference(instruction, target)
         self.log.add_subroutine(target)
@@ -94,12 +96,14 @@ class CPU:
         cpu.run()
 
         known = self._propagate_subroutine_state(target)
+        if not known:
+            return self._unknown_subroutine_state()
         return known
 
     def jump(self, instruction: Instruction) -> bool:
         target = instruction.absolute_argument
         if target is None:
-            return False
+            return self._unknown_subroutine_state()
         self.log.add_reference(instruction, target)
         self.pc = target
         return True
@@ -142,9 +146,16 @@ class CPU:
             return False
 
         change = next(iter(state_changes))
+        if change.unknown:
+            return False
+
         if change.m is not None:
             self.state_change.m = self.state.m = change.m
         if change.x is not None:
             self.state_change.x = self.state.x = change.x
 
         return True
+
+    def _unknown_subroutine_state(self) -> Literal[False]:
+        self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
+        return False

@@ -55,6 +55,9 @@ class StateChangeTest(TestCase):
         change = StateChange()
         self.assertEqual(repr(change), "<StateChange: None>")
 
+        change = StateChange(unknown=True)
+        self.assertEqual(repr(change), "<StateChange: UNKNOWN>")
+
         change = StateChange(m=1)
         self.assertEqual(repr(change), "<StateChange: M=1>")
 
@@ -63,9 +66,13 @@ class StateChangeTest(TestCase):
 
     def test_eq_hash(self):
         changes = set()
+
+        changes.add(StateChange(m=0, unknown=True))
+        changes.add(StateChange(m=1, unknown=True))
+
         changes.add(StateChange(m=1, x=1))
         changes.add(StateChange(m=1, x=1))
-        changes.add(StateChange(m=0, x=0))
+
         self.assertEqual(len(changes), 2)
 
     def test_set_reset(self):

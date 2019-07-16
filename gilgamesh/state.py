@@ -57,11 +57,14 @@ class State:
 
 
 class StateChange:
-    def __init__(self, m: Optional[int] = None, x: Optional[int] = None):
+    def __init__(self, m: Optional[int] = None, x: Optional[int] = None, unknown=False):
         self.m = m
         self.x = x
+        self.unknown = unknown
 
     def __repr__(self) -> str:
+        if self.unknown:
+            return "<StateChange: UNKNOWN>"
         r = "<StateChange: "
         m_str = [f"M={self.m}"] if self.m is not None else []
         x_str = [f"X={self.x}"] if self.x is not None else []
@@ -72,10 +75,14 @@ class StateChange:
         return r + ">"
 
     def __eq__(self, other) -> bool:
-        return (self.m == other.m) and (self.x == other.x)
+        return (self.unknown and other.unknown) or (
+            (self.m == other.m) and (self.x == other.x)
+        )
 
     def __hash__(self) -> int:
-        return hash((self.m, self.x))
+        if self.unknown:
+            return hash((None, None, self.unknown))
+        return hash((self.m, self.x, self.unknown))
 
     def set(self, p_change: int) -> None:
         change = State(p_change)

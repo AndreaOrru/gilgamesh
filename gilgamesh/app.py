@@ -59,6 +59,11 @@ class App(Repl):
         print_html(s)
 
     @command
+    def do_debug(self) -> None:
+        """Debug Gilgamesh itself."""
+        breakpoint()  # noqa
+
+    @command
     def do_list(self) -> None:
         """List various types of entities."""
         ...
