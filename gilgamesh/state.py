@@ -16,6 +16,12 @@ class State:
     def __repr__(self) -> str:
         return f"<State: M={self.m}, X={self.x}>"
 
+    def __eq__(self, other) -> bool:
+        return self.p == other.p
+
+    def __hash__(self) -> int:
+        return hash(self.p)
+
     @property
     def m(self) -> int:
         return (self.p >> M_BIT) & 1

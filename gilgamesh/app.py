@@ -5,6 +5,7 @@ from prompt_toolkit import HTML
 from .log import Log
 from .repl import Repl, argument, command, print_error, print_html
 from .rom import ROM
+from .state import State
 from .subroutine import Subroutine
 
 
@@ -74,6 +75,26 @@ class App(Repl):
         s = ""
         for subroutine in self.log.subroutines.values():
             s += "${:06X}  <green>{}</green>\n".format(subroutine.pc, subroutine.label)
+        print_html(s)
+
+    @command
+    def do_query(self) -> None:
+        """Query the analysis log in various ways."""
+        ...
+
+    @command
+    @argument("label_pc", complete_label)
+    def do_query_state(self, label_pc: str) -> None:
+        """Show the processor states in which an instruction can be reached."""
+        pc = self.log.get_label_value(label_pc, self.subroutine and self.subroutine.pc)
+        if pc is None:
+            pc = int(label_pc, 16)
+
+        s = ""
+        states = {State(x.p) for x in self.log.instructions[pc]}
+        for state in states:
+            s += f"<yellow>M</yellow>=<green>{state.m}</green>, "
+            s += f"<yellow>X</yellow>=<green>{state.x}</green>\n"
         print_html(s)
 
     @command

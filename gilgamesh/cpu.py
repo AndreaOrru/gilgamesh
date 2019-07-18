@@ -23,11 +23,11 @@ class CPU:
     def instruction_id(self) -> InstructionID:
         return InstructionID(self.pc, self.state.p, self.subroutine)
 
-    def copy(self) -> "CPU":
+    def copy(self, new_subroutine=False) -> "CPU":
         cpu = copy(self)
         cpu.state = copy(self.state)
         cpu.state_assertion = copy(self.state_assertion)
-        cpu.state_change = StateChange()
+        cpu.state_change = StateChange() if new_subroutine else copy(self.state_change)
         return cpu
 
     def run(self) -> None:
@@ -90,7 +90,7 @@ class CPU:
         self.log.add_reference(instruction, target)
         self.log.add_subroutine(target)
 
-        cpu = self.copy()
+        cpu = self.copy(new_subroutine=True)
         cpu.subroutine = target
         cpu.pc = target
         cpu.run()
@@ -129,6 +129,14 @@ class CPU:
         return (address <= 0x001FFF) or (0x7E0000 <= address <= 0x7FFFFF)
 
     def _derive_state_assertion(self, instruction: Instruction) -> None:
+        saved_assertion = self.log.state_assertions.get(instruction.pc)
+        if saved_assertion:
+            if saved_assertion.m is not None:
+                self.state_assertion.m = saved_assertion.m
+            if saved_assertion.x is not None:
+                self.state_assertion.x = saved_assertion.x
+            return
+
         if (
             instruction.address_mode == AddressMode.IMMEDIATE_M
             and self.state_change.m is None
