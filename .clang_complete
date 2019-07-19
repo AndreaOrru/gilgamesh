@@ -1,0 +1,6 @@
+-std=c++17
+
+-Wall
+-Wno-pragma-once-outside-header
+
+-Iinclude
