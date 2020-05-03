@@ -2,5 +2,5 @@ bidict
 cached-property
 click
 dictlib
-git+https://github.com/prompt-toolkit/python-prompt-toolkit.git@master
+prompt_toolkit
 sortedcontainers
