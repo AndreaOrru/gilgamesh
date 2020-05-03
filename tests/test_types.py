@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from gilgamesh.types import s8, s16
+from gilgamesh.signed_types import s8, s16
 
 
 class TypesTest(TestCase):

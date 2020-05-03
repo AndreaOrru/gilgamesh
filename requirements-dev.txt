@@ -1,11 +1,9 @@
-autoflake
-black
-bpython
-epc
-flake8
-flake8-mypy
-importmagic
-isort
+future
+ipython
 pdbpp
+pyls-black
+pyls-isort
+pyls-mypy
 pytest
+python-language-server[all]
 virtualenvwrapper
