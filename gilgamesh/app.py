@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from prompt_toolkit import HTML
+from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html

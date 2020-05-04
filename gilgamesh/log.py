@@ -1,8 +1,8 @@
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Optional, Set, Tuple
 
-from bidict import bidict
-from sortedcontainers import SortedDict
+from bidict import bidict  # type: ignore
+from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.cpu import CPU
 from gilgamesh.instruction import Instruction, InstructionID

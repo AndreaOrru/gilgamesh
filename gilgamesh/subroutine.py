@@ -1,6 +1,6 @@
 from typing import Dict, Set
 
-from sortedcontainers import SortedDict
+from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.instruction import Instruction
 from gilgamesh.state import StateChange

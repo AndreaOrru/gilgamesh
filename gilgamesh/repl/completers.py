@@ -2,8 +2,12 @@ from functools import partial
 from inspect import getfullargspec
 from typing import Callable, Iterable, List, Union
 
-from prompt_toolkit.completion import CompleteEvent, Completer, WordCompleter
-from prompt_toolkit.document import Document
+from prompt_toolkit.completion import (  # type: ignore
+    CompleteEvent,
+    Completer,
+    WordCompleter,
+)
+from prompt_toolkit.document import Document  # type: ignore
 
 
 class ArgsCompleter(Completer):
