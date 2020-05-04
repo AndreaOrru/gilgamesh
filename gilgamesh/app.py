@@ -2,11 +2,11 @@ from typing import List, Optional
 
 from prompt_toolkit import HTML
 
-from .log import Log
-from .repl import Repl, argument, command, print_error, print_html
-from .rom import ROM
-from .state import State
-from .subroutine import Subroutine
+from gilgamesh.log import Log
+from gilgamesh.repl import Repl, argument, command, print_error, print_html
+from gilgamesh.rom import ROM
+from gilgamesh.state import State
+from gilgamesh.subroutine import Subroutine
 
 
 class App(Repl):

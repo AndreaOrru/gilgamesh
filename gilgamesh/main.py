@@ -2,7 +2,7 @@
 
 import click
 
-from .app import App
+from gilgamesh.app import App
 
 
 @click.command()

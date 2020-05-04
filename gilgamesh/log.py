@@ -4,11 +4,11 @@ from typing import DefaultDict, Dict, List, Optional, Set, Tuple
 from bidict import bidict
 from sortedcontainers import SortedDict
 
-from .cpu import CPU
-from .instruction import Instruction, InstructionID
-from .rom import ROM
-from .state import StateChange
-from .subroutine import Subroutine
+from gilgamesh.cpu import CPU
+from gilgamesh.instruction import Instruction, InstructionID
+from gilgamesh.rom import ROM
+from gilgamesh.state import StateChange
+from gilgamesh.subroutine import Subroutine
 
 
 class Log:

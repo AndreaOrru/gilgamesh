@@ -2,8 +2,8 @@ from typing import Dict, Set
 
 from sortedcontainers import SortedDict
 
-from .instruction import Instruction
-from .state import StateChange
+from gilgamesh.instruction import Instruction
+from gilgamesh.state import StateChange
 
 
 class Subroutine:

@@ -1,9 +1,9 @@
 from collections import namedtuple
 from typing import Optional
 
-from .opcodes import AddressMode, Op, argument_size_table, opcode_table
-from .signed_types import s8, s16
-from .state import State
+from gilgamesh.opcodes import AddressMode, Op, argument_size_table, opcode_table
+from gilgamesh.signed_types import s8, s16
+from gilgamesh.state import State
 
 InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
 

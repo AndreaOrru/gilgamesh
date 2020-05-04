@@ -3,9 +3,9 @@ from typing import List, Tuple
 
 from typing_extensions import Literal
 
-from .instruction import Instruction, InstructionID
-from .opcodes import AddressMode, Op
-from .state import State, StateChange
+from gilgamesh.instruction import Instruction, InstructionID
+from gilgamesh.opcodes import AddressMode, Op
+from gilgamesh.state import State, StateChange
 
 
 class CPU:
