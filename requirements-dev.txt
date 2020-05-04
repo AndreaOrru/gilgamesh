@@ -1,5 +1,6 @@
 future
 ipython
+jedi<0.16
 pdbpp
 pyls-black
 pyls-isort
