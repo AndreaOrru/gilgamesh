@@ -1,10 +1,15 @@
-future
-ipython
-jedi<0.16
-pdbpp
+# Python Language Server.
+python-language-server[all]
 pyls-black
 pyls-isort
 pyls-mypy
-pytest
-python-language-server[all]
+jedi<0.16
+
+# Virtual environments.
 virtualenvwrapper
+future
+
+# Development tools.
+ipython
+pdbpp
+pytest
