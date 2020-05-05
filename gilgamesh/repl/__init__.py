@@ -30,42 +30,53 @@ class Repl:
     def run(self) -> None:
         while True:
             try:
+                # Take commands through the prompt.
                 tokens = (
                     self._session.prompt(self.prompt, completer=self._completer)
                     .strip()
                     .split()
                 )
             except EOFError:
+                # If Ctrl-D, get out.
                 break
             except KeyboardInterrupt:
+                # If Ctrl-C, abort the current command insertion.
                 continue
             if not tokens:
+                # Empty command, collect a new one.
                 continue
 
             try:
+                # Parse the command.
                 cmd, args = self._commands[tokens[0]], tokens[1:]
             except KeyError:
+                # Couldn't parse, show help.
                 self.do_help()
             else:
+                # Execute the command.
                 if cmd(self, *args):
-                    return
+                    return  # Commands can return True to quit the application.
 
     @command
     def do_help(self, *parts) -> None:
         """Show help on commands."""
         if len(parts) == 0:
-            return self._help_list(self._commands)
+            return self._help_list(self._commands)  # Generic help.
 
+        # Retrieve the command.
         try:
             cmd = self._all_commands[".".join(parts)]
         except KeyError:
+            # Command not found, show generic help.
             return self.do_help()
 
         if cmd.subcmds:
+            # The command has subcommands, show an outline of all the possible ones.
             self._help_usage(*[*parts, "SUBCOMMAND"])
             print("{}\n".format(cmd.__doc__ or ""))
             self._help_list(cmd.subcmds, "Subcommands")
         else:
+            # This is a "leaf" command, show info on its usage.
             self._help_usage(*[*parts, *[arg[0].upper() for arg in cmd.args]])
             print("{}\n".format(cmd.__doc__ or ""))
 
@@ -144,10 +155,13 @@ class Repl:
         return NestedCompleter.from_nested_dict(completer_dict)
 
     def _method_help(self, method) -> None:
+        # Unpack the method in its components (i.e 'list', 'subroutines')
+        # and invoke the actual help method.
         return self.do_help(*method.__name__.split("_")[1:])
 
     @staticmethod
     def _help_list(commands: Dict[str, Any], header="Commands") -> None:
+        # Print help for a collection of commands.
         s = f"<yellow>{header}</yellow>:\n"
         for name, cmd in commands.items():
             name += "..." if cmd.subcmds else ""
@@ -156,7 +170,9 @@ class Repl:
 
     @staticmethod
     def _help_usage(*parts) -> None:
+        # Print usage info on a command.
         if parts[0] == "help":
+            # Special case for `help` itself.
             parts = ("help", "[COMMAND [SUBCOMMAND]...]")
 
         print_html(
