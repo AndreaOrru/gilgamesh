@@ -7,7 +7,7 @@ from gilgamesh.state import StateChange
 
 
 class Subroutine:
-    def __init__(self, log, pc: str, label: str):
+    def __init__(self, log, pc: int, label: str):
         self.log = log
         self.pc = pc
         self.label = label

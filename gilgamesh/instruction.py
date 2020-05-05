@@ -82,11 +82,11 @@ class Instruction:
             return (self.pc & 0xFF0000) | self.argument
 
         elif self.address_mode == AddressMode.RELATIVE:
-            assert self.size is not None
+            assert (self.size is not None) and (self.argument is not None)
             return self.pc + self.size + s8(self.argument)
 
         elif self.address_mode == AddressMode.RELATIVE_LONG:
-            assert self.size is not None
+            assert (self.size is not None) and (self.argument is not None)
             return self.pc + self.size + s16(self.argument)
 
         return None

@@ -79,7 +79,7 @@ class Log:
         subroutine = self.subroutines.get(pc)
         if subroutine:
             return subroutine.label
-        local_label = self.local_labels[subroutine_pc].inverse.get(pc)  # noqa: T484
+        local_label = self.local_labels[subroutine_pc].inverse.get(pc)  # type: ignore
         if local_label:
             return f".{local_label}"
         return None
@@ -130,7 +130,7 @@ class Log:
 
         preserved_labels: Dict[int, str] = {}
         for subroutine_labels in self.local_labels.values():
-            preserved_labels.update(subroutine_labels.inverse)  # noqa: T484
+            preserved_labels.update(subroutine_labels.inverse)  # type: ignore
         for subroutine in self.subroutines.values():
             preserved_labels[subroutine.pc] = subroutine.label
         return preserved_labels

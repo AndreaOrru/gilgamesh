@@ -79,6 +79,8 @@ class CPU:
         cpu.run()
 
         target = instruction.absolute_argument
+        assert target is not None
+
         self.log.add_reference(instruction, target)
         self.pc = target
 
@@ -110,12 +112,15 @@ class CPU:
 
     def sep_rep(self, instruction: Instruction) -> None:
         arg = instruction.absolute_argument
+        assert arg is not None
+
         if instruction.operation == Op.SEP:
             self.state.set(arg)
             self.state_change.set(arg)
         else:
             self.state.reset(arg)
             self.state_change.reset(arg)
+
         self.state_change.apply_assertion(self.state_assertion)
 
     def push_state(self) -> None:

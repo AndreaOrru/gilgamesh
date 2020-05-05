@@ -23,6 +23,7 @@ class App(Repl):
     def prompt(self) -> str:
         if self.subroutine is None:
             return super().prompt
+        # Show the current subroutine in the prompt if there's one.
         return HTML("<yellow>" + f"[{self.subroutine.label}]> " + "</yellow>")
 
     def complete_subroutine(self) -> List[str]:
@@ -46,7 +47,7 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
 
-        s = ""
+        s: List[str] = []
         for pc, instruction in self.subroutine.instructions.items():
             label = self.log.get_label(pc, self.subroutine.pc)
             if label:
@@ -58,7 +59,7 @@ class App(Repl):
                 arg = "{:16}".format(instruction.argument_string)
             comment = "<grey>; ${:06X}</grey>".format(pc)
             s += f"  {operation}{arg}{comment}\n"
-        print_html(s)
+        print_html("".join(s))
 
     @command
     def do_debug(self) -> None:
@@ -87,7 +88,9 @@ class App(Repl):
     @argument("label_pc", complete_label)
     def do_query_state(self, label_pc: str) -> None:
         """Show the processor states in which an instruction can be reached."""
-        pc = self.log.get_label_value(label_pc, self.subroutine and self.subroutine.pc)
+        pc = self.log.get_label_value(
+            label_pc, self.subroutine.pc if self.subroutine else None
+        )
         if pc is None:
             pc = int(label_pc, 16)
 
@@ -103,7 +106,7 @@ class App(Repl):
     @argument("new")
     def do_rename(self, old: str, new: str) -> None:
         """Rename a label or subroutine."""
-        self.log.rename_label(old, new, self.subroutine and self.subroutine.pc)
+        self.log.rename_label(old, new, self.subroutine.pc if self.subroutine else None)
 
     @command
     def do_rom(self) -> None:
