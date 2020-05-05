@@ -11,10 +11,10 @@ from prompt_toolkit.document import Document  # type: ignore
 
 
 class ArgsCompleter(Completer):
-    def __init__(self, cmd, args: List[Union[Iterable[str], Callable, None]]):
-        # Bind callables to the instance of Cmd, if necessary.
+    def __init__(self, repl, args: List[Union[Iterable[str], Callable, None]]):
+        # Bind callables to the instance of Repl, if necessary.
         self.args = [
-            partial(arg, cmd) if (callable(arg) and getfullargspec(arg).args) else arg
+            partial(arg, repl) if (callable(arg) and getfullargspec(arg).args) else arg
             for arg in args
         ]
 
