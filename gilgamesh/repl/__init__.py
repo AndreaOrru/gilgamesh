@@ -80,13 +80,21 @@ class Repl:
         return True
 
     @cached_property
-    def _all_commands(self) -> OrderedDict[str, Callable]:
+    def _all_commands(self) -> Dict[str, Callable]:
         # Get a dictionary from command names to commands (methods).
-        # Methods tagged with the attribute "cmd" are considered
-        # commands. Commands are expected to begin with "do_".
+        # Methods tagged with the attribute `cmd` are considered
+        # commands. Commands are expected to begin with `do_`.
         # Subcommands are defined by using underscores.
-        # We return an OrderedDict so that parent commands always
+        # We return an `OrderedDict` so that parent commands always
         # come before their children.
+        # We use "." to define the hierarchy so that we can later make
+        # use of `dug` from `dictlib` to access nested dictionaries.
+        #
+        # Example "input":
+        #   { do_list(), do_list_subroutines() }
+        # Example "output":
+        #   { 'list': do_list(), 'list.subroutines': do_list_subroutines() }
+        #
         return OrderedDict(
             sorted(
                 (
@@ -96,39 +104,40 @@ class Repl:
                 )
             )
         )
-        # Example input:
-        #     { do_list_subroutines(), do_query_state() }
-        # Example output:
-        #     { 'list.subroutines': do_list_subroutines(),
-        #       'query.state': do_query_state() }
 
     def _build_commands(self) -> Dict[str, Callable]:
+        # Build the hierarchy of commands.
+        #
+        # Example "input":
+        #   { 'list': do_list(), 'list.subroutines': do_list_subroutines() }
+        # Example "output":
+        #   { 'list': do_list() -> .subcmds = { 'subroutines': do_list_subroutines() } }
+        #
         commands: Dict[str, Any] = {}
         for name, cmd in self._all_commands.items():
             try:
+                # Subcommand. Add it to the parent command.
                 parts = name.split(".")
                 parent = self._all_commands[".".join(parts[:-1])]
                 parent.subcmds[parts[-1]] = cmd
             except KeyError:
+                # Simple command.
                 commands[name] = cmd
         return commands
 
     def _build_completer(self) -> NestedCompleter:
         def completer(cmd):
+            # Build a completer for a command.
             if not cmd.args:
                 return {}
             return ArgsCompleter(self, [arg[1] for arg in cmd.args])
 
+        # Build a nested completion dictionary for commands and subcommands.
         completer_dict: Dict[str, Any] = {}
         for name, cmd in self._all_commands.items():
-            try:
-                parts = name.split(".")
-                parent = self._commands[".".join(parts[:-1])]
-                parent.subcmds[parts[-1]] = cmd
-            except KeyError:
-                pass
             dug(completer_dict, name, completer(cmd))
 
+        # Define completions for all the help commands.
         for name in self._all_commands:
             dug(completer_dict, f"help.{name}", {})
 
