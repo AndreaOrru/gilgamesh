@@ -2,15 +2,15 @@ from collections import OrderedDict
 from inspect import getmembers, isfunction
 from typing import Any, Callable, Dict
 
-from cached_property import cached_property
-from dictlib import dug
-from prompt_toolkit import HTML, PromptSession
-from prompt_toolkit.completion import NestedCompleter
-from prompt_toolkit.shortcuts import CompleteStyle, clear
+from cached_property import cached_property  # type: ignore
+from dictlib import dug  # type: ignore
+from prompt_toolkit import HTML, PromptSession  # type: ignore
+from prompt_toolkit.completion import NestedCompleter  # type: ignore
+from prompt_toolkit.shortcuts import CompleteStyle, clear  # type: ignore
 
-from .colors import print_error, print_html, style  # noqa
-from .completers import ArgsCompleter
-from .decorators import argument, command  # noqa
+from gilgamesh.repl.colors import print_error, print_html, style  # noqa
+from gilgamesh.repl.completers import ArgsCompleter
+from gilgamesh.repl.decorators import argument, command  # noqa
 
 
 class Repl:
@@ -80,7 +80,13 @@ class Repl:
         return True
 
     @cached_property
-    def _all_commands(self) -> Dict[str, Callable]:
+    def _all_commands(self) -> OrderedDict[str, Callable]:
+        # Get a dictionary from command names to commands (methods).
+        # Methods tagged with the attribute "cmd" are considered
+        # commands. Commands are expected to begin with "do_".
+        # Subcommands are defined by using underscores.
+        # We return an OrderedDict so that parent commands always
+        # come before their children.
         return OrderedDict(
             sorted(
                 (
@@ -90,6 +96,11 @@ class Repl:
                 )
             )
         )
+        # Example input:
+        #     { do_list_subroutines(), do_query_state() }
+        # Example output:
+        #     { 'list.subroutines': do_list_subroutines(),
+        #       'query.state': do_query_state() }
 
     def _build_commands(self) -> Dict[str, Callable]:
         commands: Dict[str, Any] = {}

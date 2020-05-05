@@ -16,6 +16,7 @@ class App(Repl):
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
 
+        # The subroutine currently under analysis.
         self.subroutine: Optional[Subroutine] = None
 
     @property
