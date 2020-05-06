@@ -61,7 +61,7 @@ class Repl:
     def do_help(self, *parts) -> None:
         """Show help on commands."""
         if len(parts) == 0:
-            return self._help_list(self._commands)  # Generic help.
+            return self._help_list(self._commands, error=True)  # Generic help.
 
         # Retrieve the command.
         try:
@@ -155,17 +155,16 @@ class Repl:
 
         return NestedCompleter.from_nested_dict(completer_dict)
 
-    def _method_help(self, method, error_arg="") -> None:
+    def _method_help(self, method, error=False) -> None:
         # Unpack the method in its components (i.e 'list', 'subroutines')
         # and invoke the actual help method.
         parts = method.__name__.split("_")[1:]
         self.do_help(*parts)
-
-        if error_arg:
-            print_html(f'<red>Unknown argument or subcommand "{error_arg}".</red>\n')
+        if error:
+            print_html(f"<red>Unknown syntax.</red>\n")
 
     @staticmethod
-    def _help_list(commands: Dict[str, Any], header="Commands") -> None:
+    def _help_list(commands: Dict[str, Any], header="Commands", error=False) -> None:
         # Print help for a collection of commands.
         s = f"<yellow>{header}:</yellow>\n"
         for name, cmd in commands.items():
@@ -173,6 +172,8 @@ class Repl:
             doc = (getdoc(cmd) or "").split("\n")[0]
             s += "  <green>{:15}</green>{}\n".format(name, doc)
         print_html(s)
+        if error:
+            print_html(f"<red>Unknown syntax.</red>\n")
 
     @staticmethod
     def _help_usage(*parts) -> None:

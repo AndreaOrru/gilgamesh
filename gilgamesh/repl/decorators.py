@@ -20,12 +20,12 @@ def command(container=False):
                     try:
                         return method.subcmds[subcmd](self, *args)
                     except KeyError:
-                        return self._method_help(method, subcmd)
+                        return self._method_help(method, error=True)
             # Try to call the command.
             try:
                 return method(self, *args)
             except TypeError:
-                return self._method_help(method, args[0])
+                return self._method_help(method, error=True)
 
         # Flag this method as a command.
         wrapper.cmd = True
