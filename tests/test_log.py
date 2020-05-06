@@ -113,10 +113,14 @@ class UnknownJumpTest(LogTest, TestCase):
     asm = "unknown_jump.asm"
 
     def test_sub_state_change_unknown(self):
+        reset = self.log.subroutines_by_label["reset"]
         sub = self.log.subroutines[0x800B]
 
         self.assertSetEqual(sub.state_changes, {StateChange(unknown=True)})
         self.assertTrue(sub.has_unknown_return_state())
 
-        reset = self.log.subroutines_by_label["reset"]
         self.assertNotIn(0x8005, reset.instructions)
+        self.assertNotIn(0x800E, sub.instructions)
+
+        self.assertTrue(reset.instructions[0x8002].stopped_execution)
+        self.assertTrue(sub.instructions[0x800B].stopped_execution)

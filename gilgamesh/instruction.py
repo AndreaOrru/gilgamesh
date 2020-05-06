@@ -21,9 +21,12 @@ class Instruction:
         self.log = log
         self.pc = pc
         self.state = State(p)
+
         self.subroutine = subroutine
         self.opcode = opcode
         self._argument = argument
+
+        self.stopped_execution = False
 
     def __repr__(self) -> str:
         return "<{}{}>".format(
@@ -101,6 +104,10 @@ class Instruction:
 
         # Other addressing modes depend on context we don't know.
         return None
+
+    @property
+    def next_pc(self) -> int:
+        return self.pc + self.size
 
     @property
     def label(self) -> Optional[str]:

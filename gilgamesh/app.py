@@ -59,6 +59,14 @@ class App(Repl):
                 arg = "{:16}".format(instruction.argument_string)
             comment = "<grey>; ${:06X}</grey>".format(pc)
             s.append(f"  {operation}{arg}{comment}\n")
+
+            if instruction.stopped_execution:
+                s.append(
+                    "  <grey>{:20}; ${:06X}</grey>\n".format(
+                        "; Unknown state.", instruction.next_pc
+                    )
+                )
+
         print_html("".join(s))
 
     @command()

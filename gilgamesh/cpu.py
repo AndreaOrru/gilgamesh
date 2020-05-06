@@ -75,7 +75,7 @@ class CPU:
             self.log.add_subroutine_state(self.subroutine, self.state_change)
             return False  # Terminate the execution of this subroutine.
         elif instruction.is_interrupt:
-            return self._unknown_subroutine_state()
+            return self._unknown_subroutine_state(instruction)
         elif instruction.is_call:
             return self.call(instruction)
         elif instruction.is_jump:
@@ -110,7 +110,7 @@ class CPU:
         if target is None:
             # If we can't reliably derive the address of the subroutine
             # being called, we're left in an unknown state.
-            return self._unknown_subroutine_state()
+            return self._unknown_subroutine_state(instruction)
 
         self.log.add_reference(instruction, target)
         self.log.add_subroutine(target)
@@ -128,13 +128,13 @@ class CPU:
         # side, we need to stop the execution.
         known = self._propagate_subroutine_state(target)
         if not known:
-            return self._unknown_subroutine_state()
+            return self._unknown_subroutine_state(instruction)
         return True
 
     def jump(self, instruction: Instruction) -> bool:
         target = instruction.absolute_argument
         if target is None:
-            return self._unknown_subroutine_state()
+            return self._unknown_subroutine_state(instruction)
         self.log.add_reference(instruction, target)
         self.pc = target
         return True
@@ -208,6 +208,7 @@ class CPU:
 
         return True
 
-    def _unknown_subroutine_state(self) -> Literal[False]:
+    def _unknown_subroutine_state(self, instruction: Instruction) -> Literal[False]:
         self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
+        instruction.stopped_execution = True
         return False
