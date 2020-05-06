@@ -36,12 +36,12 @@ class App(Repl):
         local_labels = sorted(self.subroutine.local_labels.keys())
         return local_labels + subroutines
 
-    @command
+    @command()
     def do_analyze(self) -> None:
         """Run the analysis on the ROM."""
         self.log.analyze()
 
-    @command
+    @command()
     def do_disassembly(self) -> None:
         """Show disassembly of selected subroutine."""
         if not self.subroutine:
@@ -61,30 +61,40 @@ class App(Repl):
             s.append(f"  {operation}{arg}{comment}\n")
         print_html("".join(s))
 
-    @command
+    @command()
     def do_debug(self) -> None:
         """Debug Gilgamesh itself."""
         breakpoint()  # noqa
 
-    @command
+    @command(container=True)
     def do_list(self) -> None:
         """List various types of entities."""
         ...
 
-    @command
+    @command()
     def do_list_subroutines(self) -> None:
-        """List all subroutines."""
+        """List subroutines according to various criteria.
+        If called with no arguments, display all subroutines."""
         s = []
         for subroutine in self.log.subroutines.values():
             s.append(self._print_subroutine(subroutine))
         print_html("".join(s))
 
-    @command
+    @command()
+    def do_list_subroutines_unknown(self) -> None:
+        """List subroutines with unknown or multiple return states."""
+        s = []
+        for subroutine in self.log.subroutines.values():
+            if subroutine.has_unknown_return_state():
+                s.append(self._print_subroutine(subroutine))
+        print_html("".join(s))
+
+    @command(container=True)
     def do_query(self) -> None:
         """Query the analysis log in various ways."""
         ...
 
-    @command
+    @command()
     @argument("label_pc", complete_label)
     def do_query_state(self, label_pc: str) -> None:
         """Show the processor states in which an instruction can be reached."""
@@ -101,23 +111,14 @@ class App(Repl):
             s.append(f"<yellow>X</yellow>=<green>{state.x}</green>\n")
         print_html("".join(s))
 
-    @command
-    def do_query_unknown(self) -> None:
-        """Show the subroutines with unknown or multiple return states."""
-        s = []
-        for subroutine in self.log.subroutines.values():
-            if subroutine.has_unknown_return_state():
-                s.append(self._print_subroutine(subroutine))
-        print_html("".join(s))
-
-    @command
+    @command()
     @argument("old", complete_label)
     @argument("new")
     def do_rename(self, old: str, new: str) -> None:
         """Rename a label or subroutine."""
         self.log.rename_label(old, new, self.subroutine.pc if self.subroutine else None)
 
-    @command
+    @command()
     def do_rom(self) -> None:
         """Show general information on the ROM."""
         s = []
@@ -129,7 +130,7 @@ class App(Repl):
         s.append("  <green>NMI:</green>    ${:06X}\n".format(self.rom.nmi_vector))
         print_html("".join(s))
 
-    @command
+    @command()
     @argument("label", complete_subroutine)
     def do_subroutine(self, label: str) -> None:
         """Select which subroutine to inspect."""

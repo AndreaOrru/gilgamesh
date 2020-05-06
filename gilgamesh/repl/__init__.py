@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from inspect import getmembers, isfunction
-from typing import Any, Callable, Dict
+from inspect import getdoc, getmembers, isfunction
+from typing import Any, Callable, Dict, Optional
 
 from cached_property import cached_property  # type: ignore
 from dictlib import dug  # type: ignore
@@ -57,7 +57,7 @@ class Repl:
                 if cmd(self, *args):
                     return  # Commands can return True to quit the application.
 
-    @command
+    @command()
     def do_help(self, *parts) -> None:
         """Show help on commands."""
         if len(parts) == 0:
@@ -72,20 +72,21 @@ class Repl:
 
         if cmd.subcmds:
             # The command has subcommands, show an outline of all the possible ones.
-            self._help_usage(*[*parts, "SUBCOMMAND"])
-            print("{}\n".format(cmd.__doc__ or ""))
+            subcommand = "[SUBCOMMAND]" if cmd.executable else "SUBCOMMAND"
+            self._help_usage(*[*parts, subcommand])
+            print("{}\n".format(getdoc(cmd) or ""))
             self._help_list(cmd.subcmds, "Subcommands")
         else:
             # This is a "leaf" command, show info on its usage.
             self._help_usage(*[*parts, *[arg[0].upper() for arg in cmd.args]])
-            print("{}\n".format(cmd.__doc__ or ""))
+            print("{}\n".format(getdoc(cmd) or ""))
 
-    @command
+    @command()
     def do_clear(self) -> None:
         """Clear the screen."""
         clear()
 
-    @command
+    @command()
     def do_quit(self) -> bool:
         """Quit the application."""
         return True
@@ -154,18 +155,23 @@ class Repl:
 
         return NestedCompleter.from_nested_dict(completer_dict)
 
-    def _method_help(self, method) -> None:
+    def _method_help(self, method, error_arg="") -> None:
         # Unpack the method in its components (i.e 'list', 'subroutines')
         # and invoke the actual help method.
-        return self.do_help(*method.__name__.split("_")[1:])
+        parts = method.__name__.split("_")[1:]
+        self.do_help(*parts)
+
+        if error_arg:
+            print_html(f'<red>Unknown argument or subcommand "{error_arg}".</red>\n')
 
     @staticmethod
     def _help_list(commands: Dict[str, Any], header="Commands") -> None:
         # Print help for a collection of commands.
-        s = f"<yellow>{header}</yellow>:\n"
+        s = f"<yellow>{header}:</yellow>\n"
         for name, cmd in commands.items():
             name += "..." if cmd.subcmds else ""
-            s += "  <green>{:15}</green>{}\n".format(name, cmd.__doc__ or "")
+            doc = (getdoc(cmd) or "").split("\n")[0]
+            s += "  <green>{:15}</green>{}\n".format(name, doc)
         print_html(s)
 
     @staticmethod
