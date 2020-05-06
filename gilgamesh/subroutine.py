@@ -23,3 +23,10 @@ class Subroutine:
 
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc] = instruction
+
+    def has_unknown_return_state(self) -> bool:
+        if len(self.state_changes) != 1:
+            return True
+        elif next(iter(self.state_changes)).unknown:
+            return True
+        return False

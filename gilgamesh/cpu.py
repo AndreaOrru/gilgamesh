@@ -193,17 +193,14 @@ class CPU:
         ):
             self.state_assertion.x = self.state.x
 
-    def _propagate_subroutine_state(self, subroutine: int) -> bool:
-        # If the subroutine can return in more than one distinct state,
-        # we can't reliably propagate the state to the caller.
-        state_changes = self.log.get_subroutine_states(subroutine)
-        if len(state_changes) != 1:
+    def _propagate_subroutine_state(self, subroutine_pc: int) -> bool:
+        # If the subroutine can return in more than one distinct state, or its
+        # state is unknown, we can't reliably propagate the state to the caller.
+        subroutine = self.log.subroutines[subroutine_pc]
+        if subroutine.has_unknown_return_state():
             return False
 
-        change = next(iter(state_changes))
-        if change.unknown:
-            return False
-
+        change = next(iter(subroutine.state_changes))
         if change.m is not None:
             self.state_change.m = self.state.m = change.m
         if change.x is not None:

@@ -47,18 +47,18 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
 
-        s: List[str] = []
+        s = []
         for pc, instruction in self.subroutine.instructions.items():
             label = self.log.get_label(pc, self.subroutine.pc)
             if label:
-                s += f"<red>{label}</red>:\n"
+                s.append(f"<red>{label}</red>:\n")
             operation = "<green>{:4}</green>".format(instruction.name)
             if instruction.argument_alias:
                 arg = "<red>{:16}</red>".format(instruction.argument_alias)
             else:
                 arg = "{:16}".format(instruction.argument_string)
             comment = "<grey>; ${:06X}</grey>".format(pc)
-            s += f"  {operation}{arg}{comment}\n"
+            s.append(f"  {operation}{arg}{comment}\n")
         print_html("".join(s))
 
     @command
@@ -74,10 +74,10 @@ class App(Repl):
     @command
     def do_list_subroutines(self) -> None:
         """List all subroutines."""
-        s = ""
+        s = []
         for subroutine in self.log.subroutines.values():
-            s += "${:06X}  <green>{}</green>\n".format(subroutine.pc, subroutine.label)
-        print_html(s)
+            s.append(self._print_subroutine(subroutine))
+        print_html("".join(s))
 
     @command
     def do_query(self) -> None:
@@ -94,12 +94,21 @@ class App(Repl):
         if pc is None:
             pc = int(label_pc, 16)
 
-        s = ""
+        s = []
         states = {State(x.p) for x in self.log.instructions[pc]}
         for state in states:
-            s += f"<yellow>M</yellow>=<green>{state.m}</green>, "
-            s += f"<yellow>X</yellow>=<green>{state.x}</green>\n"
-        print_html(s)
+            s.append(f"<yellow>M</yellow>=<green>{state.m}</green>, ")
+            s.append(f"<yellow>X</yellow>=<green>{state.x}</green>\n")
+        print_html("".join(s))
+
+    @command
+    def do_query_unknown(self) -> None:
+        """Show the subroutines with unknown or multiple return states."""
+        s = []
+        for subroutine in self.log.subroutines.values():
+            if subroutine.has_unknown_return_state():
+                s.append(self._print_subroutine(subroutine))
+        print_html("".join(s))
 
     @command
     @argument("old", complete_label)
@@ -111,14 +120,14 @@ class App(Repl):
     @command
     def do_rom(self) -> None:
         """Show general information on the ROM."""
-        s = ""
-        s += "<green>Title:</green>    {}\n".format(self.rom.title)
-        s += "<green>Type:</green>     {}\n".format(self.rom.type.name)
-        s += "<green>Size:</green>     {} KiB\n".format(self.rom.size // 1024)
-        s += "<green>Vectors:</green>\n"
-        s += "  <green>RESET:</green>  ${:06X}\n".format(self.rom.reset_vector)
-        s += "  <green>NMI:</green>    ${:06X}\n".format(self.rom.nmi_vector)
-        print_html(s)
+        s = []
+        s.append("<green>Title:</green>    {}\n".format(self.rom.title))
+        s.append("<green>Type:</green>     {}\n".format(self.rom.type.name))
+        s.append("<green>Size:</green>     {} KiB\n".format(self.rom.size // 1024))
+        s.append("<green>Vectors:</green>\n")
+        s.append("  <green>RESET:</green>  ${:06X}\n".format(self.rom.reset_vector))
+        s.append("  <green>NMI:</green>    ${:06X}\n".format(self.rom.nmi_vector))
+        print_html("".join(s))
 
     @command
     @argument("label", complete_subroutine)
@@ -130,3 +139,7 @@ class App(Repl):
             self.subroutine = self.log.subroutines_by_label[label]
         else:
             print_error("No such subroutine.")
+
+    @staticmethod
+    def _print_subroutine(subroutine: Subroutine) -> str:
+        return "${:06X}  <green>{}</green>\n".format(subroutine.pc, subroutine.label)

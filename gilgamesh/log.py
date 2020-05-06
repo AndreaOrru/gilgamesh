@@ -79,9 +79,6 @@ class Log:
         subroutine = self.subroutines[subroutine_pc]
         subroutine.state_changes.add(state_change)
 
-    def get_subroutine_states(self, subroutine_pc: int) -> Set[StateChange]:
-        return self.subroutines[subroutine_pc].state_changes
-
     def add_reference(self, instruction: Instruction, target: int) -> None:
         self.references[target].add((instruction.pc, instruction.subroutine))
 

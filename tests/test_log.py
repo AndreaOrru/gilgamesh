@@ -116,6 +116,7 @@ class UnknownJumpTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800B]
 
         self.assertSetEqual(sub.state_changes, {StateChange(unknown=True)})
+        self.assertTrue(sub.has_unknown_return_state())
 
         reset = self.log.subroutines_by_label["reset"]
         self.assertNotIn(0x8005, reset.instructions)
