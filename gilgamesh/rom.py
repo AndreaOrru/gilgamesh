@@ -69,6 +69,7 @@ class ROM:
         return sha1(self.data).hexdigest()
 
     def _translate(self, address: int) -> int:
+        # Translate address from SNES to PC format.
         if self.type == ROMType.HiROM:
             return address & 0x3FFFFF
         else:
