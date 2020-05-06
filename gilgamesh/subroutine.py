@@ -11,7 +11,10 @@ class Subroutine:
         self.log = log
         self.pc = pc
         self.label = label
+
+        # Instructions belonging to the subroutine.
         self.instructions: Dict[int, Instruction] = SortedDict()
+        # Calling the subroutine results in the following state changes.
         self.state_changes: Set[StateChange] = set()
 
     @property

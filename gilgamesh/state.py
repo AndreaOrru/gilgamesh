@@ -6,6 +6,8 @@ X_BIT = 4
 
 class State:
     def __init__(self, p=0b0011_0000, m: Optional[int] = None, x: Optional[int] = None):
+        # State can be specified by either passing a P integer value,
+        # or individual M & X values to specify A and X/Y sizes.
         if (m is None) and (x is None):
             self.p = p
         else:
@@ -63,6 +65,8 @@ class State:
 
 
 class StateChange:
+    """Change in processor state caused by the execution of a subroutine."""
+
     def __init__(self, m: Optional[int] = None, x: Optional[int] = None, unknown=False):
         self.m = m
         self.x = x
@@ -101,6 +105,8 @@ class StateChange:
         self.x = 0 if change.x else self.x
 
     def apply_assertion(self, assertion: "StateChange") -> None:
+        # If we already knew that M was set, and we're currently
+        # setting M, then we are not really changing its value.
         if (
             (assertion.m is not None)
             and (self.m is not None)
