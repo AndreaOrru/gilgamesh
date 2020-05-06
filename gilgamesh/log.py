@@ -15,11 +15,13 @@ class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
         self.clear()
-        self.state_assertions = {0x80858C: StateChange(m=0, x=0)}
+        self.state_assertions = {0xFDE9A6: StateChange(m=1, x=0)}
 
     def clear(self) -> None:
+        # Preserve currently assigned labels.
         self.preserved_labels = self._preserve_labels()
 
+        # Clear all data structures.
         self.entry_points: List[InstructionID] = []
         self.local_labels: DefaultDict[int, Dict[str, int]] = defaultdict(bidict)
         self.instructions: DefaultDict[int, Set[InstructionID]] = defaultdict(set)
@@ -27,17 +29,21 @@ class Log:
         self.subroutines_by_label: Dict[str, Subroutine] = {}
         self.references: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
 
+        # Add entry points.
         self.add_subroutine(self.rom.reset_vector, label="reset", entry_point=True)
         self.add_subroutine(self.rom.nmi_vector, label="nmi", entry_point=True)
 
     def analyze(self) -> None:
+        # Clear the current results.
         if self.instructions:
             self.clear()
 
+        # Start emulation from all entry points.
         for pc, p, subroutine in self.entry_points:
             cpu = CPU(self, pc, p, subroutine)
             cpu.run()
 
+        # Generate labels for newly discovered code.
         self._generate_labels()
 
     def add_instruction(self, instruction: Instruction) -> None:
@@ -48,12 +54,14 @@ class Log:
     def add_subroutine(
         self, pc: int, p: int = 0b0011_0000, label: str = "", entry_point: bool = False
     ) -> None:
+        # Assign a label to the subroutine (or retrieve the existing one).
         preserved_label = self.preserved_labels.get(pc)
         if preserved_label:
             label = preserved_label
         elif not label:
             label = "sub_{:06X}".format(pc)
 
+        # Create and register subroutine (unless it exists already).
         subroutine = self.subroutines.get(pc)
         if subroutine is None:
             subroutine = Subroutine(self, pc, label)
@@ -66,6 +74,8 @@ class Log:
     def add_subroutine_state(
         self, subroutine_pc: int, state_change: StateChange
     ) -> None:
+        # Keep track of the processor state changes
+        # caused by the execution of a subroutine.
         subroutine = self.subroutines[subroutine_pc]
         subroutine.state_changes.add(state_change)
 
@@ -79,18 +89,22 @@ class Log:
         subroutine = self.subroutines.get(pc)
         if subroutine:
             return subroutine.label
+
         local_label = self.local_labels[subroutine_pc].inverse.get(pc)  # type: ignore
         if local_label:
             return f".{local_label}"
+
         return None
 
     def get_label_value(
         self, label: str, subroutine_pc: Optional[int] = None
     ) -> Optional[int]:
+        # If there's a match with a subroutine.
         subroutine = self.subroutines_by_label.get(label)
         if subroutine is not None:
             return subroutine.pc
 
+        # If there's a match with a local label inside the given subroutine.
         if subroutine_pc is not None:
             return self.local_labels[subroutine_pc].get(label)
 
@@ -114,9 +128,11 @@ class Log:
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():
+            # Subroutines are already tracked.
             if target in self.subroutines:
                 continue
 
+            # Generate local labels, or reuse existing ones.
             for pc, subroutine_pc in sources:
                 preserved_label = self.preserved_labels.get(target)
                 local_label = (

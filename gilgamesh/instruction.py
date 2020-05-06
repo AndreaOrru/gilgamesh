@@ -1,10 +1,16 @@
 from collections import namedtuple
 from typing import Optional
 
+from cached_property import cached_property  # type: ignore
+
 from gilgamesh.opcodes import AddressMode, Op, argument_size_table, opcode_table
 from gilgamesh.signed_types import s8, s16
 from gilgamesh.state import State
 
+# The same instruction can be executed in different states or as
+# part of different subroutines. We define a InstructionID struct
+# as the unique identifier of an instruction executed in a specific
+# state and subroutine.
 InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
 
 
@@ -67,8 +73,9 @@ class Instruction:
             return self._argument & 0xFFFFFF
         return None
 
-    @property
+    @cached_property
     def absolute_argument(self) -> Optional[int]:
+        # Addressing modes whose argument is fully specified.
         if self.address_mode in (
             AddressMode.IMMEDIATE_M,
             AddressMode.IMMEDIATE_X,
@@ -77,18 +84,22 @@ class Instruction:
         ):
             return self.argument
 
+        # JMP $xxxx -> PB:xxxx
         elif self.address_mode == AddressMode.ABSOLUTE and self.is_control:
             assert self.argument is not None
             return (self.pc & 0xFF0000) | self.argument
 
+        # Bxx .label
         elif self.address_mode == AddressMode.RELATIVE:
             assert (self.size is not None) and (self.argument is not None)
             return self.pc + self.size + s8(self.argument)
 
+        # BRL .label
         elif self.address_mode == AddressMode.RELATIVE_LONG:
             assert (self.size is not None) and (self.argument is not None)
             return self.pc + self.size + s16(self.argument)
 
+        # Other addressing modes depend on context we don't know.
         return None
 
     @property
@@ -138,7 +149,7 @@ class Instruction:
     def is_sep_rep(self) -> bool:
         return self.operation in (Op.SEP, Op.REP)
 
-    @property
+    @cached_property
     def argument_string(self) -> str:
         if self.address_mode == AddressMode.IMPLIED:
             return ""
