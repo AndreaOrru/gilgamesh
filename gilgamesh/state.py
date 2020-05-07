@@ -132,19 +132,19 @@ class StateChange:
         self.m = 0 if change.m else self.m
         self.x = 0 if change.x else self.x
 
-    def apply_assertion(self, assertion: "StateChange") -> None:
+    def apply_inference(self, inference: "StateChange") -> None:
         # If we already knew that M was set, and we're currently
         # setting M, then we are not really changing its value.
         if (
-            (assertion.m is not None)
+            (inference.m is not None)
             and (self.m is not None)
-            and (assertion.m == self.m)
+            and (inference.m == self.m)
         ):
             self.m = None
 
         if (
-            (assertion.x is not None)
+            (inference.x is not None)
             and (self.x is not None)
-            and (assertion.x == self.x)
+            and (inference.x == self.x)
         ):
             self.x = None

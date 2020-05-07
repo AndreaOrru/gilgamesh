@@ -86,10 +86,10 @@ class StateChangeTest(TestCase):
         self.assertEqual(change.m, 0)
         self.assertEqual(change.x, 0)
 
-    def test_apply_assertion(self):
+    def test_apply_inference(self):
         change = StateChange(m=1, x=1)
-        assertion = StateChange(m=1, x=None)
+        inference = StateChange(m=1, x=None)
 
-        change.apply_assertion(assertion)
+        change.apply_inference(inference)
         self.assertEqual(change.m, None)
         self.assertEqual(change.x, 1)

@@ -21,7 +21,7 @@ class CPU:
         self.state_change = StateChange()
         # What we know about the CPU state based on the
         # sequence of instructions we have executed.
-        self.state_assertion = StateChange()
+        self.state_inference = StateChange()
 
         # Stack formed as a result of sequences of PHP/PLP instructions.
         self.state_stack: List[Tuple[State, StateChange]] = []
@@ -38,7 +38,7 @@ class CPU:
         # Copy the current state of the CPU.
         cpu = copy(self)
         cpu.state = copy(self.state)
-        cpu.state_assertion = copy(self.state_assertion)
+        cpu.state_inference = copy(self.state_inference)
         # Don't carry over the state change information to new subroutines.
         cpu.state_change = StateChange() if new_subroutine else copy(self.state_change)
         return cpu
@@ -69,7 +69,7 @@ class CPU:
 
         # See if we can learn something about the *required*
         # state of the CPU based on the current instruction.
-        self._derive_state_assertion(instruction)
+        self._derive_state_inference(instruction)
 
         if instruction.is_return:
             self.log.add_subroutine_state(self.subroutine, self.state_change)
@@ -155,7 +155,7 @@ class CPU:
         # processor is operating in 8-bits accumulator mode
         # and we switch to that same mode, effectively no
         # state change is being performed.
-        self.state_change.apply_assertion(self.state_assertion)
+        self.state_change.apply_inference(self.state_inference)
 
     def push_state(self) -> None:
         self.state_stack.append((copy(self.state), copy(self.state_change)))
@@ -167,17 +167,7 @@ class CPU:
     def is_ram(address: int) -> bool:
         return (address <= 0x001FFF) or (0x7E0000 <= address <= 0x7FFFFF)
 
-    def _derive_state_assertion(self, instruction: Instruction) -> None:
-        # If we have defined a custom assertion for the
-        # current instruction, retrieve it and apply it.
-        saved_assertion = self.log.state_assertions.get(instruction.pc)
-        if saved_assertion:
-            if saved_assertion.m is not None:
-                self.state_assertion.m = saved_assertion.m
-            if saved_assertion.x is not None:
-                self.state_assertion.x = saved_assertion.x
-            return
-
+    def _derive_state_inference(self, instruction: Instruction) -> None:
         # If we're executing an instruction with a certain operand size,
         # and no state change has been performed in the current subroutine,
         # then we can infer that the state of the processor as we enter
@@ -186,12 +176,12 @@ class CPU:
             instruction.address_mode == AddressMode.IMMEDIATE_M
             and self.state_change.m is None
         ):
-            self.state_assertion.m = self.state.m
+            self.state_inference.m = self.state.m
         elif (
             instruction.address_mode == AddressMode.IMMEDIATE_X
             and self.state_change.x is None
         ):
-            self.state_assertion.x = self.state.x
+            self.state_inference.x = self.state.x
 
     def _propagate_subroutine_state(self, subroutine_pc: int) -> bool:
         # If the subroutine can return in more than one distinct state, or its
