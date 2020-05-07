@@ -72,7 +72,7 @@ class Log:
         # Apply existing state change assertions.
         state_change = self.state_change_assertions.get(pc)
         if state_change:
-            subroutine.state_changes = {state_change}
+            subroutine.assert_state_change(state_change)
 
         # Register the subroutine as an entry point if specified.
         if entry_point:
@@ -87,7 +87,7 @@ class Log:
             subroutine = self.subroutines[subroutine_pc]
             subroutine.state_changes.add(state_change)
 
-    def set_subroutine_state_change(
+    def assert_subroutine_state_change(
         self, subroutine: Subroutine, state_change: StateChange
     ) -> None:
         self.state_change_assertions[subroutine.pc] = state_change

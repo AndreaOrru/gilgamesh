@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
+from gilgamesh.instruction import Instruction
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
@@ -17,7 +18,17 @@ class App(Repl):
         self.log = Log(self.rom)
 
         # The subroutine currently under analysis.
-        self.subroutine: Optional[Subroutine] = None
+        self.subroutine_pc: Optional[int] = None
+
+    @property
+    def subroutine(self) -> Optional[Subroutine]:
+        if self.subroutine_pc is None:
+            return None
+        return self.log.subroutines[self.subroutine_pc]
+
+    @subroutine.setter
+    def subroutine(self, subroutine: Subroutine) -> None:
+        self.subroutine_pc = subroutine.pc
 
     @property
     def prompt(self) -> str:
@@ -62,7 +73,7 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
         state_change = StateChange.from_state_expr(state_expr)
-        self.log.set_subroutine_state_change(self.subroutine, state_change)
+        self.log.assert_subroutine_state_change(self.subroutine, state_change)
 
     @command()
     def do_disassembly(self) -> None:
@@ -71,19 +82,18 @@ class App(Repl):
             return print_error("No selected subroutine.")
 
         s = []
-        for pc, instruction in self.subroutine.instructions.items():
-            label = self.log.get_label(pc, self.subroutine.pc)
-            if label:
-                s.append(f"<red>{label}</red>:\n")
-            operation = "<green>{:4}</green>".format(instruction.name)
-            if instruction.argument_alias:
-                arg = "<red>{:16}</red>".format(instruction.argument_alias)
-            else:
-                arg = "{:16}".format(instruction.argument_string)
-            comment = "<grey>; ${:06X}</grey>".format(pc)
-            s.append(f"  {operation}{arg}{comment}\n")
+        for instruction in self.subroutine.instructions.values():
+            s.append(self._print_instruction(instruction, self.subroutine))
 
-            if instruction.stopped_execution:
+            if self.subroutine.asserted_state_change and (
+                instruction.stopped_execution or instruction.is_return
+            ):
+                s.append(
+                    "  <grey>; Asserted state change: {}</grey>\n".format(
+                        self.subroutine.state_change.state_expr
+                    )
+                )
+            elif instruction.stopped_execution:
                 s.append(
                     "  <grey>{:20}; ${:06X}</grey>\n".format(
                         "; Unknown state.", instruction.next_pc
@@ -171,6 +181,26 @@ class App(Repl):
             self.subroutine = self.log.subroutines_by_label[label]
         else:
             print_error("No such subroutine.")
+
+    def _print_instruction(
+        self, instruction: Instruction, subroutine: Subroutine
+    ) -> str:
+        s = []
+
+        label = self.log.get_label(instruction.pc, subroutine.pc)
+        if label:
+            s.append(f"<red>{label}</red>:\n")
+
+        operation = "<green>{:4}</green>".format(instruction.name)
+        if instruction.argument_alias:
+            arg = "<red>{:16}</red>".format(instruction.argument_alias)
+        else:
+            arg = "{:16}".format(instruction.argument_string)
+
+        comment = "<grey>; ${:06X}</grey>".format(instruction.pc)
+        s.append(f"  {operation}{arg}{comment}\n")
+
+        return "".join(s)
 
     @staticmethod
     def _print_subroutine(subroutine: Subroutine) -> str:

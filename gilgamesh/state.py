@@ -89,6 +89,17 @@ class StateChange:
         else:
             raise Exception("Unknown syntax")
 
+    @property
+    def state_expr(self) -> str:
+        r = ""
+        m_str = [f"m={self.m}"] if self.m is not None else []
+        x_str = [f"x={self.x}"] if self.x is not None else []
+        if m_str or x_str:
+            r += ",".join([*m_str, *x_str])
+        else:
+            r += "none"
+        return r
+
     def __repr__(self) -> str:
         if self.unknown:
             return "<StateChange: UNKNOWN>"

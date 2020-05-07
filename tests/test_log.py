@@ -52,7 +52,7 @@ class StateChangeTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800E]
         self.assertEqual(len(sub.state_changes), 1)
 
-        change = next(iter(sub.state_changes))
+        change = sub.state_change
         self.assertEqual(change.m, 0)
         self.assertEqual(change.x, 0)
 
@@ -78,7 +78,7 @@ class ElidableStateChangeTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800A]
         self.assertEqual(len(sub.state_changes), 1)
 
-        change = next(iter(sub.state_changes))
+        change = sub.state_change
         self.assertEqual(change.m, None)
         self.assertEqual(change.x, None)
 
@@ -93,7 +93,7 @@ class PhpPlpTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800A]
         self.assertEqual(len(sub.state_changes), 1)
 
-        change = next(iter(sub.state_changes))
+        change = sub.state_change
         self.assertEqual(change.m, None)
         self.assertEqual(change.x, None)
 
@@ -105,7 +105,7 @@ class JumpInsideSubroutineTest(LogTest, TestCase):
         sub = self.log.subroutines[0x8016]
         self.assertEqual(len(sub.state_changes), 1)
 
-        change = next(iter(sub.state_changes))
+        change = sub.state_change
         self.assertEqual(change.m, 0)
 
 
@@ -127,7 +127,7 @@ class UnknownJumpTest(LogTest, TestCase):
 
     def test_assert_state_change(self):
         sub = self.log.subroutines[0x800B]
-        self.log.set_subroutine_state_change(sub, StateChange())
+        self.log.assert_subroutine_state_change(sub, StateChange())
 
         self.log.analyze()
         reset = self.log.subroutines_by_label["reset"]

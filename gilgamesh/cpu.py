@@ -200,7 +200,7 @@ class CPU:
         if subroutine.has_unknown_return_state():
             return False
 
-        change = next(iter(subroutine.state_changes))
+        change = subroutine.state_change
         if change.m is not None:
             self.state_change.m = self.state.m = change.m
         if change.x is not None:
