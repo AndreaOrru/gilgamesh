@@ -2,7 +2,7 @@ incsrc lorom.asm
 
 org $8000
 reset:
-  sep #$20                      ; $008000
+  rep #$20                      ; $008000
   jsr unknown                   ; $008002
   lda #$FFFF                    ; $008005
 .loop:

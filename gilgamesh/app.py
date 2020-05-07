@@ -5,7 +5,7 @@ from prompt_toolkit import HTML  # type: ignore
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
-from gilgamesh.state import State
+from gilgamesh.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
 
 
@@ -40,6 +40,29 @@ class App(Repl):
     def do_analyze(self) -> None:
         """Run the analysis on the ROM."""
         self.log.analyze()
+
+    @command(container=True)
+    def do_assert(self) -> None:
+        """Define known processor states for instructions and subroutines."""
+        ...
+
+    @command()
+    @argument("state_expr")
+    def do_assert_statechange(self, state_expr: str) -> None:
+        """Define a known processor return state for a given subroutine.
+
+        STATE_EXPR can accept the following values:
+          - "none"         -> The subroutine does not change the state.
+          - "m=0" or "m=1" -> The subroutine changes the state of m to 0 or 1.
+          - "x=0" or "x=1" -> The subroutine changes the state of x to 0 or 1.
+          - "m=0,x=0"      -> The subroutine changes the state of m to 0 and x to 0.
+          - "m=0,x=1"      -> The subroutine changes the state of m to 0 and x to 1.
+          - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
+          - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
+        if not self.subroutine:
+            return print_error("No selected subroutine.")
+        state_change = StateChange.from_state_expr(state_expr)
+        self.log.set_subroutine_state_change(self.subroutine, state_change)
 
     @command()
     def do_disassembly(self) -> None:

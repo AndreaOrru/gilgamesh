@@ -72,6 +72,23 @@ class StateChange:
         self.x = x
         self.unknown = unknown
 
+    @classmethod
+    def from_state_expr(cls, expr: str) -> "StateChange":
+        # TODO: Validate expression.
+        if expr == "none":
+            return cls()
+
+        expressions = expr.split(",")
+        if 1 <= len(expressions) <= 2:
+            return cls(
+                **{
+                    str(register): int(value)
+                    for register, value in (e.split("=") for e in expressions)
+                }
+            )
+        else:
+            raise Exception("Unknown syntax")
+
     def __repr__(self) -> str:
         if self.unknown:
             return "<StateChange: UNKNOWN>"

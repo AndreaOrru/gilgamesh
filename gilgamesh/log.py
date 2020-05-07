@@ -14,8 +14,9 @@ from gilgamesh.subroutine import Subroutine
 class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
+        self.state_assertions: Dict[int, StateChange] = {}
+        self.state_change_assertions: Dict[int, StateChange] = {}
         self.clear()
-        self.state_assertions = {0xFDE9A6: StateChange(m=1, x=0)}
 
     def clear(self) -> None:
         # Preserve currently assigned labels.
@@ -68,16 +69,28 @@ class Log:
             self.subroutines[pc] = subroutine
             self.subroutines_by_label[label] = subroutine
 
+        # Apply existing state change assertions.
+        state_change = self.state_change_assertions.get(pc)
+        if state_change:
+            subroutine.state_changes = {state_change}
+
+        # Register the subroutine as an entry point if specified.
         if entry_point:
             self.entry_points.append(InstructionID(pc, p, pc))
 
     def add_subroutine_state(
         self, subroutine_pc: int, state_change: StateChange
     ) -> None:
-        # Keep track of the processor state changes
-        # caused by the execution of a subroutine.
-        subroutine = self.subroutines[subroutine_pc]
-        subroutine.state_changes.add(state_change)
+        if subroutine_pc not in self.state_change_assertions:
+            # Keep track of the processor state changes
+            # caused by the execution of a subroutine.
+            subroutine = self.subroutines[subroutine_pc]
+            subroutine.state_changes.add(state_change)
+
+    def set_subroutine_state_change(
+        self, subroutine: Subroutine, state_change: StateChange
+    ) -> None:
+        self.state_change_assertions[subroutine.pc] = state_change
 
     def add_reference(self, instruction: Instruction, target: int) -> None:
         self.references[target].add((instruction.pc, instruction.subroutine))
