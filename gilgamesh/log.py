@@ -14,8 +14,8 @@ from gilgamesh.subroutine import Subroutine
 class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
-        self.state_assertions: Dict[int, StateChange] = {}
-        self.state_change_assertions: Dict[int, StateChange] = {}
+        self.instruction_assertions: Dict[int, StateChange] = {}
+        self.subroutine_assertions: Dict[int, StateChange] = {}
         self.clear()
 
     def clear(self) -> None:
@@ -70,7 +70,7 @@ class Log:
             self.subroutines_by_label[label] = subroutine
 
         # Apply existing state change assertions.
-        state_change = self.state_change_assertions.get(pc)
+        state_change = self.subroutine_assertions.get(pc)
         if state_change:
             subroutine.assert_state_change(state_change)
 
@@ -81,16 +81,21 @@ class Log:
     def add_subroutine_state(
         self, subroutine_pc: int, state_change: StateChange
     ) -> None:
-        if subroutine_pc not in self.state_change_assertions:
+        if subroutine_pc not in self.subroutine_assertions:
             # Keep track of the processor state changes
             # caused by the execution of a subroutine.
             subroutine = self.subroutines[subroutine_pc]
             subroutine.state_changes.add(state_change)
 
+    def assert_instruction_state_change(
+        self, instruction_pc: int, state_change: StateChange
+    ) -> None:
+        self.instruction_assertions[instruction_pc] = state_change
+
     def assert_subroutine_state_change(
         self, subroutine: Subroutine, state_change: StateChange
     ) -> None:
-        self.state_change_assertions[subroutine.pc] = state_change
+        self.subroutine_assertions[subroutine.pc] = state_change
 
     def add_reference(self, instruction: Instruction, target: int) -> None:
         self.references[target].add((instruction.pc, instruction.subroutine))

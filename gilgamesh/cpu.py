@@ -1,8 +1,6 @@
 from copy import copy
 from typing import List, Tuple
 
-from typing_extensions import Literal
-
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
 from gilgamesh.state import State, StateChange
@@ -190,15 +188,24 @@ class CPU:
         if subroutine.has_unknown_return_state():
             return False
 
-        change = subroutine.state_change
-        if change.m is not None:
-            self.state_change.m = self.state.m = change.m
-        if change.x is not None:
-            self.state_change.x = self.state.x = change.x
-
+        self._apply_state_change(subroutine.state_change)
         return True
 
-    def _unknown_subroutine_state(self, instruction: Instruction) -> Literal[False]:
-        self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
-        instruction.stopped_execution = True
-        return False
+    def _unknown_subroutine_state(self, instruction: Instruction) -> bool:
+        # Check if the user defined a state assertion for the current instruction.
+        state_change = self.log.instruction_assertions.get(instruction.pc)
+        if state_change is None:
+            # No custom assertion, we need to stop here.
+            self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
+            instruction.stopped_execution = True
+            return False
+
+        # There is an assertion, apply it to the current state.
+        self._apply_state_change(state_change)
+        return True
+
+    def _apply_state_change(self, state_change: StateChange) -> None:
+        if state_change.m is not None:
+            self.state_change.m = self.state.m = state_change.m
+        if state_change.x is not None:
+            self.state_change.x = self.state.x = state_change.x
