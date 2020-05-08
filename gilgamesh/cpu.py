@@ -185,10 +185,11 @@ class CPU:
         # If the subroutine can return in more than one distinct state, or its
         # state is unknown, we can't reliably propagate the state to the caller.
         subroutine = self.log.subroutines[subroutine_pc]
-        if subroutine.check_unknown_return_state(self.state):
+        return_states, unknown = subroutine.simplify_return_states(self.state)
+        if len(return_states) > 1 or unknown:
             return False
 
-        self._apply_state_change(subroutine.state_change)
+        self._apply_state_change(return_states.pop())
         return True
 
     def _unknown_subroutine_state(self, instruction: Instruction) -> bool:

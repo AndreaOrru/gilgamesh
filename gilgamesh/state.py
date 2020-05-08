@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Optional
 
 M_BIT = 5
@@ -149,8 +150,10 @@ class StateChange:
         ):
             self.x = None
 
-    def simplify(self, state: State) -> None:
-        if (self.m is not None) and (state.m == self.m):
-            self.m = None
-        if (self.x is not None) and (state.x == self.x):
-            self.x = None
+    def simplify(self, state: State) -> "StateChange":
+        change = copy(self)
+        if (change.m is not None) and (state.m == change.m):
+            change.m = None
+        if (change.x is not None) and (state.x == change.x):
+            change.x = None
+        return change

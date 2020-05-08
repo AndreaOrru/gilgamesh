@@ -126,21 +126,16 @@ class StateChangeTest(TestCase):
         state = State(m=0, x=1)
 
         change = StateChange()
-        change.simplify(state)
-        self.assertEqual(change, StateChange())
+        self.assertEqual(change.simplify(state), StateChange())
 
         change = StateChange(m=0)
-        change.simplify(state)
-        self.assertEqual(change, StateChange())
+        self.assertEqual(change.simplify(state), StateChange())
 
         change = StateChange(m=0, x=1)
-        change.simplify(state)
-        self.assertEqual(change, StateChange())
+        self.assertEqual(change.simplify(state), StateChange())
 
         change = StateChange(m=0, x=0)
-        change.simplify(state)
-        self.assertEqual(change, StateChange(x=0))
+        self.assertEqual(change.simplify(state), StateChange(x=0))
 
         change = StateChange(unknown=True)
-        change.simplify(state)
-        self.assertEqual(change, StateChange(unknown=True))
+        self.assertEqual(change.simplify(state), StateChange(unknown=True))

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Set
+from typing import Dict, Set, Tuple
 
 from sortedcontainers import SortedDict  # type: ignore
 
@@ -28,6 +28,10 @@ class Subroutine:
         assert len(self.state_changes) == 1
         return next(iter(self.state_changes))
 
+    @property
+    def has_unknown_return_state(self) -> bool:
+        return any(s for s in self.state_changes if s.unknown)
+
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc] = instruction
 
@@ -35,17 +39,16 @@ class Subroutine:
         self.state_changes = {state_change}
         self.asserted_state_change = True
 
-    def check_unknown_return_state(self, state: Optional[State] = None) -> bool:
-        # Try to simplify the state changes based on the caller state.
-        if state:
-            simplified_changes = set()
-            while self.state_changes:
-                change = self.state_changes.pop()
-                change.simplify(state)
-                simplified_changes.add(change)
-            self.state_changes = simplified_changes
+    def simplify_return_states(self, state: State) -> Tuple[Set[StateChange], bool]:
+        assert len(self.state_changes) > 0
 
-        if len(self.state_changes) != 1 or self.state_change.unknown:
-            return True
+        # Simplify the state changes based on the caller state.
+        unknown = False
+        changes = set()
 
-        return False
+        for change in self.state_changes:
+            changes.add(change.simplify(state))
+            if change.unknown:
+                unknown = True
+
+        return changes, unknown

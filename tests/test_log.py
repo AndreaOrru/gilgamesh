@@ -117,7 +117,7 @@ class UnknownJumpTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800B]
 
         self.assertSetEqual(sub.state_changes, {StateChange(unknown=True)})
-        self.assertTrue(sub.check_unknown_return_state())
+        self.assertTrue(sub.has_unknown_return_state)
 
         self.assertNotIn(0x8005, reset.instructions)
         self.assertNotIn(0x800E, sub.instructions)
@@ -135,7 +135,7 @@ class UnknownJumpTest(LogTest, TestCase):
 
         self.assertIn(0x8005, reset.instructions)
         self.assertIn(0x8008, reset.instructions)
-        self.assertFalse(sub.check_unknown_return_state())
+        self.assertFalse(sub.has_unknown_return_state)
 
 
 class SimplifiableReturnState(LogTest, TestCase):
@@ -152,3 +152,10 @@ class SimplifiableReturnState(LogTest, TestCase):
         self.assertNotIn(0x800E, reset.instructions)
         self.assertNotIn(0x8011, reset.instructions)
         self.assertNotIn(0x8014, reset.instructions)
+
+        double_state_sub = self.log.subroutines[0x8017]
+        self.assertFalse(double_state_sub.has_unknown_return_state)
+        self.assertEqual(len(double_state_sub.state_changes), 2)
+
+        unknown_sub = self.log.subroutines[0x801F]
+        self.assertTrue(unknown_sub.has_unknown_return_state)
