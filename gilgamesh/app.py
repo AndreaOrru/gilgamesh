@@ -16,6 +16,7 @@ class App(Repl):
 
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
+        self.log.analyze()
 
         # The subroutine currently under analysis.
         self.subroutine_pc: Optional[int] = None
