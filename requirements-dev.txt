@@ -1,13 +1,15 @@
 # Python Language Server.
 python-language-server[all]
-pyls-black
-pyls-isort
 pyls-mypy
 jedi<0.16
 
 # Virtual environments.
 virtualenvwrapper
 future
+
+# Formatters.
+black
+isort
 
 # Development tools.
 ipython
