@@ -141,9 +141,14 @@ class UnknownJumpTest(LogTest, TestCase):
 class SimplifiableReturnState(LogTest, TestCase):
     asm = "simplifiable_return_state.asm"
 
-    def test_double_state_change_is_simplified(self):
+    def test_double_state_change_simplification(self):
         reset = self.log.subroutines_by_label["reset"]
 
+        # Simplifiable.
         self.assertIn(0x8005, reset.instructions)
         self.assertIn(0x8008, reset.instructions)
-        self.assertIn(0x800B, reset.instructions)
+
+        # Not simplifiable.
+        self.assertNotIn(0x800E, reset.instructions)
+        self.assertNotIn(0x8011, reset.instructions)
+        self.assertNotIn(0x8014, reset.instructions)

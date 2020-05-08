@@ -36,10 +36,8 @@ class Subroutine:
         self.asserted_state_change = True
 
     def check_unknown_return_state(self, state: Optional[State] = None) -> bool:
-        if len(self.state_changes) != 1:
-            if not state:
-                return True
-            # Try to simplify the state changes based on the caller state.
+        # Try to simplify the state changes based on the caller state.
+        if state:
             simplified_changes = set()
             while self.state_changes:
                 change = self.state_changes.pop()
@@ -47,7 +45,7 @@ class Subroutine:
                 simplified_changes.add(change)
             self.state_changes = simplified_changes
 
-        if self.state_change.unknown:
+        if len(self.state_changes) != 1 or self.state_change.unknown:
             return True
 
         return False
