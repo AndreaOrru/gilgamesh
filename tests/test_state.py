@@ -121,3 +121,26 @@ class StateChangeTest(TestCase):
         change.apply_inference(inference)
         self.assertEqual(change.m, None)
         self.assertEqual(change.x, 1)
+
+    def test_simplify(self):
+        state = State(m=0, x=1)
+
+        change = StateChange()
+        change.simplify(state)
+        self.assertEqual(change, StateChange())
+
+        change = StateChange(m=0)
+        change.simplify(state)
+        self.assertEqual(change, StateChange())
+
+        change = StateChange(m=0, x=1)
+        change.simplify(state)
+        self.assertEqual(change, StateChange())
+
+        change = StateChange(m=0, x=0)
+        change.simplify(state)
+        self.assertEqual(change, StateChange(x=0))
+
+        change = StateChange(unknown=True)
+        change.simplify(state)
+        self.assertEqual(change, StateChange(unknown=True))

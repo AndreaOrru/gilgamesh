@@ -185,7 +185,7 @@ class CPU:
         # If the subroutine can return in more than one distinct state, or its
         # state is unknown, we can't reliably propagate the state to the caller.
         subroutine = self.log.subroutines[subroutine_pc]
-        if subroutine.has_unknown_return_state():
+        if subroutine.check_unknown_return_state(self.state):
             return False
 
         self._apply_state_change(subroutine.state_change)

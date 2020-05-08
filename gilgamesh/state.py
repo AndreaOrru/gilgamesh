@@ -148,3 +148,9 @@ class StateChange:
             and (inference.x == self.x)
         ):
             self.x = None
+
+    def simplify(self, state: State) -> None:
+        if (self.m is not None) and (state.m == self.m):
+            self.m = None
+        if (self.x is not None) and (state.x == self.x):
+            self.x = None

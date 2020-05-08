@@ -148,7 +148,7 @@ class App(Repl):
         """List subroutines with unknown or multiple return states."""
         s = []
         for subroutine in self.log.subroutines.values():
-            if subroutine.has_unknown_return_state():
+            if subroutine.check_unknown_return_state():
                 s.append(self._print_subroutine(subroutine))
         print_html("".join(s))
 
