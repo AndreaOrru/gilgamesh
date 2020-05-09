@@ -61,14 +61,10 @@ class App(Repl):
         """Define known processor states for instructions and subroutines."""
         ...
 
-    @command(container=True)
-    def do_assert_statechange(self, state_expr: str) -> None:
-        ...
-
     @command()
     @argument("label_pc", complete_label)
     @argument("state_expr")
-    def do_assert_statechange_instruction(self, label_pc: str, state_expr: str) -> None:
+    def do_assert_instruction(self, label_pc: str, state_expr: str) -> None:
         """Define how the processor state changes after an instruction's execution.
 
         STATE_EXPR can accept the following values:
@@ -85,7 +81,7 @@ class App(Repl):
 
     @command()
     @argument("state_expr")
-    def do_assert_statechange_subroutine(self, state_expr: str) -> None:
+    def do_assert_subroutine(self, state_expr: str) -> None:
         """Define a known processor return state for a given subroutine.
 
         STATE_EXPR can accept the following values:
@@ -100,6 +96,30 @@ class App(Repl):
             return print_error("No selected subroutine.")
         state_change = StateChange.from_state_expr(state_expr)
         self.log.assert_subroutine_state_change(self.subroutine, state_change)
+
+    @command()
+    def do_debug(self) -> None:
+        """Debug Gilgamesh itself."""
+        breakpoint()
+
+    @command(container=True)
+    def do_deassert(self) -> None:
+        """Remove previously defined assertions."""
+        ...
+
+    @command()
+    @argument("label_pc", complete_label)
+    def do_deassert_instruction(self, label_pc: str) -> None:
+        """Remove previously defined instruction assertions."""
+        pc = self._label_to_pc(label_pc)
+        self.log.instruction_assertions.pop(pc, None)
+
+    @command()
+    @argument("subroutine", complete_subroutine)
+    def do_deassert_subroutine(self, subroutine: str) -> None:
+        """Remove previously defined subroutine assertions."""
+        subroutine_pc = self.log.subroutines_by_label[subroutine].pc
+        self.log.subroutine_assertions.pop(subroutine_pc, None)
 
     @command()
     def do_disassembly(self) -> None:
@@ -128,10 +148,9 @@ class App(Repl):
 
         print_html("".join(s))
 
-    @command()
-    def do_debug(self) -> None:
-        """Debug Gilgamesh itself."""
-        breakpoint()
+    @command(container=True)
+    def do_delete_assertion(self) -> None:
+        ...
 
     @command(container=True)
     def do_list(self) -> None:
@@ -159,19 +178,23 @@ class App(Repl):
             subroutines = [
                 self.log.subroutines[i.subroutine] for i in self.log.instructions[pc]
             ]
-            instruction = subroutines[0].instructions[pc]
-            operation = "<green>{:4}</green>".format(instruction.name)
-            disassembly = f"{operation}{instruction.argument_string}"
+            try:
+                instruction = subroutines[0].instructions[pc]
+                operation = "<green>{:4}</green>".format(instruction.name)
+                disassembly = f"{operation}{instruction.argument_string}"
+            except IndexError:
+                disassembly = "<red>UNKNOWN</red>"
 
             s.append(
                 "{}<magenta>${:06X}</magenta>  {} -> ".format(spaces, pc, disassembly)
             )
             s.append(self._print_state_change(change))
-            s.append(
-                "{}  <grey>{}</grey>\n".format(
-                    spaces, ", ".join(s.label for s in subroutines)
+            if subroutines:
+                s.append(
+                    "{}  <grey>{}</grey>\n".format(
+                        spaces, ", ".join(s.label for s in subroutines)
+                    )
                 )
-            )
         print_html("".join(s))
 
     @command()
@@ -183,8 +206,11 @@ class App(Repl):
         s = []
         spaces = "  " if indent else ""
         for pc, change in self.log.subroutine_assertions.items():
-            label = self.log.subroutines[pc].label
-            s.append(f"{spaces}<magenta>{label}</magenta> -> ")
+            try:
+                sub = "<magenta>{}</magenta>".format(self.log.subroutines[pc].label)
+            except KeyError:
+                sub = "<red>${:06X}</red>".format(pc)
+            s.append(f"{spaces}{sub} -> ")
             s.append(self._print_state_change(change))
         print_html("".join(s))
 
