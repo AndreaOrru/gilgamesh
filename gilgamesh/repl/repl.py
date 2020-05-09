@@ -28,7 +28,8 @@ class Repl:
         return HTML("<yellow>" + "> " + "</yellow>")
 
     def run(self) -> None:
-        while True:
+        close = False
+        while not close:
             try:
                 # Take commands through the prompt.
                 tokens = (
@@ -38,24 +39,32 @@ class Repl:
                 )
             except EOFError:
                 # If Ctrl-D, get out.
-                break
+                close = True
             except KeyboardInterrupt:
                 # If Ctrl-C, abort the current command insertion.
                 continue
-            if not tokens:
-                # Empty command, collect a new one.
-                continue
-
-            try:
-                # Parse the command.
-                cmd, args = self._commands[tokens[0]], tokens[1:]
-            except KeyError:
-                # Couldn't parse, show help.
-                self.do_help()
             else:
-                # Execute the command.
-                if cmd(self, *args):
-                    return  # Commands can return True to quit the application.
+                if not tokens:
+                    # Empty command, collect a new one.
+                    continue
+
+                try:
+                    # Parse the command.
+                    cmd, args = self._commands[tokens[0]], tokens[1:]
+                except KeyError:
+                    # Couldn't parse, show help.
+                    self.do_help()
+                else:
+                    # Execute the command.
+                    if cmd(self, *args):
+                        # Commands can return True to quit the application.
+                        close = True
+
+            # Ask for comfirmation when quitting.
+            if close and not self.yes_no_prompt(
+                "Are you sure you want to quit without saving?"
+            ):
+                close = False
 
     @command()
     def do_help(self, *parts) -> None:
