@@ -30,41 +30,39 @@ class Repl:
     def run(self) -> None:
         close = False
         while not close:
+            # Take commands through the prompt.
             try:
-                # Take commands through the prompt.
                 tokens = (
                     self._session.prompt(self.prompt, completer=self._completer)
                     .strip()
                     .split()
                 )
+            # If Ctrl-D, get out.
             except EOFError:
-                # If Ctrl-D, get out.
                 close = True
+            # If Ctrl-C, abort the current command insertion.
             except KeyboardInterrupt:
-                # If Ctrl-C, abort the current command insertion.
                 continue
             else:
-                if not tokens:
-                    # Empty command, collect a new one.
-                    continue
-
-                try:
+                if tokens:
                     # Parse the command.
-                    cmd, args = self._commands[tokens[0]], tokens[1:]
-                except KeyError:
+                    try:
+                        cmd, args = self._commands[tokens[0]], tokens[1:]
                     # Couldn't parse, show help.
-                    self.do_help()
-                else:
+                    except KeyError:
+                        self.do_help()
                     # Execute the command.
-                    if cmd(self, *args):
+                    else:
                         # Commands can return True to quit the application.
-                        close = True
+                        if cmd(self, *args):
+                            close = True
 
-            # Ask for comfirmation when quitting.
+            # Ask for confirmation when quitting.
             if close and not self.yes_no_prompt(
                 "Are you sure you want to quit without saving?"
             ):
                 close = False
+        print()
 
     @command()
     def do_help(self, *parts) -> None:
