@@ -1,7 +1,7 @@
 from array import array
 from enum import Enum, auto
 from hashlib import sha1
-from os.path import splitext
+from os.path import basename, splitext
 from typing import List
 
 
@@ -50,6 +50,10 @@ class ROM:
     @property
     def glm_path(self) -> str:
         return splitext(self.path)[0] + ".glm"
+
+    @property
+    def glm_name(self) -> str:
+        return basename(self.glm_path)
 
     def read_byte(self, address: int) -> int:
         return self.data[self._translate(address)]

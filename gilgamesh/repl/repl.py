@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict
 
 from cached_property import cached_property  # type: ignore
 from dictlib import dug  # type: ignore
-from prompt_toolkit import HTML, PromptSession  # type: ignore
+from prompt_toolkit import HTML, PromptSession, prompt  # type: ignore
 from prompt_toolkit.completion import NestedCompleter  # type: ignore
 from prompt_toolkit.shortcuts import CompleteStyle, clear  # type: ignore
 
@@ -91,6 +91,14 @@ class Repl:
         """Quit the application."""
         return True
 
+    def yes_no_prompt(self, question: str) -> bool:
+        answer = prompt(HTML(f"<yellow>{question} (y/n) </yellow>"), style=style)
+        if answer == "y":
+            return True
+        else:
+            print()
+            return False
+
     @cached_property
     def _all_commands(self) -> Dict[str, Callable]:
         # Get a dictionary from command names to commands (methods).
@@ -161,7 +169,7 @@ class Repl:
         parts = method.__name__.split("_")[1:]
         self.do_help(*parts)
         if error:
-            print_error('Unknown syntax.')
+            print_error("Unknown syntax.")
 
     @staticmethod
     def _help_list(commands: Dict[str, Any], header="Commands", error=False) -> None:
@@ -173,7 +181,7 @@ class Repl:
             s += "  <green>{:15}</green>{}\n".format(name, doc)
         print_html(s)
         if error:
-            print_error('Unknown syntax.')
+            print_error("Unknown syntax.")
 
     @staticmethod
     def _help_usage(*parts) -> None:

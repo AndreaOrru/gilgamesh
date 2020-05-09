@@ -1,7 +1,7 @@
 from os import path
 from typing import List, Optional
 
-from prompt_toolkit import HTML, prompt  # type: ignore
+from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.instruction import Instruction
 from gilgamesh.log import Log
@@ -18,7 +18,7 @@ class App(Repl):
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
         # Try to automatically load an existing analysis.
-        if not self._do_load(ignore_error=True):
+        if not self._do_load():
             self.log.analyze()
 
         # The subroutine currently under analysis.
@@ -159,7 +159,10 @@ class App(Repl):
     @command()
     def do_load(self) -> None:
         """Load the state of the analysis from a .glm file."""
-        self._do_load()
+        if not path.exists(self.rom.glm_path):
+            print_error(f'"{self.rom.glm_name}" does not exist.')
+        elif self.yes_no_prompt("Are you sure you want to load the saved analysis?"):
+            self._do_load()
 
     @command(container=True)
     def do_query(self) -> None:
@@ -204,13 +207,13 @@ class App(Repl):
 
         def save() -> None:
             self.log.save()
-            glm_file = path.basename(self.rom.glm_path)
-            print_html(f'<green>"{glm_file}" saved successfully.</green>\n')
+            print_html(f'<green>"{self.rom.glm_name}" saved successfully.</green>\n')
 
         if not path.exists(self.rom.glm_path):
-            return save()
-        answer = prompt("Are you sure you want to overwrite the saved analysis? (y/n) ")
-        if answer == "y":
+            save()
+        elif self.yes_no_prompt(
+            "Are you sure you want to overwrite the saved analysis?"
+        ):
             save()
 
     @command()
@@ -224,14 +227,12 @@ class App(Repl):
         else:
             print_error("No such subroutine.")
 
-    def _do_load(self, ignore_error=False) -> bool:
-        glm_file = path.basename(self.rom.glm_path)
+    def _do_load(self) -> bool:
         if self.log.load():
-            print_html(f'<green>"{glm_file}" loaded successfully.</green>\n')
-        elif not ignore_error:
-            print_error(f'"{glm_file}" does not exist.')
+            print_html(f'<green>"{self.rom.glm_name}" loaded successfully.</green>\n')
+            return True
+        else:
             return False
-        return True
 
     def _label_to_pc(self, label_pc):
         pc = self.log.get_label_value(
