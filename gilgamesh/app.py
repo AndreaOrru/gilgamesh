@@ -108,7 +108,7 @@ class App(Repl):
         for instruction in self.subroutine.instructions.values():
             s.append(self._print_instruction(instruction, self.subroutine))
 
-            if self.subroutine.asserted_state_change and (
+            if self.subroutine.has_asserted_state_change and (
                 instruction.stopped_execution or instruction.is_return
             ):
                 s.append(
@@ -230,5 +230,18 @@ class App(Repl):
         return "".join(s)
 
     @staticmethod
-    def _print_subroutine(subroutine: Subroutine) -> str:
-        return "${:06X}  <green>{}</green>\n".format(subroutine.pc, subroutine.label)
+    def _print_subroutine(sub: Subroutine) -> str:
+        if sub.has_unknown_return_state:
+            color = "red"
+        elif sub.has_asserted_state_change or sub.instruction_has_asserted_state_change:
+            color = "magenta"
+        else:
+            color = "green"
+
+        return "${:06X}  <{}>{}</{}>{}\n".format(
+            sub.pc,
+            color,
+            sub.label,
+            color,
+            " <red>*</red>" if sub.has_jump_table else "",
+        )

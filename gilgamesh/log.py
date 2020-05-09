@@ -52,6 +52,9 @@ class Log:
         subroutine = self.subroutines[instruction.subroutine]
         subroutine.add_instruction(instruction)
 
+        if instruction.pc in self.instruction_assertions:
+            subroutine.instruction_has_asserted_state_change = True
+
     def add_subroutine(
         self, pc: int, p: int = 0b0011_0000, label: str = "", entry_point: bool = False
     ) -> None:

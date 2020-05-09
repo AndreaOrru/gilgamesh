@@ -17,7 +17,9 @@ class Subroutine:
         # Calling the subroutine results in the following state changes.
         self.state_changes: Set[StateChange] = set()
 
-        self.asserted_state_change = False
+        self.has_jump_table = False
+        self.has_asserted_state_change = False
+        self.instruction_has_asserted_state_change = False
 
     @property
     def local_labels(self) -> Dict[str, int]:
@@ -35,9 +37,14 @@ class Subroutine:
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc] = instruction
 
+        if (instruction.absolute_argument is None) and (
+            instruction.is_jump or instruction.is_call
+        ):
+            self.has_jump_table = True
+
     def assert_state_change(self, state_change: StateChange) -> None:
         self.state_changes = {state_change}
-        self.asserted_state_change = True
+        self.has_asserted_state_change = True
 
     def simplify_return_states(self, state: State) -> Tuple[Set[StateChange], bool]:
         assert len(self.state_changes) > 0
