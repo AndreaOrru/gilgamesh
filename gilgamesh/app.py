@@ -147,19 +147,13 @@ class App(Repl):
     def do_list_assertions(self) -> None:
         """List assertions provided by the user.
         If called with no arguments, display all assertions."""
-        print_html("<red>ASSERTED SUBROUTINE STATE CHANGES:</red>")
-        self._do_list_assertions_subroutines(indent=True)
-        print_html("<red>ASSERTED INSTRUCTION STATE CHANGES:</red>")
-        self._do_list_assertions_instructions(indent=True)
+        self.do_list_assertions_subroutines()
+        self.do_list_assertions_instructions()
 
     @command()
     def do_list_assertions_instructions(self) -> None:
         """List all instruction assertions provided by the user."""
-        self._do_list_assertions_instructions()
-
-    def _do_list_assertions_instructions(self, indent=False) -> None:
-        s = []
-        spaces = "  " if indent else ""
+        s = ["<red>ASSERTED INSTRUCTION STATE CHANGES:</red>\n"]
         for pc, change in self.log.instruction_assertions.items():
             subroutines = [
                 self.log.subroutines[i.subroutine] for i in self.log.instructions[pc]
@@ -171,14 +165,12 @@ class App(Repl):
             except IndexError:
                 disassembly = "<red>UNKNOWN</red>"
 
-            s.append(
-                "{}<magenta>${:06X}</magenta>  {} -> ".format(spaces, pc, disassembly)
-            )
+            s.append("  <magenta>${:06X}</magenta>  {} -> ".format(pc, disassembly))
             s.append(self._print_state_change(change))
             if subroutines:
                 s.append(
-                    "{}  <grey>{}</grey>\n".format(
-                        spaces, ", ".join(s.label for s in subroutines)
+                    "    <grey>{}</grey>\n".format(
+                        ", ".join(s.label for s in subroutines)
                     )
                 )
         print_html("".join(s))
@@ -189,14 +181,13 @@ class App(Repl):
         self._do_list_assertions_subroutines()
 
     def _do_list_assertions_subroutines(self, indent=False) -> None:
-        s = []
-        spaces = "  " if indent else ""
+        s = ["<red>ASSERTED SUBROUTINE STATE CHANGES:</red>\n"]
         for pc, change in self.log.subroutine_assertions.items():
             try:
                 sub = "<magenta>{}</magenta>".format(self.log.subroutines[pc].label)
             except KeyError:
                 sub = "<red>${:06X}</red>".format(pc)
-            s.append(f"{spaces}{sub} -> ")
+            s.append(f"  {sub} -> ")
             s.append(self._print_state_change(change))
         print_html("".join(s))
 
