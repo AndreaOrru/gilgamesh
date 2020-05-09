@@ -130,21 +130,7 @@ class App(Repl):
         s = []
         for instruction in self.subroutine.instructions.values():
             s.append(self._print_instruction(instruction))
-
-            if self.subroutine.has_asserted_state_change and (
-                instruction.stopped_execution or instruction.is_return
-            ):
-                s.append(
-                    "  <grey>; Asserted state change: {}</grey>\n".format(
-                        self.subroutine.state_change.state_expr
-                    )
-                )
-            elif instruction.stopped_execution:
-                s.append(
-                    "  <grey>{:20}; ${:06X}</grey>\n".format(
-                        "; Unknown state.", instruction.next_pc
-                    )
-                )
+            s.append(self._print_assertion_info(instruction))
 
         print_html("".join(s))
 
@@ -336,6 +322,24 @@ class App(Repl):
         s.append(f"  {operation}{arg}{comment}\n")
 
         return "".join(s)
+
+    def _print_assertion_info(self, instruction: Instruction) -> str:
+        subroutine = self.log.subroutines[instruction.subroutine]
+        if subroutine.has_asserted_state_change and (
+            instruction.stopped_execution or instruction.is_return
+        ):
+            return "  <grey>; Asserted state change: {}</grey>\n".format(
+                subroutine.state_change.state_expr
+            )
+        elif instruction.pc in self.log.instruction_assertions:
+            return "  <grey>; Asserted state change: {}</grey>\n".format(
+                self.log.instruction_assertions[instruction.pc].state_expr
+            )
+        elif instruction.stopped_execution:
+            return "  <grey>{:20}; ${:06X}</grey>\n".format(
+                "; Unknown state.", instruction.next_pc
+            )
+        return ""
 
     @staticmethod
     def _print_state_change(change: StateChange) -> str:
