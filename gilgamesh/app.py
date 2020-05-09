@@ -62,9 +62,9 @@ class App(Repl):
         ...
 
     @command()
-    @argument("label_pc", complete_label)
+    @argument("label_or_pc", complete_label)
     @argument("state_expr")
-    def do_assert_instruction(self, label_pc: str, state_expr: str) -> None:
+    def do_assert_instruction(self, label_or_pc: str, state_expr: str) -> None:
         """Define how the processor state changes after an instruction's execution.
 
         STATE_EXPR can accept the following values:
@@ -76,7 +76,7 @@ class App(Repl):
           - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
           - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
         state_change = StateChange.from_state_expr(state_expr)
-        instruction_pc = self._label_to_pc(label_pc)
+        instruction_pc = self._label_to_pc(label_or_pc)
         self.log.assert_instruction_state_change(instruction_pc, state_change)
 
     @command()
@@ -108,17 +108,17 @@ class App(Repl):
         ...
 
     @command()
-    @argument("label_pc", complete_label)
-    def do_deassert_instruction(self, label_pc: str) -> None:
+    @argument("label_or_pc", complete_label)
+    def do_deassert_instruction(self, label_or_pc: str) -> None:
         """Remove previously defined instruction assertions."""
-        pc = self._label_to_pc(label_pc)
+        pc = self._label_to_pc(label_or_pc)
         self.log.instruction_assertions.pop(pc, None)
 
     @command()
-    @argument("subroutine", complete_subroutine)
-    def do_deassert_subroutine(self, subroutine: str) -> None:
+    @argument("subroutine_or_pc", complete_subroutine)
+    def do_deassert_subroutine(self, subroutine_or_pc: str) -> None:
         """Remove previously defined subroutine assertions."""
-        subroutine_pc = self.log.subroutines_by_label[subroutine].pc
+        subroutine_pc = self._label_to_pc(subroutine_or_pc)
         self.log.subroutine_assertions.pop(subroutine_pc, None)
 
     @command()
@@ -253,10 +253,10 @@ class App(Repl):
         ...
 
     @command()
-    @argument("label_pc", complete_label)
-    def do_query_state(self, label_pc: str) -> None:
+    @argument("label_or_pc", complete_label)
+    def do_query_state(self, label_or_pc: str) -> None:
         """Show the processor states in which an instruction can be reached."""
-        pc = self._label_to_pc(label_pc)
+        pc = self._label_to_pc(label_or_pc)
 
         s = []
         states = {State(x.p) for x in self.log.instructions[pc]}
@@ -310,12 +310,12 @@ class App(Repl):
         else:
             print_error("No such subroutine.")
 
-    def _label_to_pc(self, label_pc):
+    def _label_to_pc(self, label_or_pc):
         pc = self.log.get_label_value(
-            label_pc, self.subroutine.pc if self.subroutine else None
+            label_or_pc, self.subroutine.pc if self.subroutine else None
         )
         if pc is None:
-            pc = int(label_pc, 16)
+            pc = int(label_or_pc, 16)
         return pc
 
     def _print_instruction(self, instruction: Instruction) -> str:
