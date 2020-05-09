@@ -109,7 +109,7 @@ class App(Repl):
 
         s = []
         for instruction in self.subroutine.instructions.values():
-            s.append(self._print_instruction(instruction, self.subroutine))
+            s.append(self._print_instruction(instruction))
 
             if self.subroutine.has_asserted_state_change and (
                 instruction.stopped_execution or instruction.is_return
@@ -131,12 +131,61 @@ class App(Repl):
     @command()
     def do_debug(self) -> None:
         """Debug Gilgamesh itself."""
-        breakpoint()  # noqa
+        breakpoint()
 
     @command(container=True)
     def do_list(self) -> None:
         """List various types of entities."""
         ...
+
+    @command()
+    def do_list_assertions(self) -> None:
+        """List all assertions provided by the user."""
+        print_html("<red>ASSERTED SUBROUTINE STATE CHANGES:</red>")
+        self._do_list_assertions_subroutines(indent=True)
+        print_html("<red>ASSERTED INSTRUCTION STATE CHANGES:</red>")
+        self._do_list_assertions_instructions(indent=True)
+
+    @command()
+    def do_list_assertions_instructions(self) -> None:
+        """List all instruction assertions provided by the user."""
+        self._do_list_assertions_instructions()
+
+    def _do_list_assertions_instructions(self, indent=False) -> None:
+        s = []
+        spaces = "  " if indent else ""
+        for pc, change in self.log.instruction_assertions.items():
+            subroutines = [
+                self.log.subroutines[i.subroutine] for i in self.log.instructions[pc]
+            ]
+            instruction = subroutines[0].instructions[pc]
+            operation = "<green>{:4}</green>".format(instruction.name)
+            disassembly = f"{operation}{instruction.argument_string}"
+
+            s.append(
+                "{}<magenta>${:06X}</magenta>  {} -> ".format(spaces, pc, disassembly)
+            )
+            s.append(self._print_state_change(change))
+            s.append(
+                "{}  <grey>{}</grey>\n".format(
+                    spaces, ", ".join(s.label for s in subroutines)
+                )
+            )
+        print_html("".join(s))
+
+    @command()
+    def do_list_assertions_subroutines(self) -> None:
+        """List all subroutine assertions provided by the user."""
+        self._do_list_assertions_subroutines()
+
+    def _do_list_assertions_subroutines(self, indent=False) -> None:
+        s = []
+        spaces = "  " if indent else ""
+        for pc, change in self.log.subroutine_assertions.items():
+            label = self.log.subroutines[pc].label
+            s.append(f"{spaces}<magenta>{label}</magenta> -> ")
+            s.append(self._print_state_change(change))
+        print_html("".join(s))
 
     @command()
     def do_list_subroutines(self) -> None:
@@ -163,6 +212,13 @@ class App(Repl):
             print_error(f'"{self.rom.glm_name}" does not exist.')
         elif self.yes_no_prompt("Are you sure you want to load the saved analysis?"):
             self._do_load()
+
+    def _do_load(self) -> bool:
+        if self.log.load():
+            print_html(f'<green>"{self.rom.glm_name}" loaded successfully.</green>\n')
+            return True
+        else:
+            return False
 
     @command(container=True)
     def do_query(self) -> None:
@@ -227,13 +283,6 @@ class App(Repl):
         else:
             print_error("No such subroutine.")
 
-    def _do_load(self) -> bool:
-        if self.log.load():
-            print_html(f'<green>"{self.rom.glm_name}" loaded successfully.</green>\n')
-            return True
-        else:
-            return False
-
     def _label_to_pc(self, label_pc):
         pc = self.log.get_label_value(
             label_pc, self.subroutine.pc if self.subroutine else None
@@ -242,12 +291,11 @@ class App(Repl):
             pc = int(label_pc, 16)
         return pc
 
-    def _print_instruction(
-        self, instruction: Instruction, subroutine: Subroutine
-    ) -> str:
+    def _print_instruction(self, instruction: Instruction) -> str:
         s = []
 
-        label = self.log.get_label(instruction.pc, subroutine.pc)
+        subroutine_pc = instruction.subroutine
+        label = self.log.get_label(instruction.pc, subroutine_pc)
         if label:
             s.append(f"<red>{label}</red>:\n")
 
@@ -260,6 +308,17 @@ class App(Repl):
         comment = "<grey>; ${:06X}</grey>".format(instruction.pc)
         s.append(f"  {operation}{arg}{comment}\n")
 
+        return "".join(s)
+
+    @staticmethod
+    def _print_state_change(change: StateChange) -> str:
+        s = []
+        if change.m is not None:
+            s.append(f"<yellow>M</yellow>=<green>{change.m}</green>, ")
+        if change.x is not None:
+            s.append(f"<yellow>X</yellow>=<green>{change.x}</green>\n")
+        elif (change.m is None) and (change.x is None):
+            s.append("<green>None</green>\n")
         return "".join(s)
 
     @staticmethod
