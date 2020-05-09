@@ -140,7 +140,8 @@ class App(Repl):
 
     @command()
     def do_list_assertions(self) -> None:
-        """List all assertions provided by the user."""
+        """List assertions provided by the user.
+        If called with no arguments, display all assertions."""
         print_html("<red>ASSERTED SUBROUTINE STATE CHANGES:</red>")
         self._do_list_assertions_subroutines(indent=True)
         print_html("<red>ASSERTED INSTRUCTION STATE CHANGES:</red>")
