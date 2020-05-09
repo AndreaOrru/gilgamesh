@@ -1,7 +1,7 @@
-from os.path import basename
+from os import path
 from typing import List, Optional
 
-from prompt_toolkit import HTML  # type: ignore
+from prompt_toolkit import HTML, prompt  # type: ignore
 
 from gilgamesh.instruction import Instruction
 from gilgamesh.log import Log
@@ -201,7 +201,17 @@ class App(Repl):
     @command()
     def do_save(self) -> None:
         """Save the state of the analysis to a .glm file."""
-        self.log.save()
+
+        def save() -> None:
+            self.log.save()
+            glm_file = path.basename(self.rom.glm_path)
+            print_html(f'<green>"{glm_file}" saved successfully.</green>\n')
+
+        if not path.exists(self.rom.glm_path):
+            return save()
+        answer = prompt("Are you sure you want to overwrite the saved analysis? (y/n) ")
+        if answer == "y":
+            save()
 
     @command()
     @argument("label", complete_subroutine)
@@ -215,7 +225,7 @@ class App(Repl):
             print_error("No such subroutine.")
 
     def _do_load(self, ignore_error=False) -> bool:
-        glm_file = basename(self.rom.glm_path)
+        glm_file = path.basename(self.rom.glm_path)
         if self.log.load():
             print_html(f'<green>"{glm_file}" loaded successfully.</green>\n')
         elif not ignore_error:
