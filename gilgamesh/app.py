@@ -1,3 +1,4 @@
+from os.path import basename
 from typing import List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
@@ -16,7 +17,9 @@ class App(Repl):
 
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
-        self.log.analyze()
+        # Try to automatically load an existing analysis.
+        if not self.do_load():
+            self.log.analyze()
 
         # The subroutine currently under analysis.
         self.subroutine_pc: Optional[int] = None
@@ -153,6 +156,13 @@ class App(Repl):
                 s.append(self._print_subroutine(subroutine))
         print_html("".join(s))
 
+    @command()
+    def do_load(self) -> None:
+        """Load the state of the analysis from a .glm file."""
+        if self.log.load():
+            glm_file = basename(self.rom.glm_path)
+            print_html("<green>{} loaded successfully.</green>\n".format(glm_file))
+
     @command(container=True)
     def do_query(self) -> None:
         """Query the analysis log in various ways."""
@@ -189,6 +199,11 @@ class App(Repl):
         s.append("  <green>RESET:</green>  ${:06X}\n".format(self.rom.reset_vector))
         s.append("  <green>NMI:</green>    ${:06X}\n".format(self.rom.nmi_vector))
         print_html("".join(s))
+
+    @command()
+    def do_save(self) -> None:
+        """Save the state of the analysis to a .glm file."""
+        self.log.save()
 
     @command()
     @argument("label", complete_subroutine)

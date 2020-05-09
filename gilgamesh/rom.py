@@ -1,6 +1,7 @@
 from array import array
 from enum import Enum, auto
 from hashlib import sha1
+from os.path import splitext
 from typing import List
 
 
@@ -45,6 +46,10 @@ class ROM:
     @property
     def nmi_vector(self) -> int:
         return self.read_word(Header.NMI)
+
+    @property
+    def glm_path(self) -> str:
+        return splitext(self.path)[0] + ".glm"
 
     def read_byte(self, address: int) -> int:
         return self.data[self._translate(address)]

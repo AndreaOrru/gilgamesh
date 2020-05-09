@@ -1,3 +1,4 @@
+import pickle
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Optional, Set, Tuple
 
@@ -18,9 +19,10 @@ class Log:
         self.subroutine_assertions: Dict[int, StateChange] = {}
         self.clear()
 
-    def clear(self) -> None:
+    def clear(self, clear_labels=True) -> None:
         # Preserve currently assigned labels.
-        self.preserved_labels = self._preserve_labels()
+        if clear_labels:
+            self.preserved_labels = self._preserve_labels()
 
         # Clear all data structures.
         self.entry_points: List[InstructionID] = []
@@ -34,10 +36,32 @@ class Log:
         self.add_subroutine(self.rom.reset_vector, label="reset", entry_point=True)
         self.add_subroutine(self.rom.nmi_vector, label="nmi", entry_point=True)
 
-    def analyze(self) -> None:
+    def save(self) -> None:
+        data = {
+            "instruction_assertions": self.instruction_assertions,
+            "subroutine_assertions": self.subroutine_assertions,
+            "preserved_labels": self._preserve_labels(),
+        }
+        with open(self.rom.glm_path, "wb") as f:
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+    def load(self) -> bool:
+        try:
+            with open(self.rom.glm_path, "rb") as f:
+                data = pickle.load(f)
+                self.instruction_assertions = data["instruction_assertions"]
+                self.subroutine_assertions = data["subroutine_assertions"]
+                self.preserved_labels = data["preserved_labels"]
+            self.analyze(clear_labels=False)
+        except OSError:
+            return False
+        else:
+            return True
+
+    def analyze(self, clear_labels=True) -> None:
         # Clear the current results.
         if self.instructions:
-            self.clear()
+            self.clear(clear_labels)
 
         # Start emulation from all entry points.
         for pc, p, subroutine in self.entry_points:
