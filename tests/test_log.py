@@ -117,6 +117,7 @@ class UnknownJumpTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800B]
 
         self.assertSetEqual(sub.state_changes, {StateChange(unknown=True)})
+        self.assertTrue(sub.has_jump_table)
         self.assertTrue(sub.has_unknown_return_state)
 
         self.assertNotIn(0x8005, reset.instructions)
@@ -128,13 +129,15 @@ class UnknownJumpTest(LogTest, TestCase):
     def test_assert_state_change(self):
         sub = self.log.subroutines[0x800B]
         self.log.assert_subroutine_state_change(sub, StateChange())
-
         self.log.analyze()
+
         reset = self.log.subroutines_by_label["reset"]
         sub = self.log.subroutines[0x800B]
 
         self.assertIn(0x8005, reset.instructions)
         self.assertIn(0x8008, reset.instructions)
+        self.assertTrue(sub.has_jump_table)
+        self.assertTrue(sub.has_asserted_state_change)
         self.assertFalse(sub.has_unknown_return_state)
 
 
@@ -144,18 +147,23 @@ class SimplifiableReturnState(LogTest, TestCase):
     def test_double_state_change_simplification(self):
         reset = self.log.subroutines_by_label["reset"]
 
-        # Simplifiable.
+        # double_state_change is simplified.
         self.assertIn(0x8005, reset.instructions)
         self.assertIn(0x8008, reset.instructions)
-
-        # Not simplifiable.
-        self.assertNotIn(0x800E, reset.instructions)
-        self.assertNotIn(0x8011, reset.instructions)
-        self.assertNotIn(0x8014, reset.instructions)
 
         double_state_sub = self.log.subroutines[0x8017]
         self.assertFalse(double_state_sub.has_unknown_return_state)
         self.assertEqual(len(double_state_sub.state_changes), 2)
 
         unknown_sub = self.log.subroutines[0x801F]
+        self.assertTrue(unknown_sub.has_jump_table)
         self.assertTrue(unknown_sub.has_unknown_return_state)
+
+    def test_instruction_state_change_assertion(self):
+        self.log.assert_instruction_state_change(0x8024, StateChange())
+        self.log.analyze()
+
+        unknown_sub = self.log.subroutines[0x801F]
+        self.assertTrue(unknown_sub.has_jump_table)
+        self.assertTrue(unknown_sub.instruction_has_asserted_state_change)
+        self.assertFalse(unknown_sub.has_unknown_return_state)

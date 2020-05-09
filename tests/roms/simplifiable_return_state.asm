@@ -24,10 +24,14 @@ double_state_change:
 unknown_state:
   bcs .return2                  ; $00801F
 .return1:
-  jmp ($9000)                   ; $008021
+  ldx #$0000                    ; $008021
+  jsr ($9100,x)                 ; $008024
 .return2:
-  rep #$10                      ; $008024
-  rts                           ; $008026
+  rep #$10                      ; $008027
+  rts                           ; $008029
 
 org $9000
-  dw unknown_state_return2      ; $009000
+  rts                           ; $009000
+
+org $9100
+  dw $9000                      ; $009100
