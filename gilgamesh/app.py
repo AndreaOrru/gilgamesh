@@ -18,7 +18,7 @@ class App(Repl):
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
         # Try to automatically load an existing analysis.
-        if not self.do_load():
+        if not self._do_load(ignore_error=True):
             self.log.analyze()
 
         # The subroutine currently under analysis.
@@ -159,9 +159,7 @@ class App(Repl):
     @command()
     def do_load(self) -> None:
         """Load the state of the analysis from a .glm file."""
-        if self.log.load():
-            glm_file = basename(self.rom.glm_path)
-            print_html("<green>{} loaded successfully.</green>\n".format(glm_file))
+        self._do_load()
 
     @command(container=True)
     def do_query(self) -> None:
@@ -215,6 +213,15 @@ class App(Repl):
             self.subroutine = self.log.subroutines_by_label[label]
         else:
             print_error("No such subroutine.")
+
+    def _do_load(self, ignore_error=False) -> bool:
+        glm_file = basename(self.rom.glm_path)
+        if self.log.load():
+            print_html(f'<green>"{glm_file}" loaded successfully.</green>\n')
+        elif not ignore_error:
+            print_error(f'"{glm_file}" does not exist.')
+            return False
+        return True
 
     def _label_to_pc(self, label_pc):
         pc = self.log.get_label_value(
