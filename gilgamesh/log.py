@@ -19,9 +19,9 @@ class Log:
         self.subroutine_assertions: Dict[int, StateChange] = {}
         self.clear()
 
-    def clear(self, clear_labels=True) -> None:
+    def clear(self, preserve_labels=True) -> None:
         # Preserve currently assigned labels.
-        if clear_labels:
+        if preserve_labels:
             self.preserved_labels = self._preserve_labels()
 
         # Clear all data structures.
@@ -52,16 +52,16 @@ class Log:
                 self.instruction_assertions = data["instruction_assertions"]
                 self.subroutine_assertions = data["subroutine_assertions"]
                 self.preserved_labels = data["preserved_labels"]
-            self.analyze(clear_labels=False)
+            self.analyze(preserve_labels=False)
         except OSError:
             return False
         else:
             return True
 
-    def analyze(self, clear_labels=True) -> None:
+    def analyze(self, preserve_labels=True) -> None:
         # Clear the current results.
         if self.instructions:
-            self.clear(clear_labels)
+            self.clear(preserve_labels)
 
         # Start emulation from all entry points.
         for pc, p, subroutine in self.entry_points:

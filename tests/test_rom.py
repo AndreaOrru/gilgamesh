@@ -58,6 +58,10 @@ class LoROMTest(ROMTest, TestCase):
         self.assertEqual(self.rom._translate(0x108000), 0x080000)
         self.assertEqual(self.rom._translate(0x808000), 0x000000)
 
+    def test_glm_path(self):
+        self.assertEqual(splitext(self.rom.glm_path)[1], ".glm")
+        self.assertEqual(splitext(self.rom.path)[0], splitext(self.rom.glm_path)[0])
+
 
 class HiROMTest(ROMTest, TestCase):
     @classmethod

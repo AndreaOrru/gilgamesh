@@ -1,3 +1,4 @@
+import os
 from abc import ABC
 from unittest import TestCase
 
@@ -112,6 +113,12 @@ class JumpInsideSubroutineTest(LogTest, TestCase):
 class UnknownJumpTest(LogTest, TestCase):
     asm = "unknown_jump.asm"
 
+    def tearDown(self):
+        try:
+            os.remove(self.rom.glm_path)
+        except OSError:
+            pass
+
     def test_sub_state_change_unknown(self):
         reset = self.log.subroutines_by_label["reset"]
         sub = self.log.subroutines[0x800B]
@@ -127,18 +134,31 @@ class UnknownJumpTest(LogTest, TestCase):
         self.assertTrue(sub.instructions[0x800B].stopped_execution)
 
     def test_assert_state_change(self):
-        sub = self.log.subroutines[0x800B]
-        self.log.assert_subroutine_state_change(sub, StateChange())
+        unknown = self.log.subroutines[0x800B]
+        self.log.assert_subroutine_state_change(unknown, StateChange())
         self.log.analyze()
 
         reset = self.log.subroutines_by_label["reset"]
-        sub = self.log.subroutines[0x800B]
+        unknown = self.log.subroutines[0x800B]
 
         self.assertIn(0x8005, reset.instructions)
         self.assertIn(0x8008, reset.instructions)
-        self.assertTrue(sub.has_jump_table)
-        self.assertTrue(sub.has_asserted_state_change)
-        self.assertFalse(sub.has_unknown_return_state)
+        self.assertTrue(unknown.has_jump_table)
+        self.assertTrue(unknown.has_asserted_state_change)
+        self.assertFalse(unknown.has_unknown_return_state)
+
+    def test_load_save(self):
+        unknown = self.log.subroutines[0x800B]
+        self.log.rename_label(unknown.label, "unknown")
+        self.log.save()
+
+        self.log.analyze(preserve_labels=False)
+        unknown = self.log.subroutines[0x800B]
+        self.assertNotEqual(unknown.label, "unknown")
+
+        self.log.load()
+        unknown = self.log.subroutines[0x800B]
+        self.assertEqual(unknown.label, "unknown")
 
 
 class SimplifiableReturnState(LogTest, TestCase):
