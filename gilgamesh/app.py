@@ -10,10 +10,12 @@ from gilgamesh.rom import ROM
 from gilgamesh.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
 
+HISTORY_FILE = "~/.local/share/gilgamesh/history.log"
+
 
 class App(Repl):
     def __init__(self, rom_path: str):
-        super().__init__()
+        super().__init__(history_file=HISTORY_FILE)
 
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)

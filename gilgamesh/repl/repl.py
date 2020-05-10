@@ -1,12 +1,16 @@
 from collections import OrderedDict
 from inspect import getdoc, getmembers, isfunction
+from os import makedirs
+from os.path import dirname, expanduser
 from shlex import split
 from typing import Any, Callable, Dict
 
 from cached_property import cached_property  # type: ignore
 from dictlib import dug  # type: ignore
 from prompt_toolkit import HTML, PromptSession, prompt  # type: ignore
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory  # type: ignore
 from prompt_toolkit.completion import NestedCompleter  # type: ignore
+from prompt_toolkit.history import FileHistory  # type: ignore
 from prompt_toolkit.shortcuts import CompleteStyle, clear  # type: ignore
 
 from gilgamesh.repl.colors import print_error, print_html, style
@@ -15,11 +19,17 @@ from gilgamesh.repl.decorators import command
 
 
 class Repl:
-    def __init__(self):
+    def __init__(self, history_file=""):
+        if history_file:
+            history_file = expanduser(history_file)
+            makedirs(dirname(history_file), exist_ok=True)
+
         self._session = PromptSession(
             style=style,
             complete_style=CompleteStyle.MULTI_COLUMN,
             complete_while_typing=False,
+            history=history_file and FileHistory(history_file),
+            auto_suggest=AutoSuggestFromHistory(),
         )
         self._commands = self._build_commands()
         self._completer = self._build_completer()
