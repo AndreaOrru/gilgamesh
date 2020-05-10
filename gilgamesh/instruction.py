@@ -4,8 +4,9 @@ from typing import Optional
 from cached_property import cached_property  # type: ignore
 
 from gilgamesh.opcodes import AddressMode, Op, argument_size_table, opcode_table
-from gilgamesh.signed_types import s8, s16
 from gilgamesh.state import State
+from gilgamesh.utils.invalidable import Invalidable
+from gilgamesh.utils.signed_types import s8, s16
 
 # The same instruction can be executed in different states or as
 # part of different subroutines. We define a InstructionID struct
@@ -14,10 +15,11 @@ from gilgamesh.state import State
 InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
 
 
-class Instruction:
+class Instruction(Invalidable):
     def __init__(
         self, log, pc: int, p: int, subroutine: int, opcode: int, argument: int
     ):
+        super().__init__()
         self.log = log
         self.pc = pc
         self.state = State(p)

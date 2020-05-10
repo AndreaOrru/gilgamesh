@@ -4,10 +4,12 @@ from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.instruction import Instruction
 from gilgamesh.state import State, StateChange
+from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
 
-class Subroutine:
+class Subroutine(Invalidable):
     def __init__(self, log, pc: int, label: str):
+        super().__init__()
         self.log = log
         self.pc = pc
         self.label = label
@@ -33,6 +35,10 @@ class Subroutine:
     @property
     def has_unknown_return_state(self) -> bool:
         return any(s for s in self.state_changes if s.unknown)
+
+    def invalidate(self) -> None:
+        bulk_invalidate(self.instructions.values())
+        super().invalidate()
 
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc] = instruction

@@ -11,6 +11,7 @@ from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.rom import ROM
 from gilgamesh.state import StateChange
 from gilgamesh.subroutine import Subroutine
+from gilgamesh.utils.invalidable import bulk_invalidate
 
 
 class Log:
@@ -29,6 +30,10 @@ class Log:
         # Preserve currently assigned labels.
         if preserve_labels:
             self._preserve_labels()
+
+        # Invalidate Subroutine and Instruction objects.
+        if hasattr(self, "subroutines"):
+            bulk_invalidate(self.subroutines.values())
 
         # Clear all data structures.
         self.entry_points: List[InstructionID] = []
