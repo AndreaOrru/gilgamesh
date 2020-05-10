@@ -36,6 +36,8 @@ class Log:
         self.add_subroutine(self.rom.reset_vector, label="reset", entry_point=True)
         self.add_subroutine(self.rom.nmi_vector, label="nmi", entry_point=True)
 
+        self.dirty = False
+
     def save(self) -> None:
         self._preserve_labels()
         data = {
@@ -119,11 +121,21 @@ class Log:
         self, instruction_pc: int, state_change: StateChange
     ) -> None:
         self.instruction_assertions[instruction_pc] = state_change
+        self.dirty = True
+
+    def deassert_instruction_state_change(self, instruction_pc: int) -> None:
+        self.instruction_assertions.pop(instruction_pc, None)
+        self.dirty = True
 
     def assert_subroutine_state_change(
         self, subroutine: Subroutine, state_change: StateChange
     ) -> None:
         self.subroutine_assertions[subroutine.pc] = state_change
+        self.dirty = True
+
+    def deassert_subroutine_state_change(self, subroutine_pc: int) -> None:
+        self.subroutine_assertions.pop(subroutine_pc, None)
+        self.dirty = True
 
     def add_reference(self, instruction: Instruction, target: int) -> None:
         self.references[target].add((instruction.pc, instruction.subroutine))

@@ -36,10 +36,14 @@ class App(Repl):
 
     @property
     def prompt(self) -> str:
+        color = "red" if self.log.dirty else "yellow"
+        prompt = "*>" if self.log.dirty else ">"
         if self.subroutine is None:
-            return super().prompt
+            return HTML("<{}>{}</{}> ".format(color, prompt, color))
         # Show the current subroutine in the prompt if there's one.
-        return HTML("<yellow>" + f"[{self.subroutine.label}]> " + "</yellow>")
+        return HTML(
+            "<{}>[{}]{}</{}> ".format(color, self.subroutine.label, prompt, color)
+        )
 
     def complete_subroutine(self) -> List[str]:
         return sorted(self.log.subroutines_by_label.keys())
@@ -112,14 +116,14 @@ class App(Repl):
     def do_deassert_instruction(self, label_or_pc: str) -> None:
         """Remove previously defined instruction assertions."""
         pc = self._label_to_pc(label_or_pc)
-        self.log.instruction_assertions.pop(pc, None)
+        self.log.deassert_instruction_state_change(pc)
 
     @command()
     @argument("subroutine_or_pc", complete_subroutine)
     def do_deassert_subroutine(self, subroutine_or_pc: str) -> None:
         """Remove previously defined subroutine assertions."""
-        subroutine_pc = self._label_to_pc(subroutine_or_pc)
-        self.log.subroutine_assertions.pop(subroutine_pc, None)
+        pc = self._label_to_pc(subroutine_or_pc)
+        self.log.deassert_subroutine_state_change(pc)
 
     @command()
     def do_disassembly(self) -> None:
@@ -133,10 +137,6 @@ class App(Repl):
             s.append(self._print_assertion_info(instruction))
 
         print_html("".join(s))
-
-    @command(container=True)
-    def do_delete_assertion(self) -> None:
-        ...
 
     @command(container=True)
     def do_list(self) -> None:
