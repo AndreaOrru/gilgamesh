@@ -135,7 +135,10 @@ class UnknownJumpTest(LogTest, TestCase):
     def test_assert_state_change(self):
         unknown = self.log.subroutines[0x800B]
         self.log.assert_subroutine_state_change(unknown, StateChange())
+        self.assertTrue(self.log.dirty)
+
         self.log.analyze()
+        self.assertFalse(self.log.dirty)
 
         reset = self.log.subroutines_by_label["reset"]
         unknown = self.log.subroutines[0x800B]
@@ -181,7 +184,10 @@ class SimplifiableReturnState(LogTest, TestCase):
 
     def test_instruction_state_change_assertion(self):
         self.log.assert_instruction_state_change(0x8024, StateChange())
+        self.assertTrue(self.log.dirty)
+
         self.log.analyze()
+        self.assertFalse(self.log.dirty)
 
         unknown_sub = self.log.subroutines[0x801F]
         self.assertTrue(unknown_sub.has_jump_table)
