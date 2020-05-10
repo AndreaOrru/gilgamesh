@@ -17,12 +17,12 @@ class Log:
         self.rom = rom
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, StateChange] = {}
+        self.preserved_labels: Dict[int, str] = {}
         self.clear()
 
-    def clear(self, preserve_labels=True) -> None:
+    def clear(self) -> None:
         # Preserve currently assigned labels.
-        if preserve_labels:
-            self.preserved_labels = self._preserve_labels()
+        self._preserve_labels()
 
         # Clear all data structures.
         self.entry_points: List[InstructionID] = []
@@ -37,10 +37,11 @@ class Log:
         self.add_subroutine(self.rom.nmi_vector, label="nmi", entry_point=True)
 
     def save(self) -> None:
+        self._preserve_labels()
         data = {
             "instruction_assertions": self.instruction_assertions,
             "subroutine_assertions": self.subroutine_assertions,
-            "preserved_labels": self._preserve_labels(),
+            "preserved_labels": self.preserved_labels,
         }
         with open(self.rom.glm_path, "wb") as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
@@ -52,16 +53,16 @@ class Log:
                 self.instruction_assertions = data["instruction_assertions"]
                 self.subroutine_assertions = data["subroutine_assertions"]
                 self.preserved_labels = data["preserved_labels"]
-            self.analyze(preserve_labels=False)
+            self.analyze()
         except OSError:
             return False
         else:
             return True
 
-    def analyze(self, preserve_labels=True) -> None:
+    def analyze(self) -> None:
         # Clear the current results.
         if self.instructions:
-            self.clear(preserve_labels)
+            self.clear()
 
         # Start emulation from all entry points.
         for pc, p, subroutine in self.entry_points:
@@ -182,13 +183,9 @@ class Log:
                 )
                 self.local_labels[subroutine_pc][local_label] = target
 
-    def _preserve_labels(self) -> Dict[int, str]:
-        if not hasattr(self, "instructions"):
-            return {}
-
-        preserved_labels: Dict[int, str] = {}
-        for subroutine_labels in self.local_labels.values():
-            preserved_labels.update(subroutine_labels.inverse)  # type: ignore
-        for subroutine in self.subroutines.values():
-            preserved_labels[subroutine.pc] = subroutine.label
-        return preserved_labels
+    def _preserve_labels(self) -> None:
+        if hasattr(self, "instructions"):
+            for subroutine_labels in self.local_labels.values():
+                self.preserved_labels.update(subroutine_labels.inverse)  # type: ignore
+            for subroutine in self.subroutines.values():
+                self.preserved_labels[subroutine.pc] = subroutine.label
