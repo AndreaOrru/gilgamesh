@@ -54,13 +54,20 @@ class CPU:
         if self.log.is_visited(self.instruction_id):
             return False
 
+        # Disassemble and log the instruction.
         opcode = self.rom.read_byte(self.pc)
         argument = self.rom.read_address(self.pc + 1)
-
         instruction = Instruction(self.log, *self.instruction_id, opcode, argument)
         self.log.add_instruction(instruction)
 
-        return self.execute(instruction)
+        # Emulate the instruction.
+        keep_going = self.execute(instruction)
+
+        # Apply asserted state changes, if any.
+        asserted_state = self.log.instruction_assertions.get(instruction.pc)
+        if asserted_state:
+            self._apply_state_change(asserted_state)
+        return keep_going
 
     def execute(self, instruction: Instruction) -> bool:
         self.pc += instruction.size
@@ -73,7 +80,8 @@ class CPU:
             self.log.add_subroutine_state(self.subroutine, self.state_change)
             return False  # Terminate the execution of this subroutine.
         elif instruction.is_interrupt:
-            return self._unknown_subroutine_state(instruction)
+            self._unknown_subroutine_state(instruction)
+            return False
         elif instruction.is_call:
             return self.call(instruction)
         elif instruction.is_jump:
@@ -124,7 +132,7 @@ class CPU:
         # called subroutine is, we can propagate it to the
         # current CPU state. Otherwise, to be on the safe
         # side, we need to stop the execution.
-        known = self._propagate_subroutine_state(target)
+        known = self._propagate_subroutine_state(instruction.pc, target)
         if not known:
             return self._unknown_subroutine_state(instruction)
         return True
@@ -132,7 +140,9 @@ class CPU:
     def jump(self, instruction: Instruction) -> bool:
         target = instruction.absolute_argument
         if target is None:
-            return self._unknown_subroutine_state(instruction)
+            self._unknown_subroutine_state(instruction)
+            return False
+
         self.log.add_reference(instruction, target)
         self.pc = target
         return True
@@ -181,7 +191,11 @@ class CPU:
         ):
             self.state_inference.x = self.state.x
 
-    def _propagate_subroutine_state(self, subroutine_pc: int) -> bool:
+    def _propagate_subroutine_state(self, call_pc: int, subroutine_pc: int) -> bool:
+        # If the user defined a state assertion for the current instruction.
+        if call_pc in self.log.instruction_assertions:
+            return True  # Execution can proceed.
+
         # If the subroutine can return in more than one distinct state, or its
         # state is unknown, we can't reliably propagate the state to the caller.
         subroutine = self.log.subroutines[subroutine_pc]
@@ -189,21 +203,19 @@ class CPU:
         if len(return_states) > 1 or unknown:
             return False
 
+        # Unique return state, apply it.
         self._apply_state_change(return_states.pop())
         return True
 
     def _unknown_subroutine_state(self, instruction: Instruction) -> bool:
         # Check if the user defined a state assertion for the current instruction.
-        state_change = self.log.instruction_assertions.get(instruction.pc)
-        if state_change is None:
-            # No custom assertion, we need to stop here.
-            self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
-            instruction.stopped_execution = True
-            return False
+        if instruction.pc in self.log.instruction_assertions:
+            return True  # Execution can proceed.
 
-        # There is an assertion, apply it to the current state.
-        self._apply_state_change(state_change)
-        return True
+        # No custom assertion, we need to stop here.
+        self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
+        instruction.stopped_execution = True
+        return False
 
     def _apply_state_change(self, state_change: StateChange) -> None:
         if state_change.m is not None:
