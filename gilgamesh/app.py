@@ -379,8 +379,8 @@ class App(Repl):
                 self.log.instruction_assertions[instruction.pc].state_expr
             )
         elif instruction.stopped_execution:
-            return "  <grey>{:20}; ${:06X}</grey>\n".format(
-                "; Unknown state.", instruction.next_pc
+            return "  <grey>; Unknown state at ${:06X}</grey>\n".format(
+                instruction.next_pc
             )
         return ""
 
