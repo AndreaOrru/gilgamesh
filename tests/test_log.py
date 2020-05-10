@@ -133,10 +133,10 @@ class UnknownJumpTest(LogTest, TestCase):
         self.assertTrue(sub.instructions[0x800B].stopped_execution)
 
     def test_assert_state_change(self):
+        # Assertion.
         unknown = self.log.subroutines[0x800B]
         self.log.assert_subroutine_state_change(unknown, StateChange())
         self.assertTrue(self.log.dirty)
-
         self.log.analyze()
         self.assertFalse(self.log.dirty)
 
@@ -148,6 +148,16 @@ class UnknownJumpTest(LogTest, TestCase):
         self.assertTrue(unknown.has_jump_table)
         self.assertTrue(unknown.has_asserted_state_change)
         self.assertFalse(unknown.has_unknown_return_state)
+
+        # Deassertion.
+        self.log.deassert_subroutine_state_change(0x800B)
+        self.assertTrue(self.log.dirty)
+        self.log.analyze()
+        self.assertFalse(self.log.dirty)
+
+        unknown = self.log.subroutines[0x800B]
+        self.assertFalse(unknown.has_asserted_state_change)
+        self.assertTrue(unknown.has_unknown_return_state)
 
     def test_load_save(self):
         unknown = self.log.subroutines[0x800B]
@@ -183,9 +193,9 @@ class SimplifiableReturnState(LogTest, TestCase):
         self.assertTrue(unknown_sub.has_unknown_return_state)
 
     def test_instruction_state_change_assertion(self):
+        # Assertion.
         self.log.assert_instruction_state_change(0x8024, StateChange())
         self.assertTrue(self.log.dirty)
-
         self.log.analyze()
         self.assertFalse(self.log.dirty)
 
@@ -193,3 +203,13 @@ class SimplifiableReturnState(LogTest, TestCase):
         self.assertTrue(unknown_sub.has_jump_table)
         self.assertTrue(unknown_sub.instruction_has_asserted_state_change)
         self.assertFalse(unknown_sub.has_unknown_return_state)
+
+        # Deassertion.
+        self.log.deassert_instruction_state_change(0x8024)
+        self.assertTrue(self.log.dirty)
+        self.log.analyze()
+        self.assertFalse(self.log.dirty)
+
+        unknown_sub = self.log.subroutines[0x801F]
+        self.assertFalse(unknown_sub.instruction_has_asserted_state_change)
+        self.assertTrue(unknown_sub.has_unknown_return_state)
