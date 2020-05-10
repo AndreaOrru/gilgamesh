@@ -1,4 +1,6 @@
+from collections import namedtuple
 from functools import wraps
+from inspect import Parameter, signature
 
 
 def command(container=False):
@@ -40,10 +42,14 @@ def command(container=False):
     return command_decorator
 
 
+Argument = namedtuple("Argument", ("name", "has_default", "completion"))
+
+
 def argument(name, completion=None):
     def wrapper(method):
         args = getattr(method, "args", [])
-        args.insert(0, (name, completion))
+        has_default = signature(method).parameters[name].default is not Parameter.empty
+        args.insert(0, Argument(name, has_default, completion))
         method.args = args
         return method
 

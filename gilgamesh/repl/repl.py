@@ -84,7 +84,15 @@ class Repl:
             self._help_list(cmd.subcmds, "Subcommands")
         else:
             # This is a "leaf" command, show info on its usage.
-            self._help_usage(*[*parts, *[arg[0].upper() for arg in cmd.args]])
+            self._help_usage(
+                *[
+                    *parts,
+                    *[
+                        ("[{}]" if arg.has_default else "{}").format(arg.name.upper())
+                        for arg in cmd.args
+                    ],
+                ]
+            )
             print("{}\n".format(getdoc(cmd) or ""))
 
     @command()
@@ -156,7 +164,7 @@ class Repl:
             # Build a completer for a command.
             if not cmd.args:
                 return {}
-            return ArgsCompleter(self, [arg[1] for arg in cmd.args])
+            return ArgsCompleter(self, [arg.completion for arg in cmd.args])
 
         # Build a nested completion dictionary for commands and subcommands.
         completer_dict: Dict[str, Any] = {}
@@ -194,7 +202,7 @@ class Repl:
         # Print usage info on a command.
         if parts[0] == "help":
             # Special case for `help` itself.
-            parts = ("help", "[COMMAND [SUBCOMMAND]...]")
+            parts = ("help", "[COMMAND [SUBCOMMAND...]]")
 
         print_html(
             "<yellow>Usage:</yellow> <green>{}</green>\n".format(" ".join(parts))

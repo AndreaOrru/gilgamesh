@@ -104,10 +104,14 @@ class App(Repl):
     @command()
     @argument("label_or_pc", complete_label)
     @argument("comment")
-    def do_comment(self, label_or_pc: str, comment: str) -> None:
-        """Add comment to an instruction."""
+    def do_comment(self, label_or_pc: str, comment="") -> None:
+        """Add comment to an instruction.
+        If no comment is specified, delete the existing comment."""
         pc = self._label_to_pc(label_or_pc)
-        self.log.comments[pc] = comment
+        if comment:
+            self.log.comments[pc] = comment
+        else:
+            self.log.comments.pop(pc, None)
 
     @command()
     def do_debug(self) -> None:
@@ -312,6 +316,14 @@ class App(Repl):
             self.subroutine = self.log.subroutines_by_label[label]
         else:
             print_error("No such subroutine.")
+
+    @command()
+    @argument("label_or_pc", complete_label)
+    def do_translate(self, label_or_pc: str) -> None:
+        """Translate a SNES address to a PC address."""
+        pc = self._label_to_pc(label_or_pc)
+        print_html("<green>SNES:</green> ${:06X}".format(pc))
+        print_html("<green>PC:</green>   ${:06X}\n".format(self.rom._translate(pc)))
 
     def _label_to_pc(self, label_or_pc):
         pc = self.log.get_label_value(
