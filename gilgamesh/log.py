@@ -15,15 +15,18 @@ from gilgamesh.subroutine import Subroutine
 class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
+
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, StateChange] = {}
         self.preserved_labels: Dict[int, str] = {}
         self.comments: Dict[int, str] = {}
+
         self.clear()
 
-    def clear(self) -> None:
+    def clear(self, preserve_labels=True) -> None:
         # Preserve currently assigned labels.
-        self._preserve_labels()
+        if preserve_labels:
+            self._preserve_labels()
 
         # Clear all data structures.
         self.entry_points: List[InstructionID] = []
@@ -38,6 +41,19 @@ class Log:
         self.add_subroutine(self.rom.nmi_vector, label="nmi", entry_point=True)
 
         self.dirty = False
+
+    def analyze(self, preserve_labels=True) -> None:
+        # Clear the current results.
+        if self.instructions:
+            self.clear(preserve_labels)
+
+        # Start emulation from all entry points.
+        for pc, p, subroutine in self.entry_points:
+            cpu = CPU(self, pc, p, subroutine)
+            cpu.run()
+
+        # Generate labels for newly discovered code.
+        self._generate_labels()
 
     def save(self) -> None:
         self._preserve_labels()
@@ -58,24 +74,11 @@ class Log:
                 self.subroutine_assertions = data["subroutine_assertions"]
                 self.preserved_labels = data["preserved_labels"]
                 self.comments = data["comments"]
-            self.analyze()
+            self.analyze(preserve_labels=False)
         except OSError:
             return False
         else:
             return True
-
-    def analyze(self) -> None:
-        # Clear the current results.
-        if self.instructions:
-            self.clear()
-
-        # Start emulation from all entry points.
-        for pc, p, subroutine in self.entry_points:
-            cpu = CPU(self, pc, p, subroutine)
-            cpu.run()
-
-        # Generate labels for newly discovered code.
-        self._generate_labels()
 
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc].add(instruction.id)

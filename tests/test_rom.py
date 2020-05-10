@@ -1,7 +1,7 @@
 from abc import ABC
 from os import remove
 from os.path import dirname, join, splitext
-from subprocess import call
+from subprocess import check_call
 from unittest import TestCase
 
 from gilgamesh.rom import ROM, ROMType
@@ -18,7 +18,7 @@ def assemble(filename: str) -> str:
         remove(rom)
     except FileNotFoundError:
         pass
-    call(["asar", asm, rom])
+    check_call(["asar", asm, rom])
     return rom
 
 

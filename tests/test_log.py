@@ -5,8 +5,7 @@ from unittest import TestCase
 from gilgamesh.log import Log
 from gilgamesh.rom import ROM
 from gilgamesh.state import StateChange
-
-from .test_rom import assemble
+from tests.test_rom import assemble
 
 
 class LogTest(ABC):
@@ -152,7 +151,8 @@ class UnknownJumpTest(LogTest, TestCase):
         self.log.rename_label(unknown.label, "unknown")
         self.log.save()
 
-        self.log.analyze(preserve_labels=False)
+        self.log = Log(self.rom)
+        self.log.analyze()
         unknown = self.log.subroutines[0x800B]
         self.assertNotEqual(unknown.label, "unknown")
 
