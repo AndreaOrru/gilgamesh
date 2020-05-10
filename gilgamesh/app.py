@@ -243,6 +243,24 @@ class App(Repl):
         print_html("".join(s))
 
     @command()
+    @argument("subroutine_or_pc", complete_label)
+    def do_query_statechange(self, subroutine_or_pc: str) -> None:
+        """Show the change in processor state caused by executing a subroutine."""
+        pc = self._label_to_pc(subroutine_or_pc)
+        asserted_change = self.log.subroutine_assertions.get(pc)
+        if asserted_change:
+            return print_html(
+                "{} <magenta>(asserted)</magenta>".format(
+                    self._print_state_change(asserted_change, newline=False)
+                )
+            )
+
+        s = []
+        for change in self.log.subroutines[pc].state_changes:
+            s.append(self._print_state_change(change))
+        print_html("".join(s))
+
+    @command()
     @argument("old", complete_label)
     @argument("new")
     def do_rename(self, old: str, new: str) -> None:
@@ -333,14 +351,21 @@ class App(Repl):
         return ""
 
     @staticmethod
-    def _print_state_change(change: StateChange) -> str:
+    def _print_state_change(change: StateChange, newline=True) -> str:
         s = []
-        if change.m is not None:
-            s.append(f"<yellow>M</yellow>=<green>{change.m}</green>, ")
-        if change.x is not None:
-            s.append(f"<yellow>X</yellow>=<green>{change.x}</green>\n")
+
+        if change.unknown:
+            s.append("<red>Unknown</red>")
         elif (change.m is None) and (change.x is None):
-            s.append("<green>None</green>\n")
+            s.append("<green>None</green>")
+        else:
+            if change.m is not None:
+                s.append(f"<yellow>M</yellow>=<green>{change.m}</green>, ")
+            if change.x is not None:
+                s.append(f"<yellow>X</yellow>=<green>{change.x}</green>")
+
+        if newline:
+            s.append("\n")
         return "".join(s)
 
     @staticmethod
