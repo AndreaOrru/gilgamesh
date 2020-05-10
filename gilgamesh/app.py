@@ -102,6 +102,14 @@ class App(Repl):
         self.log.assert_subroutine_state_change(self.subroutine, state_change)
 
     @command()
+    @argument("label_or_pc", complete_label)
+    @argument("comment")
+    def do_comment(self, label_or_pc: str, comment: str) -> None:
+        """Add comment to an instruction."""
+        pc = self._label_to_pc(label_or_pc)
+        self.log.comments[pc] = comment
+
+    @command()
     def do_debug(self) -> None:
         """Debug Gilgamesh itself."""
         breakpoint()
@@ -243,7 +251,7 @@ class App(Repl):
         print_html("".join(s))
 
     @command()
-    @argument("subroutine_or_pc", complete_label)
+    @argument("subroutine_or_pc", complete_subroutine)
     def do_query_statechange(self, subroutine_or_pc: str) -> None:
         """Show the change in processor state caused by executing a subroutine."""
         pc = self._label_to_pc(subroutine_or_pc)
@@ -323,12 +331,18 @@ class App(Repl):
 
         operation = "<green>{:4}</green>".format(instruction.name)
         if instruction.argument_alias:
-            arg = "<red>{:16}</red>".format(instruction.argument_alias)
+            argument = "<red>{:16}</red>".format(instruction.argument_alias)
         else:
-            arg = "{:16}".format(instruction.argument_string)
+            argument = "{:16}".format(instruction.argument_string)
 
-        comment = "<grey>; ${:06X}</grey>".format(instruction.pc)
-        s.append(f"  {operation}{arg}{comment}\n")
+        s.append(
+            "  {}{}<grey>; {:06X} | {}</grey>\n".format(
+                operation,
+                argument,
+                instruction.pc,
+                self.log.comments.get(instruction.pc, ""),
+            )
+        )
 
         return "".join(s)
 

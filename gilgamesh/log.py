@@ -18,6 +18,7 @@ class Log:
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, StateChange] = {}
         self.preserved_labels: Dict[int, str] = {}
+        self.comments: Dict[int, str] = {}
         self.clear()
 
     def clear(self) -> None:
@@ -44,6 +45,7 @@ class Log:
             "instruction_assertions": self.instruction_assertions,
             "subroutine_assertions": self.subroutine_assertions,
             "preserved_labels": self.preserved_labels,
+            "comments": self.comments,
         }
         with open(self.rom.glm_path, "wb") as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
@@ -55,6 +57,7 @@ class Log:
                 self.instruction_assertions = data["instruction_assertions"]
                 self.subroutine_assertions = data["subroutine_assertions"]
                 self.preserved_labels = data["preserved_labels"]
+                self.comments = data["comments"]
             self.analyze()
         except OSError:
             return False
