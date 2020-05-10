@@ -1,3 +1,4 @@
+import gc
 import pickle
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Optional, Set, Tuple
@@ -15,15 +16,16 @@ from gilgamesh.subroutine import Subroutine
 class Log:
     def __init__(self, rom: ROM):
         self.rom = rom
+        self.reset()
 
+    def reset(self) -> None:
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, StateChange] = {}
         self.preserved_labels: Dict[int, str] = {}
         self.comments: Dict[int, str] = {}
+        self._clear(preserve_labels=False)
 
-        self.clear()
-
-    def clear(self, preserve_labels=True) -> None:
+    def _clear(self, preserve_labels=True) -> None:
         # Preserve currently assigned labels.
         if preserve_labels:
             self._preserve_labels()
@@ -35,6 +37,7 @@ class Log:
         self.subroutines: Dict[int, Subroutine] = SortedDict()
         self.subroutines_by_label: Dict[str, Subroutine] = {}
         self.references: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
+        gc.collect()
 
         # Add entry points.
         self.add_subroutine(self.rom.reset_vector, label="reset", entry_point=True)
@@ -45,7 +48,7 @@ class Log:
     def analyze(self, preserve_labels=True) -> None:
         # Clear the current results.
         if self.instructions:
-            self.clear(preserve_labels)
+            self._clear(preserve_labels)
 
         # Start emulation from all entry points.
         for pc, p, subroutine in self.entry_points:

@@ -164,7 +164,7 @@ class UnknownJumpTest(LogTest, TestCase):
         self.log.rename_label(unknown.label, "unknown")
         self.log.save()
 
-        self.log = Log(self.rom)
+        self.log.reset()
         self.log.analyze()
         unknown = self.log.subroutines[0x800B]
         self.assertNotEqual(unknown.label, "unknown")

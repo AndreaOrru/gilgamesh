@@ -282,6 +282,12 @@ class App(Repl):
         self.log.rename_label(old, new, self.subroutine.pc if self.subroutine else None)
 
     @command()
+    def do_reset(self) -> None:
+        """Reset the analysis (start from scratch)."""
+        if self.yes_no_prompt("Are you sure you want to reset the entire analysis?"):
+            self.log.reset()
+
+    @command()
     def do_rom(self) -> None:
         """Show general information on the ROM."""
         s = []
