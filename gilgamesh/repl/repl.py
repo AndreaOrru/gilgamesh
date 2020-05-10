@@ -84,15 +84,7 @@ class Repl:
             self._help_list(cmd.subcmds, "Subcommands")
         else:
             # This is a "leaf" command, show info on its usage.
-            self._help_usage(
-                *[
-                    *parts,
-                    *[
-                        ("[{}]" if arg.has_default else "{}").format(arg.name.upper())
-                        for arg in cmd.args
-                    ],
-                ]
-            )
+            self._help_usage(*[*parts, *map(str, cmd.args)])
             print("{}\n".format(getdoc(cmd) or ""))
 
     @command()

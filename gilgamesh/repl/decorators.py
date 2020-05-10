@@ -1,6 +1,7 @@
-from collections import namedtuple
+from dataclasses import dataclass
 from functools import wraps
 from inspect import Parameter, signature
+from typing import Callable, Optional
 
 
 def command(container=False):
@@ -42,7 +43,14 @@ def command(container=False):
     return command_decorator
 
 
-Argument = namedtuple("Argument", ("name", "has_default", "completion"))
+@dataclass
+class Argument:
+    name: str
+    has_default: bool
+    completion: Optional[Callable]
+
+    def __str__(self):
+        return ("[{}]" if self.has_default else "{}").format(self.name.upper())
 
 
 def argument(name, completion=None):
