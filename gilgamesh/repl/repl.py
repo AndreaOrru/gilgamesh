@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from inspect import getdoc, getmembers, isfunction
+from shlex import split
 from typing import Any, Callable, Dict
 
 from cached_property import cached_property  # type: ignore
@@ -32,10 +33,8 @@ class Repl:
         while not close:
             # Take commands through the prompt.
             try:
-                tokens = (
-                    self._session.prompt(self.prompt, completer=self._completer)
-                    .strip()
-                    .split()
+                tokens = split(
+                    self._session.prompt(self.prompt, completer=self._completer).strip()
                 )
             # If Ctrl-D, get out.
             except EOFError:

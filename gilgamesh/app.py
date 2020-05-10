@@ -336,7 +336,7 @@ class App(Repl):
             argument = "{:16}".format(instruction.argument_string)
 
         s.append(
-            "  {}{}<grey>; {:06X} | {}</grey>\n".format(
+            "  {}{}<grey>; ${:06X} | {}</grey>\n".format(
                 operation,
                 argument,
                 instruction.pc,
