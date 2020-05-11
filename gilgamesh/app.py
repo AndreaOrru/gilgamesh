@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
-from gilgamesh.disassembly import Disassembly
+from gilgamesh.disassembly import Disassembly, ParserError
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
@@ -145,7 +145,17 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
         disassembly = Disassembly(self.log, self.subroutine)
-        print_html(disassembly.get_html())
+        print_html(disassembly.html)
+
+    @command()
+    def do_edit(self) -> None:
+        if not self.subroutine:
+            return print_error("No selected subroutine.")
+        disassembly = Disassembly(self.log, self.subroutine)
+        try:
+            disassembly.edit()
+        except ParserError as e:
+            print_error(str(e))
 
     @command(container=True)
     def do_list(self) -> None:
