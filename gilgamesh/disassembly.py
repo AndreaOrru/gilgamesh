@@ -4,7 +4,7 @@ from enum import Enum, auto
 from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from bs4 import BeautifulSoup as BS  # type: ignore
@@ -36,7 +36,14 @@ class Token:
 
 
 class ParserError(Exception):
-    ...
+    def __init__(self, message: str, line: Optional[int] = None):
+        self.message = message
+        self.line = line
+
+    def __str__(self) -> str:
+        if self.line is None:
+            return f"{self.message}."
+        return f"Line {self.line}: {self.message}."
 
 
 class Disassembly:
@@ -80,19 +87,24 @@ class Disassembly:
     ) -> None:
         """Compare a collection of tokens describing a subroutine, with a new one
         with potentially updated content. Apply changes where possible."""
+        line_n = 1
         renamed_labels: Dict[str, str] = {}
+
         for orig_instr_tokens, new_instr_tokens in zip_longest(
             original_tokens, new_tokens
         ):
             if (orig_instr_tokens is None) or (new_instr_tokens is None):
-                raise ParserError("Added or deleted an instruction.")
+                raise ParserError("Added or deleted an instruction", line_n)
             self._apply_instruction_changes(
-                orig_instr_tokens, new_instr_tokens, renamed_labels
+                line_n, orig_instr_tokens, new_instr_tokens, renamed_labels
             )
+            line_n += 1
+
         self._apply_renamed_labels(renamed_labels)
 
     def _apply_instruction_changes(
         self,
+        line_n: int,
         original_tokens: List[Token],
         new_tokens: List[Token],
         renamed_labels: Dict[str, str],
@@ -101,11 +113,13 @@ class Disassembly:
         for orig, new in zip_longest(original_tokens, new_tokens):
             # Error cases.
             if (orig is None) or (new is None):
-                raise ParserError("Added or deleted token.")
+                raise ParserError("Added or deleted token", line_n)
             elif orig.typ != new.typ:
-                raise ParserError("Changed the type of a token.")
+                raise ParserError("Changed the type of a token", line_n)
             elif orig.typ not in EDITABLE_TOKENS and orig.val != new.val:
-                raise ParserError(f'Can\'t edit token of type "{orig.typ.name}".')
+                raise ParserError(
+                    f'Can\'t edit token of type "{orig.typ.name}"', line_n
+                )
 
             # Keep track of the PC of the instruction.
             elif orig.typ == TokenType.PC:
@@ -122,7 +136,7 @@ class Disassembly:
                 # Labels.
                 elif orig.typ in (TokenType.LABEL, TokenType.OPERAND_LABEL):
                     if renamed_labels.get(orig.val, new.val) != new.val:
-                        raise ParserError("Ambiguous label change.")
+                        raise ParserError("Ambiguous label change", line_n)
                     renamed_labels[orig.val] = new.val
 
     def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
@@ -132,12 +146,13 @@ class Disassembly:
             """Naively perform label renames."""
             for old, new in labels.items():
                 if old[0] == ".":
-                    if new[0] != ".":
-                        raise ParserError(
-                            "Tried to transform a local label into a global one."
-                        )
                     old, new = old[1:], new[1:]
                 self.log.rename_label(old, new, self.subroutine.pc)
+
+        # Make sure we are keeping the dots at the beginning of the local labels.
+        for old, new in renamed_labels.items():
+            if old[0] == "." and new[0] != ".":
+                raise ParserError("Tried to transform a local label into a global one")
 
         # Rename labels to temporary unique labels.
         temp_renamed_labels = {
@@ -221,6 +236,7 @@ class Disassembly:
     def _text_to_tokens(text: str) -> List[List[Token]]:
         """Parse a subroutines's disassembly into a list of lists of tokens."""
         tokens = []
+        line_n = 1
 
         for line in text.splitlines():
             line = line.strip()
@@ -254,12 +270,12 @@ class Disassembly:
 
                 # Comment section.
                 if words[i] != ";":
-                    raise ParserError("Missing comment section.")
+                    raise ParserError("Missing comment section", line_n)
                 tokens[-1].append(Token(TokenType.PC, words[i + 1]))
                 try:
                     comment = line.split("|", maxsplit=1)[1].strip()
                 except IndexError:
-                    raise ParserError("Expected | before comment.")
+                    raise ParserError("Expected | before comment", line_n)
                 tokens[-1].append(Token(TokenType.COMMENT, comment))
 
             # Assertion/state line.
@@ -270,7 +286,9 @@ class Disassembly:
                     tokens[-1].append(Token(TokenType.UNKNOWN_STATE, words[4]))
 
             else:
-                raise ParserError("Unable to parse line.")
+                raise ParserError("Unable to parse line", line_n)
+
+            line_n += 1
 
         return tokens
 

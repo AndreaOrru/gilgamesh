@@ -149,6 +149,7 @@ class App(Repl):
 
     @command()
     def do_edit(self) -> None:
+        """Interactively edit the subroutine using an external editor."""
         if not self.subroutine:
             return print_error("No selected subroutine.")
         disassembly = Disassembly(self.log, self.subroutine)
