@@ -57,15 +57,18 @@ class Disassembly:
         return BS(f"<pre>{self.html}</pre>", "html.parser").get_text()
 
     def edit(self) -> None:
+        # Save the subroutines's disassembly in a temporary file.
         original_text = self.text
         with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
             f.write(original_text)
             filename = f.name
 
+        # Edit the file in an editor.
         check_call([*os.environ["EDITOR"].split(), filename])
         new_text = open(filename).read()
         os.remove(filename)
 
+        # Compare the two files and apply the changes.
         original_tokens = self._text_to_tokens(
             original_text
         )  # TODO: take tokens directly.
@@ -75,6 +78,8 @@ class Disassembly:
     def _apply_changes(
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
     ) -> None:
+        """Compare a collection of tokens describing a subroutine, with a new one
+        with potentially updated content. Apply changes where possible."""
         renamed_labels: Dict[str, str] = {}
         for orig_instr_tokens, new_instr_tokens in zip_longest(
             original_tokens, new_tokens
@@ -94,6 +99,7 @@ class Disassembly:
     ) -> None:
         pc = 0
         for orig, new in zip_longest(original_tokens, new_tokens):
+            # Error cases.
             if (orig is None) or (new is None):
                 raise ParserError("Added or deleted token.")
             elif orig.typ != new.typ:
@@ -101,22 +107,29 @@ class Disassembly:
             elif orig.typ not in EDITABLE_TOKENS and orig.val != new.val:
                 raise ParserError(f'Can\'t edit token of type "{orig.typ.name}".')
 
+            # Keep track of the PC of the instruction.
             elif orig.typ == TokenType.PC:
                 pc = int(orig.val[1:], 16)
 
+            # If the value of the current token has been changed:
             elif orig.val != new.val:
+                # Comments.
                 if orig.typ == TokenType.COMMENT:
                     if new.val:
                         self.log.comments[pc] = new.val
                     else:
                         self.log.comments.pop(pc, None)
+                # Labels.
                 elif orig.typ in (TokenType.LABEL, TokenType.OPERAND_LABEL):
                     if renamed_labels.get(orig.val, new.val) != new.val:
                         raise ParserError("Ambiguous label change.")
                     renamed_labels[orig.val] = new.val
 
     def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
+        """Safely perform bulk label renames."""
+
         def apply(labels: Dict[str, str]) -> None:
+            """Naively perform label renames."""
             for old, new in labels.items():
                 if old[0] == ".":
                     if new[0] != ".":
@@ -126,18 +139,22 @@ class Disassembly:
                     old, new = old[1:], new[1:]
                 self.log.rename_label(old, new, self.subroutine.pc)
 
+        # Rename labels to temporary unique labels.
         temp_renamed_labels = {
             old: self._unique_label(old) for old in renamed_labels.keys()
         }
         apply(temp_renamed_labels)
+        # Re-rename the unique labels to the target labels.
         renamed_labels = {
             unique_label: renamed_labels[old]
             for old, unique_label in temp_renamed_labels.items()
         }
         apply(renamed_labels)
+        # NOTE: this is needed when swapping pairs of labels.
 
     @staticmethod
     def _instruction_html(tokens: List[Token]) -> str:
+        """Generate HTML from the list of tokens describing an instruction."""
         s = []
         for token in tokens:
             if token.typ == TokenType.LABEL:
@@ -160,39 +177,49 @@ class Disassembly:
         return "".join(s)
 
     def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
+        """Convert an instruction into a list of token which describes it."""
         tokens = []
 
+        # Label.
         subroutine_pc = instruction.subroutine
         label = self.log.get_label(instruction.pc, subroutine_pc)
         if label:
             tokens.append(Token(TokenType.LABEL, label))
 
+        # Operation + Operand.
         tokens.append(Token(TokenType.OPERATION, instruction.name))
         if instruction.argument_alias:
             tokens.append(Token(TokenType.OPERAND_LABEL, instruction.argument_alias))
         else:
             tokens.append(Token(TokenType.OPERAND, instruction.argument_string))
 
+        # PC + Comment.
         tokens.append(Token(TokenType.PC, "${:06X}".format(instruction.pc)))
         comment = self.log.comments.get(instruction.pc, "")
         tokens.append(Token(TokenType.COMMENT, comment))
 
+        # Assertions or unknown state.
         subroutine = self.log.subroutines[subroutine_pc]
         if subroutine.has_asserted_state_change and (
             instruction.stopped_execution or instruction.is_return
         ):
+            # Subroutine with asserted return state.
             state_expr = subroutine.state_change.state_expr
             tokens.append(Token(TokenType.ASSERTION, state_expr))
         elif instruction.pc in self.log.instruction_assertions:
+            # Instruction with asserted state change.
             state_expr = self.log.instruction_assertions[instruction.pc].state_expr
             tokens.append(Token(TokenType.ASSERTION, state_expr))
         elif instruction.stopped_execution:
+            # Unknown state.
             next_pc = "${:06X}".format(instruction.next_pc)
             tokens.append(Token(TokenType.UNKNOWN_STATE, next_pc))
 
         return tokens
 
-    def _text_to_tokens(self, text: str) -> List[List[Token]]:
+    @staticmethod
+    def _text_to_tokens(text: str) -> List[List[Token]]:
+        """Parse a subroutines's disassembly into a list of lists of tokens."""
         tokens = []
 
         for line in text.splitlines():
@@ -247,6 +274,9 @@ class Disassembly:
 
         return tokens
 
-    def _unique_label(self, orig_label: str) -> str:
-        # TODO: check for collisions.
+    @staticmethod
+    def _unique_label(orig_label: str) -> str:
+        """Return a unique label. Respects locality (i.e. if orig_label
+        starts with a dot, the generated label will also start with a dot."""
         return orig_label[0] + "l" + uuid4().hex
+        # TODO: check for meteors.
