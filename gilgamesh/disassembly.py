@@ -5,6 +5,7 @@ from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
 from typing import Dict, List
+from uuid import uuid4
 
 from bs4 import BeautifulSoup as BS  # type: ignore
 
@@ -75,7 +76,6 @@ class Disassembly:
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
     ) -> None:
         renamed_labels: Dict[str, str] = {}
-
         for orig_instr_tokens, new_instr_tokens in zip_longest(
             original_tokens, new_tokens
         ):
@@ -84,15 +84,7 @@ class Disassembly:
             self._apply_instruction_changes(
                 orig_instr_tokens, new_instr_tokens, renamed_labels
             )
-
-        for old, new in renamed_labels.items():
-            if old[0] == ".":
-                if new[0] != ".":
-                    raise ParserError(
-                        "Tried to transform a local label into a global one."
-                    )
-                old, new = old[1:], new[1:]
-            self.log.rename_label(old, new, self.subroutine.pc)
+        self._apply_renamed_labels(renamed_labels)
 
     def _apply_instruction_changes(
         self,
@@ -122,6 +114,27 @@ class Disassembly:
                     if renamed_labels.get(orig.val, new.val) != new.val:
                         raise ParserError("Ambiguous label change.")
                     renamed_labels[orig.val] = new.val
+
+    def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
+        def apply(labels: Dict[str, str]) -> None:
+            for old, new in labels.items():
+                if old[0] == ".":
+                    if new[0] != ".":
+                        raise ParserError(
+                            "Tried to transform a local label into a global one."
+                        )
+                    old, new = old[1:], new[1:]
+                self.log.rename_label(old, new, self.subroutine.pc)
+
+        temp_renamed_labels = {
+            old: self._unique_label(old) for old in renamed_labels.keys()
+        }
+        apply(temp_renamed_labels)
+        renamed_labels = {
+            unique_label: renamed_labels[old]
+            for old, unique_label in temp_renamed_labels.items()
+        }
+        apply(renamed_labels)
 
     @staticmethod
     def _instruction_html(tokens: List[Token]) -> str:
@@ -233,3 +246,7 @@ class Disassembly:
                 raise ParserError("Unable to parse line.")
 
         return tokens
+
+    def _unique_label(self, orig_label: str) -> str:
+        # TODO: check for collisions.
+        return orig_label[0] + "l" + uuid4().hex
