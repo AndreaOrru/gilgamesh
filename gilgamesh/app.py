@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
-from gilgamesh.instruction import Instruction
+from gilgamesh.disassembly import Disassembly
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
@@ -144,13 +144,8 @@ class App(Repl):
         """Show disassembly of selected subroutine."""
         if not self.subroutine:
             return print_error("No selected subroutine.")
-
-        s = []
-        for instruction in self.subroutine.instructions.values():
-            s.append(self._print_instruction(instruction))
-            s.append(self._print_assertion_info(instruction))
-
-        print_html("".join(s))
+        disassembly = Disassembly(self.log, self.subroutine)
+        print_html(disassembly.get_html())
 
     @command(container=True)
     def do_list(self) -> None:
@@ -340,49 +335,6 @@ class App(Repl):
         if pc is None:
             pc = int(label_or_pc, 16)
         return pc
-
-    def _print_instruction(self, instruction: Instruction) -> str:
-        s = []
-
-        subroutine_pc = instruction.subroutine
-        label = self.log.get_label(instruction.pc, subroutine_pc)
-        if label:
-            s.append(f"<red>{label}</red>:\n")
-
-        operation = "<green>{:4}</green>".format(instruction.name)
-        if instruction.argument_alias:
-            argument = "<red>{:16}</red>".format(instruction.argument_alias)
-        else:
-            argument = "{:16}".format(instruction.argument_string)
-
-        s.append(
-            "  {}{}<grey>; ${:06X} | {}</grey>\n".format(
-                operation,
-                argument,
-                instruction.pc,
-                self.log.comments.get(instruction.pc, ""),
-            )
-        )
-
-        return "".join(s)
-
-    def _print_assertion_info(self, instruction: Instruction) -> str:
-        subroutine = self.log.subroutines[instruction.subroutine]
-        if subroutine.has_asserted_state_change and (
-            instruction.stopped_execution or instruction.is_return
-        ):
-            return "  <grey>; Asserted state change: {}</grey>\n".format(
-                subroutine.state_change.state_expr
-            )
-        elif instruction.pc in self.log.instruction_assertions:
-            return "  <grey>; Asserted state change: {}</grey>\n".format(
-                self.log.instruction_assertions[instruction.pc].state_expr
-            )
-        elif instruction.stopped_execution:
-            return "  <grey>; Unknown state at ${:06X}</grey>\n".format(
-                instruction.next_pc
-            )
-        return ""
 
     @staticmethod
     def _print_state_change(change: StateChange, newline=True) -> str:
