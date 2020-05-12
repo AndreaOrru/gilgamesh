@@ -4,6 +4,7 @@ from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
 from gilgamesh.stack import Stack
 from gilgamesh.state import State, StateChange
+from gilgamesh.subroutine import Subroutine
 
 
 class CPU:
@@ -23,13 +24,17 @@ class CPU:
         self.state_inference = StateChange()
 
         # The subroutine currently being executed.
-        self.subroutine = subroutine
+        self.subroutine_pc = subroutine
 
     @property
     def instruction_id(self) -> InstructionID:
         # Get the ID of the instruction currently being executed
         # in the context of the current subroutine.
-        return InstructionID(self.pc, self.state.p, self.subroutine)
+        return InstructionID(self.pc, self.state.p, self.subroutine_pc)
+
+    @property
+    def subroutine(self) -> Subroutine:
+        return self.log.subroutines[self.subroutine_pc]
 
     def copy(self, new_subroutine=False) -> "CPU":
         # Copy the current state of the CPU.
@@ -90,6 +95,8 @@ class CPU:
             self.branch(instruction)
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
+        elif instruction.is_changing_stack:
+            return self.change_stack(instruction)
         elif instruction.is_pop:
             self.pop(instruction)
         elif instruction.is_push:
@@ -126,7 +133,7 @@ class CPU:
         cpu = self.copy(new_subroutine=True)
         call_size = 2 if instruction.operation == Op.JSR else 3
         cpu.stack.push(instruction, size=call_size)
-        cpu.subroutine = target
+        cpu.subroutine_pc = target
         cpu.pc = target
         cpu.run()
 
@@ -160,7 +167,7 @@ class CPU:
                 return
 
         # Standard return.
-        self.log.add_subroutine_state(self.subroutine, self.state_change)
+        self.log.add_subroutine_state(self.subroutine_pc, self.state_change)
 
     def sep_rep(self, instruction: Instruction) -> None:
         arg = instruction.absolute_argument
@@ -180,6 +187,12 @@ class CPU:
         # state change is being performed.
         self.state_change.apply_inference(self.state_inference)
 
+    def change_stack(self, instruction: Instruction) -> bool:
+        # TODO: check that it's the first TCS/TXS in the subroutine.
+        if self.subroutine_pc == self.rom.reset_vector:
+            return True
+        return self._unknown_subroutine_state(instruction, stack_manipulation=True)
+
     def push(self, instruction: Instruction) -> None:
         if instruction.operation == Op.PHP:
             self.stack.push(instruction, (copy(self.state), copy(self.state_change)))
@@ -187,9 +200,9 @@ class CPU:
             self.stack.push(instruction, size=self.state.a_size)
         elif instruction.operation in (Op.PHX, Op.PHY):
             self.stack.push(instruction, size=self.state.x_size)
-        elif instruction.operation == Op.PHB:
+        elif instruction.operation in (Op.PHB, Op.PHK):
             self.stack.push(instruction)
-        elif instruction.operation in (Op.PHD, Op.PEA):
+        elif instruction.operation in (Op.PHD, Op.PEA, Op.PER):
             self.stack.push(instruction, size=2)
         else:
             assert False
@@ -254,12 +267,11 @@ class CPU:
             return True  # Execution can proceed.
 
         # No custom assertion, we need to stop here.
-        self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
+        self.log.add_subroutine_state(self.subroutine_pc, StateChange(unknown=True))
         instruction.stopped_execution = True
 
         if stack_manipulation:
-            subroutine = self.log.subroutines[self.subroutine]
-            subroutine.has_stack_manipulation = True
+            self.subroutine.has_stack_manipulation = True
 
         return False
 

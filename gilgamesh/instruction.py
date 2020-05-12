@@ -155,6 +155,10 @@ class Instruction(Invalidable):
         )
 
     @property
+    def is_changing_stack(self) -> bool:
+        return self.operation in (Op.TCS, Op.TXS)
+
+    @property
     def is_sep_rep(self) -> bool:
         return self.operation in (Op.SEP, Op.REP)
 

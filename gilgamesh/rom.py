@@ -7,11 +7,15 @@ from typing import List
 
 class ROMType(Enum):
     LoROM = auto()
+    ExLoROM = auto()
     HiROM = auto()
+    ExHiROM = auto()
+    # TODO: support other types.
 
 
 class Header:
     TITLE = 0xFFC0
+    MARKUP = 0xFFD5
     TYPE = 0xFFD6
     SIZE = 0xFFD7
     NMI = 0xFFEA
@@ -24,6 +28,7 @@ class ROM:
         with open(path, "rb") as f:
             self.data = array("B", f.read())
         self.type = self._discover_type()
+        self.type = self._discover_subtype()
 
     @property
     def size(self) -> int:
@@ -79,10 +84,31 @@ class ROM:
 
     def _translate(self, address: int) -> int:
         # Translate address from SNES to PC format.
-        if self.type == ROMType.HiROM:
-            return address & 0x3FFFFF
-        else:
+        if self.type == ROMType.LoROM:
             return ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
+
+        elif self.type == ROMType.ExLoROM:
+            if address & 0x800000:
+                return ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
+            return (((address & 0x7F0000) >> 1) | (address & 0x7FFF)) + 0x400000
+
+        elif self.type == ROMType.HiROM:
+            return address & 0x3FFFFF
+
+        elif self.type == ROMType.ExHiROM:
+            if (address & 0xC00000) != 0xC00000:
+                return (address & 0x3FFFFF) | 0x400000
+            return address & 0x3FFFFF
+
+        assert False
+
+    def _discover_subtype(self) -> ROMType:
+        markup = self.read_byte(Header.MARKUP)
+        if (self.type == ROMType.LoROM) and (markup & 0b10):
+            return ROMType.ExLoROM
+        elif (self.type == ROMType.HiROM) and (markup & 0b100):
+            return ROMType.ExHiROM
+        return self.type
 
     def _discover_type(self) -> ROMType:
         if len(self.data) <= 0x8000:

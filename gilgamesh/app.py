@@ -368,8 +368,10 @@ class App(Repl):
             s.append("<green>None</green>")
         else:
             if change.m is not None:
-                s.append(f"<yellow>M</yellow>=<green>{change.m}</green>, ")
+                s.append(f"<yellow>M</yellow>=<green>{change.m}</green>")
             if change.x is not None:
+                if change.m is not None:
+                    s.append(", ")
                 s.append(f"<yellow>X</yellow>=<green>{change.x}</green>")
 
         if newline:
