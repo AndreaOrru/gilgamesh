@@ -1,9 +1,17 @@
 from copy import copy
-from typing import List, Tuple
+from dataclasses import dataclass
+from typing import Any, List, Optional
 
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
 from gilgamesh.state import State, StateChange
+
+
+@dataclass
+class StackEntry:
+    instruction: Instruction
+    byte: Optional[int] = None
+    metadata: Any = None
 
 
 class CPU:
@@ -22,7 +30,7 @@ class CPU:
         self.state_inference = StateChange()
 
         # Stack formed as a result of sequences of PHP/PLP instructions.
-        self.state_stack: List[Tuple[State, StateChange]] = []
+        self.stack: List[StackEntry] = []
         # The subroutine currently being executed.
         self.subroutine = subroutine
 
@@ -91,7 +99,7 @@ class CPU:
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
         elif instruction.operation == Op.PHP:
-            self.push_state()
+            self.push_state(instruction)
         elif instruction.operation == Op.PLP:
             self.pop_state()
 
@@ -165,11 +173,13 @@ class CPU:
         # state change is being performed.
         self.state_change.apply_inference(self.state_inference)
 
-    def push_state(self) -> None:
-        self.state_stack.append((copy(self.state), copy(self.state_change)))
+    def push_state(self, instruction: Instruction) -> None:
+        stack_entry = StackEntry(instruction, self.state.p, copy(self.state_change))
+        self.stack.append(stack_entry)
 
     def pop_state(self) -> None:
-        self.state, self.state_change = self.state_stack.pop()
+        stack_entry = self.stack.pop()
+        self.state, self.state_change = State(p=stack_entry.byte), stack_entry.metadata
 
     @staticmethod
     def is_ram(address: int) -> bool:
