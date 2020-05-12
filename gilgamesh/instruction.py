@@ -158,6 +158,25 @@ class Instruction(Invalidable):
     def is_sep_rep(self) -> bool:
         return self.operation in (Op.SEP, Op.REP)
 
+    @property
+    def is_pop(self) -> bool:
+        return self.operation in (Op.PLA, Op.PLB, Op.PLD, Op.PLP, Op.PLX, Op.PLY)
+
+    @property
+    def is_push(self) -> bool:
+        return self.operation in (
+            Op.PEA,
+            Op.PEI,
+            Op.PER,
+            Op.PHA,
+            Op.PHB,
+            Op.PHD,
+            Op.PHK,
+            Op.PHP,
+            Op.PHX,
+            Op.PHY,
+        )
+
     @cached_property
     def argument_string(self) -> str:
         if self.address_mode == AddressMode.IMPLIED:

@@ -1,17 +1,9 @@
 from copy import copy
-from dataclasses import dataclass
-from typing import Any, List, Optional
 
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
+from gilgamesh.stack import Stack
 from gilgamesh.state import State, StateChange
-
-
-@dataclass
-class StackEntry:
-    instruction: Instruction
-    byte: Optional[int] = None
-    metadata: Any = None
 
 
 class CPU:
@@ -22,6 +14,7 @@ class CPU:
         # Processor state.
         self.pc = pc
         self.state = State(p)
+        self.stack = Stack()
 
         # Change in CPU state caused by the execution of the current subroutine.
         self.state_change = StateChange()
@@ -29,8 +22,6 @@ class CPU:
         # sequence of instructions we have executed.
         self.state_inference = StateChange()
 
-        # Stack formed as a result of sequences of PHP/PLP instructions.
-        self.stack: List[StackEntry] = []
         # The subroutine currently being executed.
         self.subroutine = subroutine
 
@@ -44,6 +35,7 @@ class CPU:
         # Copy the current state of the CPU.
         cpu = copy(self)
         cpu.state = copy(self.state)
+        cpu.stack = self.stack.copy()  # TODO: check if necessary.
         cpu.state_inference = copy(self.state_inference)
         # Don't carry over the state change information to new subroutines.
         cpu.state_change = StateChange() if new_subroutine else copy(self.state_change)
@@ -85,7 +77,7 @@ class CPU:
         self._derive_state_inference(instruction)
 
         if instruction.is_return:
-            self.log.add_subroutine_state(self.subroutine, self.state_change)
+            self.ret(instruction)
             return False  # Terminate the execution of this subroutine.
         elif instruction.is_interrupt:
             self._unknown_subroutine_state(instruction)
@@ -98,10 +90,10 @@ class CPU:
             self.branch(instruction)
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
-        elif instruction.operation == Op.PHP:
-            self.push_state(instruction)
-        elif instruction.operation == Op.PLP:
-            self.pop_state()
+        elif instruction.is_pop:
+            self.pop(instruction)
+        elif instruction.is_push:
+            self.push(instruction)
 
         return True  # Keep executing in the context of this subroutine.
 
@@ -132,6 +124,8 @@ class CPU:
         # Run a parallel instance of the CPU to execute
         # the subroutine that is being called.
         cpu = self.copy(new_subroutine=True)
+        call_size = 2 if instruction.operation == Op.JSR else 3
+        cpu.stack.push(instruction, size=call_size)
         cpu.subroutine = target
         cpu.pc = target
         cpu.run()
@@ -155,6 +149,17 @@ class CPU:
         self.pc = target
         return True
 
+    def ret(self, instruction: Instruction) -> None:
+        # Check whether this return is operating on a manipulated stack.
+        if instruction.operation != Op.RTI:
+            ret_size = 2 if instruction.operation == Op.RTS else 3
+            if not all(s.instruction.is_call for s in self.stack.pop(ret_size)):
+                self._unknown_subroutine_state(instruction)
+                return
+
+        # Standard return.
+        self.log.add_subroutine_state(self.subroutine, self.state_change)
+
     def sep_rep(self, instruction: Instruction) -> None:
         arg = instruction.absolute_argument
         assert arg is not None
@@ -173,13 +178,35 @@ class CPU:
         # state change is being performed.
         self.state_change.apply_inference(self.state_inference)
 
-    def push_state(self, instruction: Instruction) -> None:
-        stack_entry = StackEntry(instruction, self.state.p, copy(self.state_change))
-        self.stack.append(stack_entry)
+    def push(self, instruction: Instruction) -> None:
+        if instruction.operation == Op.PHP:
+            self.stack.push(instruction, (copy(self.state), copy(self.state_change)))
+        elif instruction.operation == Op.PHA:
+            self.stack.push(instruction, size=self.state.a_size)
+        elif instruction.operation in (Op.PHX, Op.PHY):
+            self.stack.push(instruction, size=self.state.x_size)
+        elif instruction.operation == Op.PHB:
+            self.stack.push(instruction)
+        elif instruction.operation in (Op.PHD, Op.PEA):
+            self.stack.push(instruction, size=2)
+        else:
+            assert False
 
-    def pop_state(self) -> None:
-        stack_entry = self.stack.pop()
-        self.state, self.state_change = State(p=stack_entry.byte), stack_entry.metadata
+    def pop(self, instruction: Instruction) -> None:
+        if instruction.operation == Op.PLP:
+            stack_entry = self.stack.pop_one()
+            assert stack_entry.instruction.operation == Op.PHP
+            self.state, self.state_change = stack_entry.data
+        elif instruction.operation == Op.PLA:
+            self.stack.pop(self.state.a_size)
+        elif instruction.operation in (Op.PLX, Op.PLY):
+            self.stack.pop(self.state.x_size)
+        elif instruction.operation == Op.PLB:
+            self.stack.pop_one()
+        elif instruction.operation == Op.PLD:
+            self.stack.pop(2)
+        else:
+            assert False
 
     @staticmethod
     def is_ram(address: int) -> bool:

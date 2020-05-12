@@ -213,3 +213,14 @@ class SimplifiableReturnState(LogTest, TestCase):
         unknown_sub = self.log.subroutines[0x801F]
         self.assertFalse(unknown_sub.instruction_has_asserted_state_change)
         self.assertTrue(unknown_sub.has_unknown_return_state)
+
+
+class StackManipulationTest(LogTest, TestCase):
+    asm = "stack_manipulation.asm"
+
+    def test_stack_manipulation_is_detected(self):
+        reset = self.log.subroutines_by_label["reset"]
+        self.assertNotIn(0x8004, reset.instructions)
+
+        manipulation_sub = self.log.subroutines[0x8008]
+        self.assertTrue(manipulation_sub.has_unknown_return_state)
