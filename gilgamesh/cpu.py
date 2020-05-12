@@ -154,7 +154,7 @@ class CPU:
         if instruction.operation != Op.RTI:
             ret_size = 2 if instruction.operation == Op.RTS else 3
             if not all(s.instruction.is_call for s in self.stack.pop(ret_size)):
-                self._unknown_subroutine_state(instruction)
+                self._unknown_subroutine_state(instruction, stack_manipulation=True)
                 return
 
         # Standard return.
@@ -244,7 +244,9 @@ class CPU:
         self._apply_state_change(return_states.pop())
         return True
 
-    def _unknown_subroutine_state(self, instruction: Instruction) -> bool:
+    def _unknown_subroutine_state(
+        self, instruction: Instruction, stack_manipulation=False
+    ) -> bool:
         # Check if the user defined a state assertion for the current instruction.
         if instruction.pc in self.log.instruction_assertions:
             return True  # Execution can proceed.
@@ -252,6 +254,10 @@ class CPU:
         # No custom assertion, we need to stop here.
         self.log.add_subroutine_state(self.subroutine, StateChange(unknown=True))
         instruction.stopped_execution = True
+
+        if stack_manipulation:
+            self.log.subroutines[self.subroutine].has_stack_manipulation = True
+
         return False
 
     def _apply_state_change(self, state_change: StateChange) -> None:

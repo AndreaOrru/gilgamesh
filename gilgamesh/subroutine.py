@@ -21,6 +21,7 @@ class Subroutine(Invalidable):
         self.state_changes: Set[StateChange] = set()
 
         self.has_jump_table = False
+        self.has_stack_manipulation = False
         self.has_suspicious_instructions = False
         self.has_asserted_state_change = False
         self.instruction_has_asserted_state_change = False

@@ -388,6 +388,8 @@ class App(Repl):
         comment = ""
         if sub.has_suspicious_instructions:
             comment += " <red>[!]</red>"
+        if sub.has_stack_manipulation:
+            comment += " <red>[?]</red>"
         if sub.has_jump_table:
             comment += " <red>[*]</red>"
 
