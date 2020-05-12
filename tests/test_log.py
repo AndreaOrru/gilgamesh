@@ -215,6 +215,15 @@ class SimplifiableReturnState(LogTest, TestCase):
         self.assertTrue(unknown_sub.has_unknown_return_state)
 
 
+class SuspiciousInstructionsTest(LogTest, TestCase):
+    asm = "suspicious_instructions.asm"
+
+    def test_detects_suspicious_instruction(self):
+        reset = self.log.subroutines_by_label["reset"]
+        self.assertTrue(reset.has_suspicious_instructions)
+        self.assertTrue(reset.has_unknown_return_state)
+
+
 class StackManipulationTest(LogTest, TestCase):
     asm = "stack_manipulation.asm"
 
