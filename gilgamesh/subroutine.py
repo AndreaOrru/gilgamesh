@@ -3,6 +3,7 @@ from typing import Dict, Set, Tuple
 from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.instruction import Instruction
+from gilgamesh.opcodes import Op
 from gilgamesh.state import State, StateChange
 from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
@@ -20,6 +21,7 @@ class Subroutine(Invalidable):
         self.state_changes: Set[StateChange] = set()
 
         self.has_jump_table = False
+        self.has_suspicious_instructions = False
         self.has_asserted_state_change = False
         self.instruction_has_asserted_state_change = False
 
@@ -43,7 +45,9 @@ class Subroutine(Invalidable):
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc] = instruction
 
-        if (instruction.absolute_argument is None) and (
+        if instruction.operation == Op.BRK:
+            self.has_suspicious_instructions = True
+        elif (instruction.absolute_argument is None) and (
             instruction.is_jump or instruction.is_call
         ):
             self.has_jump_table = True

@@ -214,7 +214,13 @@ class App(Repl):
     @command()
     def do_list_subroutines(self) -> None:
         """List subroutines according to various criteria.
-        If called with no arguments, display all subroutines."""
+        If called with no arguments, display all subroutines.
+        Subroutines with unknown return states are shown in red.
+
+        Subroutines can be flagged with various symbols:
+          [*] -> Jump table
+          [?] -> Stack manipulation
+          [!] -> Suspicious instructions"""
         s = []
         for subroutine in self.log.subroutines.values():
             s.append(self._print_subroutine(subroutine))
@@ -222,7 +228,12 @@ class App(Repl):
 
     @command()
     def do_list_subroutines_unknown(self) -> None:
-        """List subroutines with unknown or multiple return states."""
+        """List subroutines with unknown return states.
+
+        Subroutines can be flagged with various symbols:
+          [*] -> Jump table
+          [?] -> Stack manipulation
+          [!] -> Suspicious instructions"""
         s = []
         for subroutine in self.log.subroutines.values():
             if subroutine.has_unknown_return_state:
@@ -374,10 +385,12 @@ class App(Repl):
         else:
             color = "green"
 
+        comment = ""
+        if sub.has_suspicious_instructions:
+            comment += " <red>[!]</red>"
+        if sub.has_jump_table:
+            comment += " <red>[*]</red>"
+
         return "${:06X}  <{}>{}</{}>{}\n".format(
-            sub.pc,
-            color,
-            sub.label,
-            color,
-            " <red>*</red>" if sub.has_jump_table else "",
+            sub.pc, color, sub.label, color, comment,
         )

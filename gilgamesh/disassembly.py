@@ -177,9 +177,9 @@ class Disassembly:
             elif token.typ == TokenType.OPERATION:
                 s.append("  <green>{:4}</green>".format(token.val))
             elif token.typ == TokenType.OPERAND:
-                s.append("{:16}".format(token.val))
+                s.append("{:20}".format(token.val))
             elif token.typ == TokenType.OPERAND_LABEL:
-                s.append("<red>{:16}</red>".format(token.val))
+                s.append("<red>{:20}</red>".format(token.val))
             elif token.typ == TokenType.PC:
                 s.append(f"<grey>; {token.val} | </grey>")
             elif token.typ == TokenType.COMMENT:
