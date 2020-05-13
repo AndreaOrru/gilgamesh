@@ -303,6 +303,7 @@ class App(Repl):
         """Reset the analysis (start from scratch)."""
         if self.yes_no_prompt("Are you sure you want to reset the entire analysis?"):
             self.log.reset()
+            self.subroutine_pc = None
 
     @command()
     def do_rom(self) -> None:
