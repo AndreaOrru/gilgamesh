@@ -1,19 +1,20 @@
 from copy import copy
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any, Dict, List, Optional
 
 from gilgamesh.instruction import Instruction
 
 
 @dataclass
 class StackEntry:
-    instruction: Instruction
+    instruction: Optional[Instruction] = None
     data: Any = None
 
 
 class Stack:
     def __init__(self):
-        self.memory: List[StackEntry] = []
+        self.memory: Dict[int, StackEntry] = {}
+        self.pointer = 0
 
     def copy(self) -> "Stack":
         stack = copy(self)
@@ -24,10 +25,15 @@ class Stack:
         if size > 1:
             assert data is None
         for _ in range(size):
-            self.memory.append(StackEntry(instruction, data))
+            self.memory[self.pointer] = StackEntry(instruction, data)
+            self.pointer -= 1
 
     def pop_one(self) -> StackEntry:
-        return self.memory.pop()
+        self.pointer += 1
+        try:
+            return self.memory[self.pointer]
+        except KeyError:
+            return StackEntry()
 
     def pop(self, size: int) -> List[StackEntry]:
         return [self.pop_one() for _ in range(size)]

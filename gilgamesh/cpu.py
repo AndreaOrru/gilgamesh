@@ -169,7 +169,10 @@ class CPU:
             ret_size = 2 if instruction.operation == Op.RTS else 3
             call_op = Op.JSR if instruction.operation == Op.RTS else Op.JSL
             stack_entries = self.stack.pop(ret_size)
-            if not all(s.instruction.operation == call_op for s in stack_entries):
+            if not all(
+                s.instruction and s.instruction.operation == call_op
+                for s in stack_entries
+            ):
                 self._unknown_subroutine_state(instruction, stack_manipulation=True)
                 return
 
@@ -195,16 +198,34 @@ class CPU:
         self.state_change.apply_inference(self.state_inference)
 
     def change_a(self, i: Instruction) -> None:
-        if i.operation == Op.LDA and i.address_mode == AddressMode.IMMEDIATE_M:
-            self.registers.a.set(i.argument)
+        if i.address_mode == AddressMode.IMMEDIATE_M:
+            assert i.argument is not None
+            a = self.registers.a.get()
+
+            if i.operation == Op.LDA:
+                self.registers.a.set(i.argument)
+            elif a is not None:
+                if i.operation == Op.ADC:
+                    # TODO: handle carry flag.
+                    self.registers.a.set(a + i.argument)
+                elif i.operation == Op.SBC:
+                    # TODO: handle negative flag.
+                    self.registers.a.set(a - i.argument)
+        elif i.operation == Op.TSC:
+            self.registers.a.set_whole(self.stack.pointer)
+        elif i.operation == Op.PLA:
+            self.stack.pop(self.state.a_size)
         else:
             self.registers.a.set(None)
 
-    def change_stack(self, instruction: Instruction) -> bool:
-        # TODO: check that it's the first TCS/TXS in the subroutine.
-        if self.subroutine_pc == self.rom.reset_vector:
-            return True
-        return self._unknown_subroutine_state(instruction, stack_manipulation=True)
+    def change_stack(self, i: Instruction) -> bool:
+        if i.operation == Op.TCS:
+            a = self.registers.a.get_whole()
+            if a is not None:
+                self.stack.pointer = a
+                return True
+
+        return self._unknown_subroutine_state(i, stack_manipulation=True)
 
     def push(self, instruction: Instruction) -> None:
         if instruction.operation == Op.PHP:
@@ -223,10 +244,10 @@ class CPU:
     def pop(self, instruction: Instruction) -> None:
         if instruction.operation == Op.PLP:
             stack_entry = self.stack.pop_one()
-            assert stack_entry.instruction.operation == Op.PHP
+            assert (
+                stack_entry.instruction and stack_entry.instruction.operation == Op.PHP
+            )
             self.state, self.state_change = stack_entry.data
-        elif instruction.operation == Op.PLA:
-            self.stack.pop(self.state.a_size)
         elif instruction.operation in (Op.PLX, Op.PLY):
             self.stack.pop(self.state.x_size)
         elif instruction.operation == Op.PLB:

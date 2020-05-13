@@ -240,8 +240,14 @@ class ChangeRegisterTest(LogTest, TestCase):
 
     def test_value_of_register_changes(self):
         reset = self.log.subroutines_by_label["reset"]
-        self.assertEqual(reset.instructions[0x8005].registers["a"], 0x1234)
-        self.assertEqual(reset.instructions[0x8007].registers["a"], 0x34)
-        self.assertEqual(reset.instructions[0x800B].registers["a"], None)
-        self.assertEqual(reset.instructions[0x800D].registers["a"], 0xFF)
-        self.assertEqual(reset.instructions[0x800F].registers["a"], 0x12FF)
+
+        # LDA
+        self.assertEqual(reset.instructions[0x8006].registers["a"], 0x1234)
+        self.assertEqual(reset.instructions[0x8008].registers["a"], 0x34)
+        self.assertEqual(reset.instructions[0x800C].registers["a"], None)
+        self.assertEqual(reset.instructions[0x800E].registers["a"], 0xFF)
+        self.assertEqual(reset.instructions[0x8010].registers["a"], 0x12FF)
+
+        # ADC
+        self.assertEqual(reset.instructions[0x8013].registers["a"], 0x13FF)
+        self.assertEqual(reset.instructions[0x8019].registers["a"], 0x1300)

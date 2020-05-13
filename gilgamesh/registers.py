@@ -35,7 +35,19 @@ class Register:
             else:
                 self.lo = self.hi = None
         elif self.size == 1:
-            self.lo = value
+            self.lo = value & 0xFF
+        else:
+            self.lo = value & 0xFF
+            self.hi = (value >> 8) & 0xFF
+
+    def get_whole(self) -> Optional[int]:
+        if (self.lo is None) or (self.hi is None):
+            return None
+        return (self.hi << 8) | self.lo
+
+    def set_whole(self, value: Optional[int]) -> None:
+        if value is None:
+            self.lo = self.hi = None
         else:
             self.lo = value & 0xFF
             self.hi = (value >> 8) & 0xFF

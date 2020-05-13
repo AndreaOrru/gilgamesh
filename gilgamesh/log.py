@@ -62,6 +62,7 @@ class Log:
 
         # Generate labels for newly discovered code.
         self._generate_labels()
+        gc.collect()
 
     def save(self) -> None:
         self._preserve_labels()
