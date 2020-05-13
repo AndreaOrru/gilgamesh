@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Optional
+from typing import Dict, Optional
 
 from cached_property import cached_property  # type: ignore
 
@@ -17,12 +17,20 @@ InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
 
 class Instruction(Invalidable):
     def __init__(
-        self, log, pc: int, p: int, subroutine: int, opcode: int, argument: int
+        self,
+        log,
+        pc: int,
+        p: int,
+        subroutine: int,
+        opcode: int,
+        argument: int,
+        registers: Dict[str, Optional[int]],
     ):
         super().__init__()
         self.log = log
         self.pc = pc
         self.state = State(p)
+        self.registers = registers
 
         self.subroutine = subroutine
         self.opcode = opcode
@@ -116,6 +124,49 @@ class Instruction(Invalidable):
         return self.log.get_label(self.pc, self.subroutine)
 
     @property
+    def does_change_stack(self) -> bool:
+        return self.operation in (Op.TCS, Op.TXS)
+
+    @property
+    def does_change_a(self) -> bool:
+        return self.operation in {
+            Op.ADC,
+            Op.AND,
+            Op.ASL,
+            Op.DEC,
+            Op.EOR,
+            Op.INC,
+            Op.LDA,
+            Op.LSR,
+            Op.ORA,
+            Op.PLA,
+            Op.ROL,
+            Op.ROR,
+            Op.SBC,
+            Op.TDC,
+            Op.TSC,
+            Op.TXA,
+            Op.TYA,
+            Op.XBA,
+        }
+
+    @property
+    def does_change_x(self) -> bool:
+        return self.operation in (
+            Op.DEX,
+            Op.INX,
+            Op.LDX,
+            Op.PLX,
+            Op.TAX,
+            Op.TSX,
+            Op.TYX,
+        )
+
+    @property
+    def does_change_y(self) -> bool:
+        return self.operation in (Op.DEY, Op.INY, Op.LDY, Op.PLY, Op.TAY, Op.TXY,)
+
+    @property
     def is_branch(self) -> bool:
         return self.operation in (
             Op.BCC,
@@ -153,10 +204,6 @@ class Instruction(Invalidable):
             or self.is_return
             or self.is_interrupt
         )
-
-    @property
-    def is_changing_stack(self) -> bool:
-        return self.operation in (Op.TCS, Op.TXS)
 
     @property
     def is_sep_rep(self) -> bool:

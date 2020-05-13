@@ -233,3 +233,15 @@ class StackManipulationTest(LogTest, TestCase):
 
         manipulation_sub = self.log.subroutines[0x8008]
         self.assertTrue(manipulation_sub.has_unknown_return_state)
+
+
+class ChangeRegisterTest(LogTest, TestCase):
+    asm = "change_register.asm"
+
+    def test_value_of_register_changes(self):
+        reset = self.log.subroutines_by_label["reset"]
+        self.assertEqual(reset.instructions[0x8005].registers["a"], 0x1234)
+        self.assertEqual(reset.instructions[0x8007].registers["a"], 0x34)
+        self.assertEqual(reset.instructions[0x800B].registers["a"], None)
+        self.assertEqual(reset.instructions[0x800D].registers["a"], 0xFF)
+        self.assertEqual(reset.instructions[0x800F].registers["a"], 0x12FF)

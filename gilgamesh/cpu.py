@@ -2,6 +2,7 @@ from copy import copy
 
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
+from gilgamesh.registers import Registers
 from gilgamesh.stack import Stack
 from gilgamesh.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
@@ -15,6 +16,7 @@ class CPU:
         # Processor state.
         self.pc = pc
         self.state = State(p)
+        self.registers = Registers(self.state)
         self.stack = Stack()
 
         # Change in CPU state caused by the execution of the current subroutine.
@@ -40,6 +42,7 @@ class CPU:
         # Copy the current state of the CPU.
         cpu = copy(self)
         cpu.state = copy(self.state)
+        cpu.registers = self.registers.copy(cpu.state)
         cpu.stack = self.stack.copy()  # TODO: check if necessary.
         cpu.state_inference = copy(self.state_inference)
         # Don't carry over the state change information to new subroutines.
@@ -62,7 +65,9 @@ class CPU:
         # Disassemble and log the instruction.
         opcode = self.rom.read_byte(self.pc)
         argument = self.rom.read_address(self.pc + 1)
-        instruction = Instruction(self.log, *self.instruction_id, opcode, argument)
+        instruction = Instruction(
+            self.log, *self.instruction_id, opcode, argument, self.registers.snapshot()
+        )
         self.log.add_instruction(instruction)
 
         # Emulate the instruction.
@@ -95,8 +100,10 @@ class CPU:
             self.branch(instruction)
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
-        elif instruction.is_changing_stack:
+        elif instruction.does_change_stack:
             return self.change_stack(instruction)
+        elif instruction.does_change_a:
+            self.change_a(instruction)
         elif instruction.is_pop:
             self.pop(instruction)
         elif instruction.is_push:
@@ -186,6 +193,12 @@ class CPU:
         # and we switch to that same mode, effectively no
         # state change is being performed.
         self.state_change.apply_inference(self.state_inference)
+
+    def change_a(self, i: Instruction) -> None:
+        if i.operation == Op.LDA and i.address_mode == AddressMode.IMMEDIATE_M:
+            self.registers.a.set(i.argument)
+        else:
+            self.registers.a.set(None)
 
     def change_stack(self, instruction: Instruction) -> bool:
         # TODO: check that it's the first TCS/TXS in the subroutine.
