@@ -105,7 +105,7 @@ class CPU:
         elif instruction.does_change_a:
             self.change_a(instruction)
         elif instruction.is_pop:
-            self.pop(instruction)
+            return self.pop(instruction)
         elif instruction.is_push:
             self.push(instruction)
 
@@ -241,21 +241,22 @@ class CPU:
         else:
             assert False
 
-    def pop(self, instruction: Instruction) -> None:
-        if instruction.operation == Op.PLP:
+    def pop(self, i: Instruction) -> bool:
+        if i.operation == Op.PLP:
             stack_entry = self.stack.pop_one()
-            assert (
-                stack_entry.instruction and stack_entry.instruction.operation == Op.PHP
-            )
-            self.state, self.state_change = stack_entry.data
-        elif instruction.operation in (Op.PLX, Op.PLY):
+            if stack_entry.instruction and stack_entry.instruction.operation == Op.PHP:
+                self.state, self.state_change = stack_entry.data
+            else:
+                return self._unknown_subroutine_state(i, stack_manipulation=True)
+        elif i.operation in (Op.PLX, Op.PLY):
             self.stack.pop(self.state.x_size)
-        elif instruction.operation == Op.PLB:
+        elif i.operation == Op.PLB:
             self.stack.pop_one()
-        elif instruction.operation == Op.PLD:
+        elif i.operation == Op.PLD:
             self.stack.pop(2)
         else:
             assert False
+        return True
 
     @staticmethod
     def is_ram(address: int) -> bool:
