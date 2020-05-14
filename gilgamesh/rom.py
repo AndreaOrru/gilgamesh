@@ -88,6 +88,10 @@ class ROM:
     def sha1(self):
         return sha1(self.data).hexdigest()
 
+    @staticmethod
+    def is_ram(address: int) -> bool:
+        return (address <= 0x001FFF) or (0x7E0000 <= address <= 0x7FFFFF)
+
     def _translate(self, address: int) -> int:
         # Translate address from SNES to PC format.
         if self.type == ROMType.LoROM:

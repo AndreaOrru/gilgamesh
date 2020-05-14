@@ -99,6 +99,9 @@ class Log:
             subroutine.instruction_has_asserted_state_change = True
 
     def add_subroutine(self, pc: int, label: str = "") -> None:
+        if self.rom.is_ram(pc):
+            return
+
         # Assign a label to the subroutine (or retrieve the existing one).
         preserved_label = self.preserved_labels.get(pc)
         if preserved_label:
