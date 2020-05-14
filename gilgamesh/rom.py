@@ -105,7 +105,8 @@ class ROM:
         elif self.type == ROMType.ExHiROM:
             if (address & 0xC00000) != 0xC00000:
                 pc = (address & 0x3FFFFF) | 0x400000
-            pc = address & 0x3FFFFF
+            else:
+                pc = address & 0x3FFFFF
 
         if address > 0xFFFFFF or pc >= self.real_size:
             raise GilgameshError(f"Invalid address: ${address:X}.")
