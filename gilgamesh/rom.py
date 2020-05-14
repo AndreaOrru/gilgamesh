@@ -4,6 +4,8 @@ from hashlib import sha1
 from os.path import basename, splitext
 from typing import List
 
+from gilgamesh.errors import GilgameshError
+
 
 class ROMType(Enum):
     LoROM = auto()
@@ -33,6 +35,10 @@ class ROM:
     @property
     def size(self) -> int:
         return 0x400 << self.read_byte(Header.SIZE)
+
+    @property
+    def real_size(self) -> int:
+        return len(self.data)
 
     @property
     def title(self) -> str:
@@ -85,22 +91,25 @@ class ROM:
     def _translate(self, address: int) -> int:
         # Translate address from SNES to PC format.
         if self.type == ROMType.LoROM:
-            return ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
+            pc = ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
 
         elif self.type == ROMType.ExLoROM:
             if address & 0x800000:
-                return ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
-            return (((address & 0x7F0000) >> 1) | (address & 0x7FFF)) + 0x400000
+                pc = ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
+            else:
+                pc = (((address & 0x7F0000) >> 1) | (address & 0x7FFF)) + 0x400000
 
         elif self.type == ROMType.HiROM:
-            return address & 0x3FFFFF
+            pc = address & 0x3FFFFF
 
         elif self.type == ROMType.ExHiROM:
             if (address & 0xC00000) != 0xC00000:
-                return (address & 0x3FFFFF) | 0x400000
-            return address & 0x3FFFFF
+                pc = (address & 0x3FFFFF) | 0x400000
+            pc = address & 0x3FFFFF
 
-        assert False
+        if address > 0xFFFFFF or pc >= self.real_size:
+            raise GilgameshError(f"Invalid address: ${address:X}.")
+        return pc
 
     def _discover_subtype(self) -> ROMType:
         markup = self.read_byte(Header.MARKUP)

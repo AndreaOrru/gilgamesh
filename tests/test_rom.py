@@ -55,7 +55,6 @@ class LoROMTest(ROMTest, TestCase):
 
     def test_translate(self):
         self.assertEqual(self.rom._translate(0x008000), 0x000000)
-        self.assertEqual(self.rom._translate(0x108000), 0x080000)
         self.assertEqual(self.rom._translate(0x808000), 0x000000)
 
     def test_glm_path(self):

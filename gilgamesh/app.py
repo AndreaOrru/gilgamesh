@@ -164,17 +164,21 @@ class App(Repl):
         """Add an entry point to the analysis.
 
         STATE_EXPR can accept the following values:
-          - "m=0,x=0"      -> The subroutine changes the state of m to 0 and x to 0.
-          - "m=0,x=1"      -> The subroutine changes the state of m to 0 and x to 1.
-          - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
-          - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
-        pc_int = int(pc, 16)
+          - "m=0,x=0" -> The subroutine changes the state of m to 0 and x to 0.
+          - "m=0,x=1" -> The subroutine changes the state of m to 0 and x to 1.
+          - "m=1,x=0" -> The subroutine changes the state of m to 1 and x to 0.
+          - "m=1,x=1" -> The subroutine changes the state of m to 1 and x to 1."""
+        try:
+            pc_int = int(pc, 16)
+            self.rom._translate(pc_int)  # Verify that the address exists in the ROM.
+        except ValueError:
+            raise GilgameshError("Invalid PC format.")
         state = State.from_state_expr(state_expr)
-        self.log.entry_points[pc_int] = EntryPoint(name, state.p)
 
-        # TODO: PC not valid address.
-        # TODO: Fully specified state_expr.
-        # TODO: Entry point is already part of the analysis.
+        if (pc_int in self.log.entry_points) or (pc_int in self.log.instructions):
+            raise GilgameshError("This address is already covered by the analysis.")
+
+        self.log.entry_points[pc_int] = EntryPoint(name, state.p)
         # TODO: add reference instruction (i.e. a jump table).
 
     @command(container=True)
@@ -243,6 +247,7 @@ class App(Repl):
         """List subroutines according to various criteria.
         If called with no arguments, display all subroutines.
         Subroutines with unknown return states are shown in red.
+        Entry points are shown with a colored background.
 
         Subroutines can be flagged with various symbols:
           [*] -> Jump table
@@ -290,6 +295,7 @@ class App(Repl):
     @command()
     @argument("label_or_pc", complete_label)
     def do_query_references(self, label_or_pc: str) -> None:
+        """Given an address, list the instructions pointing to it."""
         pc = self._label_to_pc(label_or_pc)
         references = self.log.references[pc]
         for instr_pc, sub_pc in references:
@@ -387,8 +393,10 @@ class App(Repl):
     def do_translate(self, label_or_pc: str) -> None:
         """Translate a SNES address to a PC address."""
         pc = self._label_to_pc(label_or_pc)
-        print_html("<green>SNES:</green> ${:06X}".format(pc))
-        print_html("<green>PC:</green>   ${:06X}\n".format(self.rom._translate(pc)))
+        s = []
+        s.append("<green>SNES:</green> ${:06X}".format(pc))
+        s.append("<green>PC:</green>   ${:06X}\n".format(self.rom._translate(pc)))
+        print_html("".join(s))
 
     def _label_to_pc(self, label_or_pc) -> int:
         pc = self.log.get_label_value(

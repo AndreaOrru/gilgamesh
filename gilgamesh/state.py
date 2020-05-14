@@ -1,3 +1,4 @@
+import re
 from copy import copy
 from typing import Optional
 
@@ -20,11 +21,13 @@ class State:
 
     @classmethod
     def from_state_expr(cls, expr: str) -> "State":
-        # TODO: Validate expression.
         # TODO: Write tests for this.
-        expressions = expr.split(",")
-        if len(expressions) != 2:
+        if not (
+            re.match(r"m=(0|1),x=(0|1)", expr) or re.match(r"x=(0|1),m=(0|1)", expr)
+        ):
             raise GilgameshError("Unknown syntax.")
+
+        expressions = expr.split(",")
         return cls(
             **{
                 str(register).lower(): int(value)
