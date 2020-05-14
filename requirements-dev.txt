@@ -1,7 +1,7 @@
 # Python Language Server.
 python-language-server[all]
 pyls-mypy
-jedi<0.16
+jedi
 
 # Virtual environments.
 virtualenvwrapper

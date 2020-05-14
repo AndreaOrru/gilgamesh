@@ -26,6 +26,7 @@ class Repl:
 
         self._session = PromptSession(
             style=style,
+            swap_light_and_dark_colors=True,
             complete_style=CompleteStyle.MULTI_COLUMN,
             complete_while_typing=False,
             history=history_file and FileHistory(history_file),
