@@ -5,7 +5,14 @@ from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.disassembly import Disassembly, ParserError
 from gilgamesh.log import Log
-from gilgamesh.repl import Repl, argument, command, print_error, print_html
+from gilgamesh.repl import (
+    Repl,
+    ReplException,
+    argument,
+    command,
+    print_error,
+    print_html,
+)
 from gilgamesh.rom import ROM
 from gilgamesh.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
@@ -351,13 +358,17 @@ class App(Repl):
         print_html("<green>SNES:</green> ${:06X}".format(pc))
         print_html("<green>PC:</green>   ${:06X}\n".format(self.rom._translate(pc)))
 
-    def _label_to_pc(self, label_or_pc):
+    def _label_to_pc(self, label_or_pc) -> int:
         pc = self.log.get_label_value(
             label_or_pc, self.subroutine.pc if self.subroutine else None
         )
-        if pc is None:
-            pc = int(label_or_pc, 16)
-        return pc
+        if pc is not None:
+            return pc
+
+        try:
+            return int(label_or_pc, 16)
+        except ValueError:
+            raise ReplException("Provided value is neither a label nor an address.")
 
     @staticmethod
     def _print_state_change(change: StateChange, newline=True) -> str:

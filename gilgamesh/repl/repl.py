@@ -18,6 +18,10 @@ from gilgamesh.repl.completers import ArgsCompleter
 from gilgamesh.repl.decorators import command
 
 
+class ReplException(Exception):
+    ...
+
+
 class Repl:
     def __init__(self, history_file=""):
         if history_file:
@@ -64,8 +68,13 @@ class Repl:
                     # Execute the command.
                     else:
                         # Commands can return True to quit the application.
-                        if cmd(self, *args):
-                            close = True
+                        try:
+                            if cmd(self, *args):
+                                close = True
+                        except ReplException as e:
+                            print_error(str(e))
+                        # except Exception as e:
+                        #     breakpoint()
 
             # Ask for confirmation when quitting.
             if close and not self.yes_no_prompt(
