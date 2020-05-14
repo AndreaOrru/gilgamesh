@@ -132,17 +132,14 @@ class Disassembly:
     def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
         """Safely perform bulk label renames."""
 
-        def apply(labels: Dict[str, str]) -> None:
+        def apply(labels: Dict[str, str], dry=False) -> None:
             """Naively perform label renames."""
             for old, new in labels.items():
-                if old[0] == ".":
-                    old, new = old[1:], new[1:]
-                self.log.rename_label(old, new, self.subroutine.pc)
+                self.log.rename_label(old, new, self.subroutine.pc, dry)
 
-        # Make sure we are keeping the dots at the beginning of the local labels.
-        for old, new in renamed_labels.items():
-            if old[0] == "." and new[0] != ".":
-                raise ParserError("Tried to transform a local label into a global one.")
+        # Perform a dry run to make sure there are no errors
+        # when renames are applied to the full disassembly.
+        apply(renamed_labels, dry=True)
 
         # Rename labels to temporary unique labels.
         temp_renamed_labels = {
@@ -167,11 +164,11 @@ class Disassembly:
             elif token.typ == TokenType.OPERATION:
                 s.append("  <green>{:4}</green>".format(token.val))
             elif token.typ == TokenType.OPERAND:
-                s.append("{:20}".format(token.val))
+                s.append("{:25}".format(token.val))
             elif token.typ == TokenType.OPERAND_LABEL:
-                s.append("<red>{:20}</red>".format(token.val))
+                s.append("<red>{:25}</red>".format(token.val))
             elif token.typ == TokenType.PC:
-                s.append(f"<grey>; {token.val} | </grey>")
+                s.append(f" <grey>; {token.val} | </grey>")
             elif token.typ == TokenType.COMMENT:
                 s.append(f"<grey>{token.val}</grey>")
             elif token.typ == TokenType.ASSERTION:
