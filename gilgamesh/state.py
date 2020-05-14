@@ -118,7 +118,7 @@ class StateChange:
         m_str = [f"M={self.m}"] if self.m is not None else []
         x_str = [f"X={self.x}"] if self.x is not None else []
         if m_str or x_str:
-            r += ", ".join([*m_str, *x_str])
+            r += ",".join([*m_str, *x_str])
         else:
             r += "None"
         return r

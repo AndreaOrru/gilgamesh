@@ -302,17 +302,20 @@ class Disassembly:
 
 
 class DisassemblyContainer:
+    HEADER = ";; ========================================\n"
+
     def __init__(self, log: Log):
-        self.disassemblies = {
-            pc: Disassembly(sub) for pc, sub in log.subroutines.items()
-        }
+        self.disassemblies = [Disassembly(sub) for sub in log.subroutines.values()]
 
     def edit(self) -> None:
         # Save the subroutines' disassembly in a temporary file.
+        original_tokens: List[List[List[Token]]] = []
         with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
-            for disassembly in self.disassemblies.values():
-                f.write(";; ========================================\n")
-                f.write(disassembly._get_text()[0])
+            for disassembly in self.disassemblies:
+                f.write(self.HEADER)
+                text, tokens = disassembly._get_text()
+                original_tokens.append(tokens)
+                f.write(text)
                 f.write("\n\n")
             filename = f.name
 
@@ -320,3 +323,8 @@ class DisassemblyContainer:
         check_call([*os.environ["EDITOR"].split(), filename])
         new_text = open(filename).read()
         os.remove(filename)
+
+        subroutine_texts = new_text.split(self.HEADER)
+        for i, disassembly in enumerate(self.disassemblies):
+            new_tokens = disassembly._text_to_tokens(subroutine_texts[i + 1])
+            disassembly._apply_changes(original_tokens[i], new_tokens)
