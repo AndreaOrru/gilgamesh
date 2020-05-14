@@ -22,10 +22,10 @@ class LoROMTest(LogTest, TestCase):
     asm = "lorom.asm"
 
     def test_initial_entry_points(self):
-        self.assertIn((0x8000, 0b0011_0000, 0x8000), self.log.entry_points)
+        self.assertIn((0x8000, "reset", 0b0011_0000), self.log.entry_points)
         self.assertEqual(self.log.subroutines[0x8000].label, "reset")
 
-        self.assertIn((0x0000, 0b0011_0000, 0x0000), self.log.entry_points)
+        self.assertIn((0x0000, "nmi", 0b0011_0000), self.log.entry_points)
         self.assertEqual(self.log.subroutines[0x0000].label, "nmi")
 
 

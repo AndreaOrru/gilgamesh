@@ -1,7 +1,7 @@
 import gc
 import pickle
-from collections import defaultdict
-from typing import DefaultDict, Dict, List, Optional, Set, Tuple
+from collections import defaultdict, namedtuple
+from typing import DefaultDict, Dict, Optional, Set, Tuple
 
 from bidict import bidict  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
@@ -14,6 +14,8 @@ from gilgamesh.state import StateChange
 from gilgamesh.subroutine import Subroutine
 from gilgamesh.utils.invalidable import bulk_invalidate
 
+EntryPoint = namedtuple("EntryPoint", ("name", "p"))
+
 
 class Log:
     def __init__(self, rom: ROM):
@@ -25,6 +27,12 @@ class Log:
         self.subroutine_assertions: Dict[int, StateChange] = {}
         self.preserved_labels: Dict[int, str] = {}
         self.comments: Dict[int, str] = {}
+
+        self.entry_points: Dict[int, EntryPoint] = {
+            self.rom.reset_vector: EntryPoint("reset", 0b0011_0000),
+            self.rom.nmi_vector: EntryPoint("nmi", 0b0011_0000),
+        }
+
         self._clear(preserve_labels=False)
 
     def _clear(self, preserve_labels=True) -> None:
@@ -37,7 +45,6 @@ class Log:
             bulk_invalidate(self.subroutines.values())
 
         # Clear all data structures.
-        self.entry_points: List[InstructionID] = []
         self.local_labels: DefaultDict[int, Dict[str, int]] = defaultdict(bidict)
         self.instructions: DefaultDict[int, Set[InstructionID]] = defaultdict(set)
         self.subroutines: Dict[int, Subroutine] = SortedDict()
@@ -46,8 +53,8 @@ class Log:
         gc.collect()
 
         # Add entry points.
-        self.add_subroutine(self.rom.reset_vector, label="reset", entry_point=True)
-        self.add_subroutine(self.rom.nmi_vector, label="nmi", entry_point=True)
+        for pc, entry in self.entry_points.items():
+            self.add_subroutine(pc, label=entry.name)
 
         self.dirty = False
 
@@ -57,8 +64,8 @@ class Log:
             self._clear(preserve_labels)
 
         # Start emulation from all entry points.
-        for pc, p, subroutine in self.entry_points:
-            cpu = CPU(self, pc, p, subroutine)
+        for subroutine_pc, (name, p) in self.entry_points.items():
+            cpu = CPU(self, subroutine_pc, p, subroutine_pc)
             cpu.run()
 
         # Generate labels for newly discovered code.
@@ -68,6 +75,7 @@ class Log:
     def save(self) -> None:
         self._preserve_labels()
         data = {
+            "entry_points": self.entry_points,
             "instruction_assertions": self.instruction_assertions,
             "subroutine_assertions": self.subroutine_assertions,
             "preserved_labels": self.preserved_labels,
@@ -80,6 +88,7 @@ class Log:
         try:
             with open(self.rom.glm_path, "rb") as f:
                 data = pickle.load(f)
+                self.entry_points = data["entry_points"]
                 self.instruction_assertions = data["instruction_assertions"]
                 self.subroutine_assertions = data["subroutine_assertions"]
                 self.preserved_labels = data["preserved_labels"]
@@ -98,9 +107,7 @@ class Log:
         if instruction.pc in self.instruction_assertions:
             subroutine.instruction_has_asserted_state_change = True
 
-    def add_subroutine(
-        self, pc: int, p: int = 0b0011_0000, label: str = "", entry_point: bool = False
-    ) -> None:
+    def add_subroutine(self, pc: int, label: str = "") -> None:
         # Assign a label to the subroutine (or retrieve the existing one).
         preserved_label = self.preserved_labels.get(pc)
         if preserved_label:
@@ -119,10 +126,6 @@ class Log:
         state_change = self.subroutine_assertions.get(pc)
         if state_change:
             subroutine.assert_state_change(state_change)
-
-        # Register the subroutine as an entry point if specified.
-        if entry_point:
-            self.entry_points.append(InstructionID(pc, p, pc))
 
     def add_subroutine_state(
         self, subroutine_pc: int, state_change: StateChange

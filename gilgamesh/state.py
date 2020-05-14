@@ -18,6 +18,20 @@ class State:
             self.p = m << M_BIT
             self.p |= x << X_BIT
 
+    @classmethod
+    def from_state_expr(cls, expr: str) -> "State":
+        # TODO: Validate expression.
+        # TODO: Write tests for this.
+        expressions = expr.split(",")
+        if len(expressions) != 2:
+            raise GilgameshError("Unknown syntax.")
+        return cls(
+            **{
+                str(register).lower(): int(value)
+                for register, value in (e.split("=") for e in expressions)
+            }
+        )
+
     def __repr__(self) -> str:
         return f"<State: M={self.m}, X={self.x}>"
 

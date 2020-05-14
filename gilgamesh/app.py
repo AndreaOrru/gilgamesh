@@ -5,7 +5,7 @@ from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.disassembly import Disassembly
 from gilgamesh.errors import GilgameshError
-from gilgamesh.log import Log
+from gilgamesh.log import EntryPoint, Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
 from gilgamesh.state import State, StateChange
@@ -156,6 +156,27 @@ class App(Repl):
         disassembly = Disassembly(self.subroutine)
         disassembly.edit()
 
+    @command()
+    @argument("pc")
+    @argument("name")
+    @argument("state_expr")
+    def do_entrypoint(self, pc: str, name: str, state_expr: str) -> None:
+        """Add an entry point to the analysis.
+
+        STATE_EXPR can accept the following values:
+          - "m=0,x=0"      -> The subroutine changes the state of m to 0 and x to 0.
+          - "m=0,x=1"      -> The subroutine changes the state of m to 0 and x to 1.
+          - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
+          - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
+        pc_int = int(pc, 16)
+        state = State.from_state_expr(state_expr)
+        self.log.entry_points[pc_int] = EntryPoint(name, state.p)
+
+        # TODO: PC not valid address.
+        # TODO: Fully specified state_expr.
+        # TODO: Entry point is already part of the analysis.
+        # TODO: add reference instruction (i.e. a jump table).
+
     @command(container=True)
     def do_list(self) -> None:
         """List various types of entities."""
@@ -170,6 +191,9 @@ class App(Repl):
 
     @command()
     def do_list_assertions_instructions(self) -> None:
+        if not self.log.instruction_assertions:
+            return
+
         """List all instruction assertions provided by the user."""
         s = ["<red>ASSERTED INSTRUCTION STATE CHANGES:</red>\n"]
         for pc, change in self.log.instruction_assertions.items():
@@ -179,11 +203,13 @@ class App(Repl):
             try:
                 instruction = subroutines[0].instructions[pc]
                 operation = "<green>{:4}</green>".format(instruction.name)
-                disassembly = f"{operation}{instruction.argument_string}"
+                disassembly = f"{operation}{instruction.argument_string} "
+                if not instruction.argument_string:
+                    disassembly = disassembly[:-1]  # Delete extra space.
             except IndexError:
-                disassembly = "<red>UNKNOWN</red>"
+                disassembly = "<red>UNKNOWN</red> "
 
-            s.append("  <magenta>${:06X}</magenta>  {} -> ".format(pc, disassembly))
+            s.append("  <magenta>${:06X}</magenta>  {}-> ".format(pc, disassembly))
             s.append(self._print_state_change(change))
             if subroutines:
                 s.append(
@@ -199,6 +225,9 @@ class App(Repl):
         self._do_list_assertions_subroutines()
 
     def _do_list_assertions_subroutines(self, indent=False) -> None:
+        if not self.log.subroutine_assertions:
+            return
+
         s = ["<red>ASSERTED SUBROUTINE STATE CHANGES:</red>\n"]
         for pc, change in self.log.subroutine_assertions.items():
             try:
@@ -396,20 +425,24 @@ class App(Repl):
     @staticmethod
     def _print_subroutine(sub: Subroutine) -> str:
         if sub.has_unknown_return_state:
-            color = "red"
+            open_color = close_color = "red"
         elif sub.has_asserted_state_change or sub.instruction_has_asserted_state_change:
-            color = "magenta"
+            open_color = close_color = "magenta"
         else:
-            color = "green"
+            open_color = close_color = "green"
+
+        if sub.is_entry_point:
+            open_color = f'black bg="ansi{open_color}"'
+            close_color = "black"
 
         comment = ""
         if sub.has_suspicious_instructions:
-            comment += " <red>[!]</red>"
+            comment += ' <black bg="ansired">[!]</black>'
         if sub.has_stack_manipulation:
             comment += " <red>[?]</red>"
         if sub.has_jump_table:
             comment += " <red>[*]</red>"
 
         return "${:06X}  <{}>{}</{}>{}\n".format(
-            sub.pc, color, sub.label, color, comment,
+            sub.pc, open_color, sub.label, close_color, comment,
         )

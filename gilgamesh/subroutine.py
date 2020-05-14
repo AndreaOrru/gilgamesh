@@ -36,6 +36,10 @@ class Subroutine(Invalidable):
         return next(iter(self.state_changes))
 
     @property
+    def is_entry_point(self) -> bool:
+        return self.pc in self.log.entry_points
+
+    @property
     def has_unknown_return_state(self) -> bool:
         return any(s for s in self.state_changes if s.unknown)
 

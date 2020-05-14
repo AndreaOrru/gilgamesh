@@ -3,12 +3,13 @@ from prompt_toolkit.styles import Style  # type: ignore
 
 style = Style.from_dict(
     {
-        "red": "ansired",
-        "green": "ansigreen",
-        "yellow": "ansiyellow",
+        "black": "ansiblack",
         "blue": "ansiblue",
-        "magenta": "ansimagenta",
         "cyan": "ansicyan",
+        "green": "ansigreen",
+        "magenta": "ansimagenta",
+        "red": "ansired",
+        "yellow": "ansiyellow",
     }
 )
 
