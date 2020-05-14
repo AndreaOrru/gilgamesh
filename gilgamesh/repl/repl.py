@@ -78,7 +78,7 @@ class Repl:
     def do_help(self, *parts) -> None:
         """Show help on commands."""
         if len(parts) == 0:
-            return self._help_list(self._commands, error=True)  # Generic help.
+            return self._help_list(self._commands)  # Generic help.
 
         # Retrieve the command.
         try:
