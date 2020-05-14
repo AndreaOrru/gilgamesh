@@ -37,16 +37,15 @@ class Token:
 
 
 class Disassembly:
-    def __init__(self, log: Log, subroutine: Subroutine):
-        self.log = log
+    def __init__(self, subroutine: Subroutine):
+        self.log = subroutine.log
         self.subroutine = subroutine
 
     @property
     def html(self) -> str:
         s = []
         for instruction in self.subroutine.instructions.values():
-            tokens = self._instruction_to_tokens(instruction)
-            s.append(self._instruction_html(tokens))
+            s.append(self.instruction_html(instruction))
         return "".join(s)
 
     @property
@@ -71,6 +70,11 @@ class Disassembly:
         )  # TODO: take tokens directly.
         new_tokens = self._text_to_tokens(new_text)
         self._apply_changes(original_tokens, new_tokens)
+
+    def instruction_html(self, instruction: Instruction, include_comment=True):
+        return self._instruction_html(
+            self._instruction_to_tokens(instruction, include_comment)
+        )
 
     def _apply_changes(
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
@@ -168,9 +172,9 @@ class Disassembly:
             elif token.typ == TokenType.OPERAND_LABEL:
                 s.append("<red>{:25}</red>".format(token.val))
             elif token.typ == TokenType.PC:
-                s.append(f" <grey>; {token.val} | </grey>")
+                s.append(f" <grey>; {token.val}</grey>")
             elif token.typ == TokenType.COMMENT:
-                s.append(f"<grey>{token.val}</grey>")
+                s.append(f"<grey> | {token.val}</grey>")
             elif token.typ == TokenType.ASSERTION:
                 s.append(f"\n  <grey>; Asserted state change: {token.val}</grey>")
             elif token.typ == TokenType.UNKNOWN_STATE:
@@ -178,7 +182,9 @@ class Disassembly:
         s.append("\n")
         return "".join(s)
 
-    def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
+    def _instruction_to_tokens(
+        self, instruction: Instruction, include_comment=True
+    ) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
         tokens = []
 
@@ -197,8 +203,9 @@ class Disassembly:
 
         # PC + Comment.
         tokens.append(Token(TokenType.PC, "${:06X}".format(instruction.pc)))
-        comment = self.log.comments.get(instruction.pc, "")
-        tokens.append(Token(TokenType.COMMENT, comment))
+        if include_comment:
+            comment = self.log.comments.get(instruction.pc, "")
+            tokens.append(Token(TokenType.COMMENT, comment))
 
         # Assertions or unknown state.
         subroutine = self.log.subroutines[subroutine_pc]

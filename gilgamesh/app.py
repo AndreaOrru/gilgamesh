@@ -4,6 +4,7 @@ from typing import List, Optional
 from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.disassembly import Disassembly
+from gilgamesh.errors import GilgameshError
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
@@ -144,7 +145,7 @@ class App(Repl):
         """Show disassembly of selected subroutine."""
         if not self.subroutine:
             return print_error("No selected subroutine.")
-        disassembly = Disassembly(self.log, self.subroutine)
+        disassembly = Disassembly(self.subroutine)
         print_html(disassembly.html)
 
     @command()
@@ -152,7 +153,7 @@ class App(Repl):
         """Interactively edit the subroutine using an external editor."""
         if not self.subroutine:
             return print_error("No selected subroutine.")
-        disassembly = Disassembly(self.log, self.subroutine)
+        disassembly = Disassembly(self.subroutine)
         disassembly.edit()
 
     @command(container=True)
@@ -256,6 +257,18 @@ class App(Repl):
     def do_query(self) -> None:
         """Query the analysis log in various ways."""
         ...
+
+    @command()
+    @argument("label_or_pc", complete_label)
+    def do_query_references(self, label_or_pc: str) -> None:
+        pc = self._label_to_pc(label_or_pc)
+        references = self.log.references[pc]
+        for instr_pc, sub_pc in references:
+            subroutine = self.log.subroutines[sub_pc]
+            instruction = subroutine.instructions[instr_pc]
+            disassembly = Disassembly(subroutine)
+            print_html(f"<red>{subroutine.label}:</red>")
+            print_html(disassembly.instruction_html(instruction, False))
 
     @command()
     @argument("label_or_pc", complete_label)
