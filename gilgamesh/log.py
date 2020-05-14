@@ -1,7 +1,6 @@
 import gc
-import pickle
 from collections import defaultdict, namedtuple
-from typing import DefaultDict, Dict, Optional, Set, Tuple
+from typing import Any, DefaultDict, Dict, Optional, Set, Tuple
 
 from bidict import bidict  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
@@ -72,32 +71,24 @@ class Log:
         self._generate_labels()
         gc.collect()
 
-    def save(self) -> None:
+    def save(self) -> Dict[str, Any]:
         self._preserve_labels()
-        data = {
+        return {
             "entry_points": self.entry_points,
             "instruction_assertions": self.instruction_assertions,
             "subroutine_assertions": self.subroutine_assertions,
             "preserved_labels": self.preserved_labels,
             "comments": self.comments,
         }
-        with open(self.rom.glm_path, "wb") as f:
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
-    def load(self) -> bool:
-        try:
-            with open(self.rom.glm_path, "rb") as f:
-                data = pickle.load(f)
-                self.entry_points = data["entry_points"]
-                self.instruction_assertions = data["instruction_assertions"]
-                self.subroutine_assertions = data["subroutine_assertions"]
-                self.preserved_labels = data["preserved_labels"]
-                self.comments = data["comments"]
-            self.analyze(preserve_labels=False)
-        except OSError:
-            return False
-        else:
-            return True
+    def load(self, data: Dict[str, Any]) -> None:
+        self.entry_points = data["entry_points"]
+        self.instruction_assertions = data["instruction_assertions"]
+        self.subroutine_assertions = data["subroutine_assertions"]
+        self.preserved_labels = data["preserved_labels"]
+        self.comments = data["comments"]
+
+        self.analyze(preserve_labels=False)
 
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc].add(instruction.id)

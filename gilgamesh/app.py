@@ -1,5 +1,6 @@
+import pickle
 from os import path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
@@ -20,12 +21,13 @@ class App(Repl):
 
         self.rom = ROM(rom_path)
         self.log = Log(self.rom)
-        # Try to automatically load an existing analysis.
-        if not self._do_load():
-            self.log.analyze()
 
         # The subroutine currently under analysis.
         self.subroutine_pc: Optional[int] = None
+
+        # Try to automatically load an existing analysis.
+        if not self._do_load():
+            self.log.analyze()
 
     @property
     def subroutine(self) -> Optional[Subroutine]:
@@ -288,11 +290,16 @@ class App(Repl):
             self._do_load()
 
     def _do_load(self) -> bool:
-        if self.log.load():
+        try:
+            with open(self.rom.glm_path, "rb") as f:
+                data = pickle.load(f)
+            self.log.load(data)
+            self.subroutine_pc = data["current_subroutine"]
+        except OSError:
+            return False
+        else:
             print_html(f'<green>"{self.rom.glm_name}" loaded successfully.</green>\n')
             return True
-        else:
-            return False
 
     @command(container=True)
     def do_query(self) -> None:
@@ -374,7 +381,12 @@ class App(Repl):
         """Save the state of the analysis to a .glm file."""
 
         def save() -> None:
-            self.log.save()
+            data: Dict[str, Any] = {
+                **self.log.save(),
+                "current_subroutine": self.subroutine_pc,
+            }
+            with open(self.rom.glm_path, "wb") as f:
+                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
             print_html(f'<green>"{self.rom.glm_name}" saved successfully.</green>\n')
 
         if not path.exists(self.rom.glm_path):

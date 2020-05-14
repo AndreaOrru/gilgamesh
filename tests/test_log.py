@@ -1,4 +1,3 @@
-import os
 from abc import ABC
 from unittest import TestCase
 
@@ -114,12 +113,6 @@ class JumpInsideSubroutineTest(LogTest, TestCase):
 class UnknownJumpTest(LogTest, TestCase):
     asm = "unknown_jump.asm"
 
-    def tearDown(self):
-        try:
-            os.remove(self.rom.glm_path)
-        except OSError:
-            pass
-
     def test_sub_state_change_unknown(self):
         reset = self.log.subroutines_by_label["reset"]
         sub = self.log.subroutines[0x800B]
@@ -164,14 +157,14 @@ class UnknownJumpTest(LogTest, TestCase):
     def test_load_save(self):
         unknown = self.log.subroutines[0x800B]
         self.log.rename_label(unknown.label, "unknown")
-        self.log.save()
+        data = self.log.save()
 
         self.log.reset()
         self.log.analyze()
         unknown = self.log.subroutines[0x800B]
         self.assertNotEqual(unknown.label, "unknown")
 
-        self.log.load()
+        self.log.load(data)
         unknown = self.log.subroutines[0x800B]
         self.assertEqual(unknown.label, "unknown")
 
