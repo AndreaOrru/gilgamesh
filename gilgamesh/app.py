@@ -61,7 +61,14 @@ class App(Repl):
     @command()
     def do_analyze(self) -> None:
         """Run the analysis on the ROM."""
+        n_suspect = self.log.num_suspect_subroutines
         self.log.analyze()
+
+        new_suspect = self.log.num_suspect_subroutines - n_suspect
+        if new_suspect > 0:
+            print_html(
+                f"<yellow>Discovered {new_suspect} new suspect subroutine(s).</yellow>\n"  # noqa
+            )
 
     @command(container=True)
     def do_assert(self) -> None:
@@ -252,7 +259,7 @@ class App(Repl):
         Subroutines can be flagged with various symbols:
           [*] -> Jump table
           [?] -> Stack manipulation
-          [!] -> Suspicious instructions"""
+          [!] -> Suspect instructions"""
         s = []
         for subroutine in self.log.subroutines.values():
             s.append(self._print_subroutine(subroutine))
@@ -265,7 +272,7 @@ class App(Repl):
         Subroutines can be flagged with various symbols:
           [*] -> Jump table
           [?] -> Stack manipulation
-          [!] -> Suspicious instructions"""
+          [!] -> Suspect instructions"""
         s = []
         for subroutine in self.log.subroutines.values():
             if subroutine.has_unknown_return_state:
@@ -444,7 +451,7 @@ class App(Repl):
             close_color = "black"
 
         comment = ""
-        if sub.has_suspicious_instructions:
+        if sub.has_suspect_instructions:
             comment += ' <black bg="ansired">[!]</black>'
         if sub.has_stack_manipulation:
             comment += " <red>[?]</red>"

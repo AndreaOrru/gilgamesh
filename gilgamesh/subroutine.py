@@ -22,7 +22,7 @@ class Subroutine(Invalidable):
 
         self.has_jump_table = False
         self.has_stack_manipulation = False
-        self.has_suspicious_instructions = False
+        self.has_suspect_instructions = False
         self.has_asserted_state_change = False
         self.instruction_has_asserted_state_change = False
 
@@ -51,7 +51,7 @@ class Subroutine(Invalidable):
         self.instructions[instruction.pc] = instruction
 
         if instruction.operation == Op.BRK:
-            self.has_suspicious_instructions = True
+            self.has_suspect_instructions = True
         elif (instruction.absolute_argument is None) and (
             instruction.is_jump or instruction.is_call
         ):

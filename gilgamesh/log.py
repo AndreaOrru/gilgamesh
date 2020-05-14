@@ -240,6 +240,12 @@ class Log:
         elements = self.instructions.get(instruction_id.pc, set())
         return instruction_id in elements
 
+    @property
+    def num_suspect_subroutines(self) -> int:
+        return sum(
+            1 if s.has_suspect_instructions else 0 for s in self.subroutines.values()
+        )
+
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():
             # Subroutines are already tracked.
