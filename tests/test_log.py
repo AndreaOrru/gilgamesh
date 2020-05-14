@@ -2,7 +2,7 @@ import os
 from abc import ABC
 from unittest import TestCase
 
-from gilgamesh.log import Log
+from gilgamesh.log import EntryPoint, Log
 from gilgamesh.rom import ROM
 from gilgamesh.state import StateChange
 from tests.test_rom import assemble
@@ -22,10 +22,12 @@ class LoROMTest(LogTest, TestCase):
     asm = "lorom.asm"
 
     def test_initial_entry_points(self):
-        self.assertIn((0x8000, "reset", 0b0011_0000), self.log.entry_points)
+        self.assertEqual(
+            self.log.entry_points[0x8000], EntryPoint("reset", 0b0011_0000)
+        )
         self.assertEqual(self.log.subroutines[0x8000].label, "reset")
 
-        self.assertIn((0x0000, "nmi", 0b0011_0000), self.log.entry_points)
+        self.assertEqual(self.log.entry_points[0x0000], EntryPoint("nmi", 0b0011_0000))
         self.assertEqual(self.log.subroutines[0x0000].label, "nmi")
 
 
