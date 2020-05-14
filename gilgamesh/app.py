@@ -54,7 +54,7 @@ class App(Repl):
         subroutines = self.complete_subroutine()
         if not self.subroutine:
             return subroutines
-        local_labels = sorted(self.subroutine.local_labels.keys())
+        local_labels = sorted(f".{x}" for x in self.subroutine.local_labels.keys())
         return local_labels + subroutines
 
     @command()
