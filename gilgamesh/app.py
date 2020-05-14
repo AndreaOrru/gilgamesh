@@ -314,6 +314,29 @@ class App(Repl):
 
     @command()
     @argument("label_or_pc", complete_label)
+    def do_query_instruction(self, label_or_pc: str) -> None:
+        """Query various info on an instruction, including the subroutine
+        it belongs to, and all the possible states it was encountered at."""
+        pc = self._label_to_pc(label_or_pc)
+        instr_ids = self.log.instructions.get(pc, None)
+        if instr_ids is None:
+            return
+
+        s = ["<red>SUBROUTINES:</red>\n"]
+        subroutines = {i.subroutine for i in instr_ids}
+        for subroutine_pc in sorted(subroutines):
+            subroutine = self.log.subroutines[subroutine_pc]
+            s.append("  " + self._print_subroutine(subroutine))
+
+        s.append("\n<red>STATES:</red>\n")
+        states = {State(x.p) for x in instr_ids}
+        for state in states:
+            s.append(f"  <yellow>M</yellow>=<green>{state.m}</green>, ")
+            s.append(f"<yellow>X</yellow>=<green>{state.x}</green>\n")
+        print_html("".join(s))
+
+    @command()
+    @argument("label_or_pc", complete_label)
     def do_query_references(self, label_or_pc: str) -> None:
         """Given an address, list the instructions pointing to it."""
         pc = self._label_to_pc(label_or_pc)
@@ -324,19 +347,6 @@ class App(Repl):
             disassembly = Disassembly(subroutine)
             print_html(f"<red>{subroutine.label}:</red>")
             print_html(disassembly.get_instruction_html(instruction))
-
-    @command()
-    @argument("label_or_pc", complete_label)
-    def do_query_state(self, label_or_pc: str) -> None:
-        """Show the processor states in which an instruction can be reached."""
-        pc = self._label_to_pc(label_or_pc)
-
-        s = []
-        states = {State(x.p) for x in self.log.instructions[pc]}
-        for state in states:
-            s.append(f"<yellow>M</yellow>=<green>{state.m}</green>, ")
-            s.append(f"<yellow>X</yellow>=<green>{state.x}</green>\n")
-        print_html("".join(s))
 
     @command()
     @argument("subroutine_or_pc", complete_subroutine)
