@@ -4,11 +4,12 @@ from enum import Enum, auto
 from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
-from typing import Dict, List, Optional
+from typing import Dict, List
 from uuid import uuid4
 
 from bs4 import BeautifulSoup as BS  # type: ignore
 
+from gilgamesh.errors import ParserError
 from gilgamesh.instruction import Instruction
 from gilgamesh.log import Log
 from gilgamesh.opcodes import Op
@@ -33,17 +34,6 @@ EDITABLE_TOKENS = (TokenType.LABEL, TokenType.OPERAND_LABEL, TokenType.COMMENT)
 class Token:
     typ: TokenType
     val: str
-
-
-class ParserError(Exception):
-    def __init__(self, message: str, line: Optional[int] = None):
-        self.message = message
-        self.line = line
-
-    def __str__(self) -> str:
-        if self.line is None:
-            return f"{self.message}."
-        return f"Line {self.line}: {self.message}."
 
 
 class Disassembly:

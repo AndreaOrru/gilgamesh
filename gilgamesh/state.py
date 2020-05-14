@@ -1,7 +1,7 @@
 from copy import copy
 from typing import Optional
 
-from gilgamesh.repl import ReplException
+from gilgamesh.errors import GilgameshError
 
 M_BIT = 5
 X_BIT = 4
@@ -90,7 +90,7 @@ class StateChange:
                 }
             )
         else:
-            raise ReplException("Unknown syntax.")
+            raise GilgameshError("Unknown syntax.")
 
     @property
     def state_expr(self) -> str:

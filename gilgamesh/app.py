@@ -3,16 +3,9 @@ from typing import List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
-from gilgamesh.disassembly import Disassembly, ParserError
+from gilgamesh.disassembly import Disassembly
 from gilgamesh.log import Log
-from gilgamesh.repl import (
-    Repl,
-    ReplException,
-    argument,
-    command,
-    print_error,
-    print_html,
-)
+from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.rom import ROM
 from gilgamesh.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
@@ -160,10 +153,7 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
         disassembly = Disassembly(self.log, self.subroutine)
-        try:
-            disassembly.edit()
-        except ParserError as e:
-            print_error(str(e))
+        disassembly.edit()
 
     @command(container=True)
     def do_list(self) -> None:
@@ -368,7 +358,7 @@ class App(Repl):
         try:
             return int(label_or_pc, 16)
         except ValueError:
-            raise ReplException("Provided value is neither a label nor an address.")
+            raise GilgameshError("Provided value is neither a label nor an address.")
 
     @staticmethod
     def _print_state_change(change: StateChange, newline=True) -> str:

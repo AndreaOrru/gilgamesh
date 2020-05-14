@@ -13,13 +13,10 @@ from prompt_toolkit.completion import NestedCompleter  # type: ignore
 from prompt_toolkit.history import FileHistory  # type: ignore
 from prompt_toolkit.shortcuts import CompleteStyle, clear  # type: ignore
 
+from gilgamesh.errors import GilgameshError
 from gilgamesh.repl.colors import print_error, print_html, style
 from gilgamesh.repl.completers import ArgsCompleter
 from gilgamesh.repl.decorators import command
-
-
-class ReplException(Exception):
-    ...
 
 
 class Repl:
@@ -71,7 +68,7 @@ class Repl:
                         try:
                             if cmd(self, *args):
                                 close = True
-                        except ReplException as e:
+                        except GilgameshError as e:
                             print_error(str(e))
                         # except Exception as e:
                         #     breakpoint()
