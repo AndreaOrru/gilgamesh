@@ -84,7 +84,7 @@ class Disassembly:
             original_tokens, new_tokens
         ):
             if (orig_instr_tokens is None) or (new_instr_tokens is None):
-                raise ParserError("Added or deleted an instruction", line_n)
+                raise ParserError("Added or deleted an instruction.", line_n)
             self._apply_instruction_changes(
                 line_n, orig_instr_tokens, new_instr_tokens, renamed_labels
             )
@@ -103,12 +103,12 @@ class Disassembly:
         for orig, new in zip_longest(original_tokens, new_tokens):
             # Error cases.
             if (orig is None) or (new is None):
-                raise ParserError("Added or deleted token", line_n)
+                raise ParserError("Added or deleted token.", line_n)
             elif orig.typ != new.typ:
-                raise ParserError("Changed the type of a token", line_n)
+                raise ParserError("Changed the type of a token.", line_n)
             elif orig.typ not in EDITABLE_TOKENS and orig.val != new.val:
                 raise ParserError(
-                    f'Can\'t edit token of type "{orig.typ.name}"', line_n
+                    f'Can\'t edit token of type "{orig.typ.name}".', line_n
                 )
 
             # Keep track of the PC of the instruction.
@@ -126,7 +126,7 @@ class Disassembly:
                 # Labels.
                 elif orig.typ in (TokenType.LABEL, TokenType.OPERAND_LABEL):
                     if renamed_labels.get(orig.val, new.val) != new.val:
-                        raise ParserError("Ambiguous label change", line_n)
+                        raise ParserError("Ambiguous label change.", line_n)
                     renamed_labels[orig.val] = new.val
 
     def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
@@ -142,7 +142,7 @@ class Disassembly:
         # Make sure we are keeping the dots at the beginning of the local labels.
         for old, new in renamed_labels.items():
             if old[0] == "." and new[0] != ".":
-                raise ParserError("Tried to transform a local label into a global one")
+                raise ParserError("Tried to transform a local label into a global one.")
 
         # Rename labels to temporary unique labels.
         temp_renamed_labels = {
@@ -260,12 +260,12 @@ class Disassembly:
 
                 # Comment section.
                 if words[i] != ";":
-                    raise ParserError("Missing comment section", line_n)
+                    raise ParserError("Missing comment section.", line_n)
                 tokens[-1].append(Token(TokenType.PC, words[i + 1]))
                 try:
                     comment = line.split("|", maxsplit=1)[1].strip()
                 except IndexError:
-                    raise ParserError("Expected | before comment", line_n)
+                    raise ParserError("Expected | before comment.", line_n)
                 tokens[-1].append(Token(TokenType.COMMENT, comment))
 
             # Assertion/state line.
@@ -276,7 +276,7 @@ class Disassembly:
                     tokens[-1].append(Token(TokenType.UNKNOWN_STATE, words[4]))
 
             else:
-                raise ParserError("Unable to parse line", line_n)
+                raise ParserError("Unable to parse line.", line_n)
 
             line_n += 1
 

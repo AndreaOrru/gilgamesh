@@ -12,5 +12,5 @@ class ParserError(GilgameshError):
 
     def __str__(self) -> str:
         if self.line is None:
-            return f"{self.message}."
-        return f"Line {self.line}: {self.message}."
+            return self.message
+        return f"Line {self.line}: {self.message}"

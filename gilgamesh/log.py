@@ -7,6 +7,7 @@ from bidict import bidict  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.cpu import CPU
+from gilgamesh.errors import GilgameshError
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.rom import ROM
 from gilgamesh.state import StateChange
@@ -183,14 +184,44 @@ class Log:
     def rename_label(
         self, old: str, new: str, subroutine_pc: Optional[int] = None
     ) -> None:
-        subroutine = self.subroutines_by_label.pop(old, None)
-        if subroutine is not None:
-            subroutine.label = new
-            self.subroutines_by_label[new] = subroutine
+        if old.startswith("."):
+            if subroutine_pc is None:
+                raise GilgameshError("No selected subroutine.")
+            if not new.startswith("."):
+                raise GilgameshError(
+                    "Tried to transform a local label into a global one."
+                )
+            self._rename_local_label(old[1:], new[1:], subroutine_pc)
+        else:
+            if new.startswith("."):
+                raise GilgameshError(
+                    "Tried to transform a subroutine into a local label."
+                )
+            self._rename_subroutine(old, new)
 
-        elif subroutine_pc is not None:
-            local_labels = self.local_labels[subroutine_pc]
-            local_labels[new] = local_labels.pop(old)
+    def _rename_local_label(self, old: str, new: str, subroutine_pc: int) -> None:
+        local_labels = self.local_labels[subroutine_pc]
+        pc = local_labels.pop(old, None)
+        if pc is None:
+            raise GilgameshError(f'Unknown local label: "{old}".')
+
+        if not new.isidentifier():
+            raise GilgameshError("The provided label is not a valid identifier.")
+        if new in local_labels:
+            raise GilgameshError("The provided label is already in use.")
+        local_labels[new] = pc
+
+    def _rename_subroutine(self, old: str, new: str) -> None:
+        subroutine = self.subroutines_by_label.pop(old, None)
+        if subroutine is None:
+            raise GilgameshError(f'Unknown subroutine label: "{old}".')
+
+        if not new.isidentifier():
+            raise GilgameshError("The provided label is not a valid identifier.")
+        if new in self.subroutines_by_label:
+            raise GilgameshError("The provided label is already in use.")
+        subroutine.label = new
+        self.subroutines_by_label[new] = subroutine
 
     def is_visited(self, instruction_id: InstructionID) -> bool:
         elements = self.instructions.get(instruction_id.pc, set())
