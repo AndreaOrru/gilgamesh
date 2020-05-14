@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
-from gilgamesh.disassembly import Disassembly
+from gilgamesh.disassembly import Disassembly, DisassemblyContainer
 from gilgamesh.errors import GilgameshError
 from gilgamesh.log import EntryPoint, Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
@@ -155,7 +155,7 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
         disassembly = Disassembly(self.subroutine)
-        print_html(disassembly.html)
+        print_html(disassembly.get_html())
 
     @command()
     def do_edit(self) -> None:
@@ -163,6 +163,12 @@ class App(Repl):
         if not self.subroutine:
             return print_error("No selected subroutine.")
         disassembly = Disassembly(self.subroutine)
+        disassembly.edit()
+
+    @command()
+    def do_edit_all(self) -> None:
+        """Interactively edit all subroutines using an external editor."""
+        disassembly = DisassemblyContainer(self.log)
         disassembly.edit()
 
     @command()
@@ -317,7 +323,7 @@ class App(Repl):
             instruction = subroutine.instructions[instr_pc]
             disassembly = Disassembly(subroutine)
             print_html(f"<red>{subroutine.label}:</red>")
-            print_html(disassembly.instruction_html(instruction, False))
+            print_html(disassembly.get_instruction_html(instruction))
 
     @command()
     @argument("label_or_pc", complete_label)

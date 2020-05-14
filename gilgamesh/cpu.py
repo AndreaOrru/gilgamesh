@@ -56,7 +56,7 @@ class CPU:
 
     def step(self) -> bool:
         # We can't analyze code that lives in RAM.
-        if self.is_ram(self.pc):
+        if self.rom.is_ram(self.pc):
             return False
         # Don't visit the exact same instruction twice.
         if self.log.is_visited(self.instruction_id):
@@ -257,10 +257,6 @@ class CPU:
         else:
             assert False
         return True
-
-    @staticmethod
-    def is_ram(address: int) -> bool:
-        return (address <= 0x001FFF) or (0x7E0000 <= address <= 0x7FFFFF)
 
     def _derive_state_inference(self, instruction: Instruction) -> None:
         # If we're executing an instruction with a certain operand size,

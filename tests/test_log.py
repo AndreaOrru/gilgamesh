@@ -27,7 +27,7 @@ class LoROMTest(LogTest, TestCase):
         self.assertEqual(self.log.subroutines[0x8000].label, "reset")
 
         self.assertEqual(self.log.entry_points[0x0000], EntryPoint("nmi", 0b0011_0000))
-        self.assertEqual(self.log.subroutines[0x0000].label, "nmi")
+        self.assertNotIn(0x0000, self.log.subroutines)
 
 
 class InfiniteLoopTest(LogTest, TestCase):

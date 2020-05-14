@@ -4,10 +4,8 @@ from enum import Enum, auto
 from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from uuid import uuid4
-
-from bs4 import BeautifulSoup as BS  # type: ignore
 
 from gilgamesh.errors import ParserError
 from gilgamesh.instruction import Instruction
@@ -41,20 +39,16 @@ class Disassembly:
         self.log = subroutine.log
         self.subroutine = subroutine
 
-    @property
-    def html(self) -> str:
-        s = []
-        for instruction in self.subroutine.instructions.values():
-            s.append(self.instruction_html(instruction))
-        return "".join(s)
+    def get_html(self) -> str:
+        return self._get_text(html=True)[0]
 
-    @property
-    def text(self) -> str:
-        return BS(f"<pre>{self.html}</pre>", "html.parser").get_text()
+    def get_instruction_html(self, instruction: Instruction) -> str:
+        tokens = self._instruction_to_tokens(instruction)
+        return self._instruction_tokens_to_text(tokens, html=True)
 
     def edit(self) -> None:
-        # Save the subroutines's disassembly in a temporary file.
-        original_text = self.text
+        # Save the subroutine's disassembly in a temporary file.
+        original_text, original_tokens = self._get_text()
         with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
             f.write(original_text)
             filename = f.name
@@ -65,16 +59,16 @@ class Disassembly:
         os.remove(filename)
 
         # Compare the two files and apply the changes.
-        original_tokens = self._text_to_tokens(
-            original_text
-        )  # TODO: take tokens directly.
         new_tokens = self._text_to_tokens(new_text)
         self._apply_changes(original_tokens, new_tokens)
 
-    def instruction_html(self, instruction: Instruction, include_comment=True):
-        return self._instruction_html(
-            self._instruction_to_tokens(instruction, include_comment)
-        )
+    def _get_text(self, html=False) -> Tuple[str, List[List[Token]]]:
+        s, tokens = [], []
+        for instruction in self.subroutine.instructions.values():
+            instr_tokens = self._instruction_to_tokens(instruction)
+            tokens.append(instr_tokens)
+            s.append(self._instruction_tokens_to_text(instr_tokens, html))
+        return "".join(s), tokens
 
     def _apply_changes(
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
@@ -159,32 +153,46 @@ class Disassembly:
         # NOTE: this is needed when swapping pairs of labels.
 
     @staticmethod
-    def _instruction_html(tokens: List[Token]) -> str:
-        """Generate HTML from the list of tokens describing an instruction."""
+    def _instruction_tokens_to_text(tokens: List[Token], html=False) -> str:
+        """Generate HTML or plain text from the list
+        of tokens describing an instruction."""
+
+        def o(color: str) -> str:
+            return f"<{color}>" if html else ""
+
+        def c(color: str) -> str:
+            return f"</{color}>" if html else ""
+
         s = []
         for token in tokens:
             if token.typ == TokenType.LABEL:
-                s.append(f"<red>{token.val}</red>:\n")
+                s.append("{}{}{}:\n".format(o("red"), token.val, c("red")))
             elif token.typ == TokenType.OPERATION:
-                s.append("  <green>{:4}</green>".format(token.val))
+                s.append("  {}{:4}{}".format(o("green"), token.val, c("green")))
             elif token.typ == TokenType.OPERAND:
                 s.append("{:25}".format(token.val))
             elif token.typ == TokenType.OPERAND_LABEL:
-                s.append("<red>{:25}</red>".format(token.val))
+                s.append("{}{:25}{}".format(o("red"), token.val, c("red")))
             elif token.typ == TokenType.PC:
-                s.append(f" <grey>; {token.val}</grey>")
+                s.append(" {}; {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.COMMENT:
-                s.append(f"<grey> | {token.val}</grey>")
+                s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.ASSERTION:
-                s.append(f"\n  <grey>; Asserted state change: {token.val}</grey>")
+                s.append(
+                    "\n  {}; Asserted state change: {}{}".format(
+                        o("grey"), token.val, c("grey")
+                    )
+                )
             elif token.typ == TokenType.UNKNOWN_STATE:
-                s.append(f"\n  <grey>; Unknown state at {token.val}</grey>")
+                s.append(
+                    "\n  {}; Unknown state at {}{}".format(
+                        o("grey"), token.val, c("grey")
+                    )
+                )
         s.append("\n")
         return "".join(s)
 
-    def _instruction_to_tokens(
-        self, instruction: Instruction, include_comment=True
-    ) -> List[Token]:
+    def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
         tokens = []
 
@@ -203,9 +211,8 @@ class Disassembly:
 
         # PC + Comment.
         tokens.append(Token(TokenType.PC, "${:06X}".format(instruction.pc)))
-        if include_comment:
-            comment = self.log.comments.get(instruction.pc, "")
-            tokens.append(Token(TokenType.COMMENT, comment))
+        comment = self.log.comments.get(instruction.pc, "")
+        tokens.append(Token(TokenType.COMMENT, comment))
 
         # Assertions or unknown state.
         subroutine = self.log.subroutines[subroutine_pc]
@@ -292,3 +299,24 @@ class Disassembly:
         starts with a dot, the generated label will also start with a dot."""
         return orig_label[0] + "l" + uuid4().hex
         # TODO: check for meteors.
+
+
+class DisassemblyContainer:
+    def __init__(self, log: Log):
+        self.disassemblies = {
+            pc: Disassembly(sub) for pc, sub in log.subroutines.items()
+        }
+
+    def edit(self) -> None:
+        # Save the subroutines' disassembly in a temporary file.
+        with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
+            for disassembly in self.disassemblies.values():
+                f.write(";; ========================================\n")
+                f.write(disassembly._get_text()[0])
+                f.write("\n\n")
+            filename = f.name
+
+        # Edit the file in an editor.
+        check_call([*os.environ["EDITOR"].split(), filename])
+        new_text = open(filename).read()
+        os.remove(filename)

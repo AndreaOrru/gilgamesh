@@ -1,5 +1,4 @@
 bidict
-bs4
 cached-property
 click
 dictlib
