@@ -62,7 +62,7 @@ class StateChangeTest(TestCase):
         self.assertEqual(repr(change), "<StateChange: M=1>")
 
         change = StateChange(m=1, x=1)
-        self.assertEqual(repr(change), "<StateChange: M=1, X=1>")
+        self.assertEqual(repr(change), "<StateChange: M=1,X=1>")
 
     def test_from_state_expr(self):
         change = StateChange.from_state_expr("none")
@@ -90,9 +90,9 @@ class StateChangeTest(TestCase):
         self.assertEqual(change.state_expr, "X=1")
 
         change = StateChange(m=0, x=1)
-        self.assertEqual(change.state_expr, "M=0, X=1")
+        self.assertEqual(change.state_expr, "M=0,X=1")
         change = StateChange(m=1, x=0)
-        self.assertEqual(change.state_expr, "M=1, X=0")
+        self.assertEqual(change.state_expr, "M=1,X=0")
 
     def test_eq_hash(self):
         changes = set()
