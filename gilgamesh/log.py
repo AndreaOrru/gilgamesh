@@ -178,7 +178,7 @@ class Log:
 
         # If there's a match with a local label inside the given subroutine.
         if subroutine_pc is not None:
-            return self.local_labels[subroutine_pc].get(label)
+            return self.local_labels[subroutine_pc].get(label[1:])
 
         return None
 

@@ -472,7 +472,7 @@ class App(Repl):
                 )
 
         pc = self.log.get_label_value(
-            label_or_pc[1:], self.subroutine.pc if self.subroutine else None
+            label_or_pc, self.subroutine.pc if self.subroutine else None
         )
         if pc is None:
             raise GilgameshError("Unknown label.")
