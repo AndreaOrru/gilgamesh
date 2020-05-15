@@ -1,15 +1,12 @@
-# Python Language Server.
-python-language-server[all]
-pyls-mypy
-jedi
-
 # Virtual environments.
 virtualenvwrapper
 future
 
-# Formatters.
+# Formatters and linters.
 black
+flake8
 isort
+mypy
 
 # Development tools.
 ipython
