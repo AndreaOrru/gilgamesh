@@ -70,7 +70,12 @@ class CPU:
         opcode = self.rom.read_byte(self.pc)
         argument = self.rom.read_address(self.pc + 1)
         instruction = Instruction(
-            self.log, *self.instruction_id, opcode, argument, self.registers.snapshot()
+            self.log,
+            *self.instruction_id,
+            opcode,
+            argument,
+            self.registers.snapshot(),
+            self.state_change.state_expr
         )
         self.log.add_instruction(instruction)
 

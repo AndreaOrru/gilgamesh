@@ -25,12 +25,15 @@ class Instruction(Invalidable):
         opcode: int,
         argument: int,
         registers: Dict[str, Optional[int]],
+        state_change: str,
     ):
         super().__init__()
         self.log = log
         self.pc = pc
         self.state = State(p)
+
         self.registers = registers
+        self.state_change = state_change
 
         self.subroutine = subroutine
         self.opcode = opcode

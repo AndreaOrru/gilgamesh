@@ -195,7 +195,7 @@ class Disassembly:
                 )
             elif token.typ == TokenType.UNKNOWN_STATE:
                 s.append(
-                    "  {}; Unknown state at {}{}".format(
+                    "  {}; Unknown state. Last known state change: {}{}".format(
                         o("grey"), token.val, c("grey")
                     )
                 )
@@ -249,8 +249,7 @@ class Disassembly:
 
         elif instruction.stopped_execution:
             # Unknown state.
-            next_pc = "${:06X}".format(instruction.next_pc)
-            tokens.append(Token(TokenType.UNKNOWN_STATE, next_pc))
+            tokens.append(Token(TokenType.UNKNOWN_STATE, instruction.state_change))
             tokens.append(Token(TokenType.NEWLINE, "\n"))
 
         return tokens
@@ -316,8 +315,8 @@ class Disassembly:
             elif words[0] == ";":
                 if words[1:4] == "Asserted state change:".split():
                     tokens[-1].append(Token(TokenType.ASSERTION, words[4]))
-                elif words[1:4] == "Unknown state at".split():
-                    tokens[-1].append(Token(TokenType.UNKNOWN_STATE, words[4]))
+                elif words[1:7] == "Unknown state. Last known state change:".split():
+                    tokens[-1].append(Token(TokenType.UNKNOWN_STATE, words[7]))
             else:
                 raise ParserError("Unable to parse line.", line_n)
 
