@@ -16,15 +16,17 @@ from gilgamesh.subroutine import Subroutine
 
 class TokenType(Enum):
     ASSERTION = auto()
+    ASSERTION_TYPE = auto()
     COMMENT = auto()
     LABEL = auto()
+    LAST_KNOWN_STATE = auto()
     NEWLINE = auto()
     OPERAND = auto()
     OPERAND_LABEL = auto()
     OPERATION = auto()
     PC = auto()
+    SEPARATOR_LINE = auto()
     STACK_MANIPULATION = auto()
-    UNKNOWN_STATE = auto()
 
 
 EDITABLE_TOKENS = (TokenType.LABEL, TokenType.OPERAND_LABEL, TokenType.COMMENT)
@@ -176,6 +178,7 @@ class Disassembly:
 
         s = []
         for token in tokens:
+            # fmt: off
             if token.typ == TokenType.NEWLINE:
                 s.append("\n")
             elif token.typ == TokenType.LABEL:
@@ -192,23 +195,24 @@ class Disassembly:
                 s.append(" {}; {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.COMMENT:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
+            elif token.typ == TokenType.SEPARATOR_LINE:
+                s.append(f"  {o('grey')};---------------------------------------{c('grey')}")
+            elif token.typ == TokenType.LAST_KNOWN_STATE:
+                s.append("  {}; Last known state change: {}{}".format(o('grey'), token.val, c('grey')))
+            elif token.typ == TokenType.ASSERTION_TYPE:
+                s.append("  {}; ASSERTION TYPE: {}{}".format(o('grey'), token.val, c('grey')))
             elif token.typ == TokenType.ASSERTION:
-                s.append(
-                    "  {}; Asserted state change: {}{}".format(
-                        o("grey"), token.val, c("grey")
-                    )
-                )
-            elif token.typ == TokenType.UNKNOWN_STATE:
-                s.append(
-                    "  {}; Unknown state. Last known state change: {}{}".format(
-                        o("grey"), token.val, c("grey")
-                    )
-                )
+                s.append("  {}; ASSERTED STATE CHANGE: {}{}".format(o('grey'), token.val, c('grey')))
+            # fmt: on
 
         return "".join(s)
 
     def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
+
+        def newline():
+            tokens.append(Token(TokenType.NEWLINE, "\n"))
+
         tokens = []
 
         # Label.
@@ -236,26 +240,42 @@ class Disassembly:
         tokens.append(Token(TokenType.COMMENT, comment))
         tokens.append(Token(TokenType.NEWLINE, "\n"))
 
-        # Assertions or unknown state.
+        # Assertions and unknown states.
         subroutine = self.log.subroutines[subroutine_pc]
+        assertion_type = "none"
+        unknown_state = False
+
+        # TODO: what if there are both subroutine and instruction assertions?
         if subroutine.has_asserted_state_change and (
             instruction.stopped_execution or instruction.is_return
         ):
-            # Subroutine with asserted return state.
-            state_expr = subroutine.state_change.state_expr
-            tokens.append(Token(TokenType.ASSERTION, state_expr))
-            tokens.append(Token(TokenType.NEWLINE, "\n"))
+            unknown_state = True
+            assertion = self.log.subroutine_assertions.get(subroutine_pc)
+            state_change = (
+                assertion.state_expr if assertion else instruction.state_change
+            )
+            if assertion:
+                assertion_type = "subroutine"
 
-        elif instruction.pc in self.log.instruction_assertions:
-            # Instruction with asserted state change.
-            state_expr = self.log.instruction_assertions[instruction.pc].state_expr
-            tokens.append(Token(TokenType.ASSERTION, state_expr))
-            tokens.append(Token(TokenType.NEWLINE, "\n"))
+        elif (
+            instruction.pc in self.log.instruction_assertions
+            or instruction.stopped_execution
+        ):
+            unknown_state = True
+            assertion = self.log.instruction_assertions.get(instruction.pc)
+            state_change = assertion.state_expr if assertion else "unknown"
+            if assertion:
+                assertion_type = "instruction"
 
-        elif instruction.stopped_execution:
-            # Unknown state.
-            tokens.append(Token(TokenType.UNKNOWN_STATE, instruction.state_change))
-            tokens.append(Token(TokenType.NEWLINE, "\n"))
+        if unknown_state:
+            # fmt: off
+            tokens.append(Token(TokenType.SEPARATOR_LINE))                             ; newline()
+            tokens.append(Token(TokenType.LAST_KNOWN_STATE, instruction.state_change)) ; newline()
+            tokens.append(Token(TokenType.SEPARATOR_LINE))                             ; newline()
+            tokens.append(Token(TokenType.ASSERTION_TYPE, assertion_type))             ; newline()
+            tokens.append(Token(TokenType.ASSERTION, state_change))                    ; newline()
+            tokens.append(Token(TokenType.SEPARATOR_LINE))                             ; newline()
+            # fmt: on
 
         return tokens
 
