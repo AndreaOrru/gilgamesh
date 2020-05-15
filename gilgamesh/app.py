@@ -109,7 +109,7 @@ class App(Repl):
           - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
           - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
         if not self.subroutine:
-            return print_error("No selected subroutine.")
+            raise GilgameshError("No selected subroutine.")
         state_change = StateChange.from_state_expr(state_expr)
         self.log.assert_subroutine_state_change(self.subroutine, state_change)
 
@@ -153,7 +153,7 @@ class App(Repl):
     def do_disassembly(self) -> None:
         """Show disassembly of selected subroutine."""
         if not self.subroutine:
-            return print_error("No selected subroutine.")
+            raise GilgameshError("No selected subroutine.")
         disassembly = Disassembly(self.subroutine)
         print_html(disassembly.get_html())
 
@@ -161,7 +161,7 @@ class App(Repl):
     def do_edit(self) -> None:
         """Interactively edit the subroutine using an external editor."""
         if not self.subroutine:
-            return print_error("No selected subroutine.")
+            raise GilgameshError("No selected subroutine.")
         disassembly = Disassembly(self.subroutine)
         disassembly.edit()
 
@@ -341,12 +341,33 @@ class App(Repl):
         """Given an address, list the instructions pointing to it."""
         pc = self._label_to_pc(label_or_pc)
         references = self.log.references[pc]
+
+        s = []
         for instr_pc, sub_pc in references:
             subroutine = self.log.subroutines[sub_pc]
             instruction = subroutine.instructions[instr_pc]
             disassembly = Disassembly(subroutine)
-            print_html(f"<red>{subroutine.label}:</red>")
-            print_html(disassembly.get_instruction_html(instruction))
+            s.append(f"<red>{subroutine.label}:</red>")
+            s.append(disassembly.get_instruction_html(instruction))
+        print_html("\n".join(s))
+
+    @command()
+    @argument("subroutine_or_pc", complete_subroutine)
+    def do_query_stacktrace(self, subroutine_or_pc: Optional[str] = None) -> None:
+        """Given a subroutine, show its stack of calling subroutines."""
+        if (subroutine_or_pc is None) and self.subroutine:
+            subroutine = self.subroutine
+        elif subroutine_or_pc is not None:
+            pc = self._label_to_pc(subroutine_or_pc)
+            subroutine = self.log.subroutines[pc]
+        else:
+            raise GilgameshError("No selected subroutine.")
+
+        s = []
+        for caller_pc in subroutine.stack_trace:
+            caller = self.log.subroutines[caller_pc]
+            s.append(self._print_subroutine(caller))
+        print_html("".join(s))
 
     @command()
     @argument("subroutine_or_pc", complete_subroutine)

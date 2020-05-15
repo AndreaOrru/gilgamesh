@@ -1,6 +1,6 @@
 import gc
 from collections import defaultdict, namedtuple
-from typing import Any, DefaultDict, Dict, Optional, Set, Tuple
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from bidict import bidict  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
@@ -53,7 +53,7 @@ class Log:
 
         # Add entry points.
         for pc, entry in self.entry_points.items():
-            self.add_subroutine(pc, label=entry.name)
+            self.add_subroutine(pc, label=entry.name, stack_trace=[])
 
         self.dirty = False
 
@@ -98,9 +98,13 @@ class Log:
         if instruction.pc in self.instruction_assertions:
             subroutine.instruction_has_asserted_state_change = True
 
-    def add_subroutine(self, pc: int, label: str = "") -> None:
+    def add_subroutine(
+        self, pc: int, label: str = "", stack_trace: List[int] = None
+    ) -> None:
         if self.rom.is_ram(pc):
             return
+        if stack_trace is None:
+            stack_trace = []
 
         # Assign a label to the subroutine (or retrieve the existing one).
         preserved_label = self.preserved_labels.get(pc)
@@ -112,7 +116,7 @@ class Log:
         # Create and register subroutine (unless it exists already).
         subroutine = self.subroutines.get(pc)
         if subroutine is None:
-            subroutine = Subroutine(self, pc, label)
+            subroutine = Subroutine(self, pc, label, stack_trace)
             self.subroutines[pc] = subroutine
             self.subroutines_by_label[label] = subroutine
 

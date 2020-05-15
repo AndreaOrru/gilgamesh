@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from sortedcontainers import SortedDict  # type: ignore
 
@@ -9,7 +9,7 @@ from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
 
 class Subroutine(Invalidable):
-    def __init__(self, log, pc: int, label: str):
+    def __init__(self, log, pc: int, label: str, stack_trace: List[int]):
         super().__init__()
         self.log = log
         self.pc = pc
@@ -19,6 +19,8 @@ class Subroutine(Invalidable):
         self.instructions: Dict[int, Instruction] = SortedDict()
         # Calling the subroutine results in the following state changes.
         self.state_changes: Set[StateChange] = set()
+        # The stack of calls that brought us to the current subroutine.
+        self.stack_trace = stack_trace
 
         self.has_jump_table = False
         self.has_stack_manipulation = False

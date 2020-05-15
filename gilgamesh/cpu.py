@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Optional
+from typing import List, Optional
 
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
@@ -28,6 +28,8 @@ class CPU:
 
         # The subroutine currently being executed.
         self.subroutine_pc = subroutine
+        # The stack of calls that brought us to the current subroutine.
+        self.stack_trace: List[int] = []
 
     @property
     def instruction_id(self) -> InstructionID:
@@ -45,6 +47,7 @@ class CPU:
         cpu.state = copy(self.state)
         cpu.registers = self.registers.copy(cpu.state)
         cpu.stack = self.stack.copy()  # TODO: check if necessary.
+        cpu.stack_trace = copy(self.stack_trace)
         cpu.state_inference = copy(self.state_inference)
         # Don't carry over the state change information to new subroutines.
         cpu.state_change = StateChange() if new_subroutine else copy(self.state_change)
@@ -133,16 +136,17 @@ class CPU:
             # being called, we're left in an unknown state.
             return self._unknown_subroutine_state(instruction)
 
-        self.log.add_reference(instruction, target)
-        self.log.add_subroutine(target)
-
         # Run a parallel instance of the CPU to execute
         # the subroutine that is being called.
         cpu = self.copy(new_subroutine=True)
         call_size = 2 if instruction.operation == Op.JSR else 3
         cpu.stack.push(instruction, size=call_size)
+        cpu.stack_trace.append(self.subroutine_pc)
         cpu.subroutine_pc = target
         cpu.pc = target
+
+        self.log.add_reference(instruction, target)
+        self.log.add_subroutine(target, stack_trace=cpu.stack_trace)
         cpu.run()
 
         # If we univocally know what the return state of the
