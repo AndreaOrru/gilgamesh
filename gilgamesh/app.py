@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
-from gilgamesh.disassembly import Disassembly, DisassemblyContainer
+from gilgamesh.disassembly import ROMDisassembly, SubroutineDisassembly
 from gilgamesh.errors import GilgameshError
 from gilgamesh.log import EntryPoint, Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
@@ -154,7 +154,7 @@ class App(Repl):
         """Show disassembly of selected subroutine."""
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
-        disassembly = Disassembly(self.subroutine)
+        disassembly = SubroutineDisassembly(self.subroutine)
         print_html(disassembly.get_html())
 
     @command()
@@ -162,13 +162,13 @@ class App(Repl):
         """Interactively edit the subroutine using an external editor."""
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
-        disassembly = Disassembly(self.subroutine)
+        disassembly = SubroutineDisassembly(self.subroutine)
         disassembly.edit()
 
     @command()
     def do_edit_all(self) -> None:
         """Interactively edit all subroutines using an external editor."""
-        disassembly = DisassemblyContainer(self.log)
+        disassembly = ROMDisassembly(self.log)
         disassembly.edit()
 
     @command()
@@ -346,7 +346,7 @@ class App(Repl):
         for instr_pc, sub_pc in references:
             subroutine = self.log.subroutines[sub_pc]
             instruction = subroutine.instructions[instr_pc]
-            disassembly = Disassembly(subroutine)
+            disassembly = SubroutineDisassembly(subroutine)
             if not last_sub or sub_pc != last_sub.pc:
                 s.append(
                     "{}<red>{:12}</red>".format(

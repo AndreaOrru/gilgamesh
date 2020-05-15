@@ -4,7 +4,7 @@ from enum import Enum, auto
 from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 from uuid import uuid4
 
 from gilgamesh.errors import ParserError
@@ -36,6 +36,36 @@ class Token:
     val: str = ""
 
 
+def apply_renames(log: Log, renamed_labels: Dict[str, str]) -> None:
+    def apply(labels: Dict[str, str], dry=False) -> None:
+        """Naively perform label renames."""
+        for old, new in labels.items():
+            log.rename_label(old, new, dry=dry)
+
+    # Rename labels to temporary unique labels.
+    temp_renamed_labels = {old: unique_label(old) for old in renamed_labels.keys()}
+    # Perform a dry run to make sure there are no errors
+    # when renames are applied to the full disassembly.
+    apply(temp_renamed_labels, dry=True)
+    # Actually apply the renames if everything was ok.
+    apply(temp_renamed_labels)
+
+    # Re-rename the unique labels to the target labels.
+    renamed_labels = {
+        unique_label: renamed_labels[old]
+        for old, unique_label in temp_renamed_labels.items()
+    }
+    apply(renamed_labels)
+    # NOTE: this is needed when swapping pairs of labels.
+
+
+def unique_label(orig_label: str) -> str:
+    """Return a unique label. Respects locality (i.e. if orig_label
+    starts with a dot, the generated label will also start with a dot."""
+    return orig_label[0] + "l" + uuid4().hex
+    # TODO: check for meteors.
+
+
 class Disassembly:
     def __init__(self, subroutine: Subroutine):
         self.log = subroutine.log
@@ -48,22 +78,6 @@ class Disassembly:
         tokens = self._instruction_to_tokens(instruction)
         return self._instruction_tokens_to_text(tokens, html=True)
 
-    def edit(self) -> None:
-        # Save the subroutine's disassembly in a temporary file.
-        original_text, original_tokens = self._get_text()
-        with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
-            f.write(original_text)
-            filename = f.name
-
-        # Edit the file in an editor.
-        check_call([*os.environ["EDITOR"].split(), filename])
-        new_text = open(filename).read()
-        os.remove(filename)
-
-        # Compare the two files and apply the changes.
-        new_tokens = self._text_to_tokens(new_text)
-        self._apply_changes(original_tokens, new_tokens)
-
     def _get_text(self, html=False) -> Tuple[str, List[List[Token]]]:
         s, tokens = [], []
         for instruction in self.subroutine.instructions.values():
@@ -74,7 +88,7 @@ class Disassembly:
 
     def _apply_changes(
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
-    ) -> None:
+    ) -> Dict[str, str]:
         """Compare a collection of tokens describing a subroutine, with a new one
         with potentially updated content. Apply changes where possible."""
         line_n = 1
@@ -89,7 +103,7 @@ class Disassembly:
                 line_n, orig_instr_tokens, new_instr_tokens, renamed_labels
             )
 
-        self._apply_renamed_labels(renamed_labels)
+        return self._apply_renames(renamed_labels)
 
     def _apply_instruction_changes(
         self,
@@ -133,30 +147,21 @@ class Disassembly:
                     renamed_labels[orig.val] = new.val
         return line_n
 
-    def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
+    def _apply_renames(self, renamed_labels: Dict[str, str]) -> Dict[str, str]:
         """Safely perform bulk label renames."""
 
-        def apply(labels: Dict[str, str], dry=False) -> None:
-            """Naively perform label renames."""
-            for old, new in labels.items():
-                self.log.rename_label(old, new, self.subroutine.pc, dry)
+        # Separate local and global renames. Global renames
+        # will be performed by the DisassemblyContainer.
+        local_renames = {}
+        global_renames = {}
+        for old, new in renamed_labels.items():
+            if old[0] == ".":
+                local_renames[old] = new
+            else:
+                global_renames[old] = new
 
-        # Perform a dry run to make sure there are no errors
-        # when renames are applied to the full disassembly.
-        apply(renamed_labels, dry=True)
-
-        # Rename labels to temporary unique labels.
-        temp_renamed_labels = {
-            old: self._unique_label(old) for old in renamed_labels.keys()
-        }
-        apply(temp_renamed_labels)
-        # Re-rename the unique labels to the target labels.
-        renamed_labels = {
-            unique_label: renamed_labels[old]
-            for old, unique_label in temp_renamed_labels.items()
-        }
-        apply(renamed_labels)
-        # NOTE: this is needed when swapping pairs of labels.
+        apply_renames(self.log, local_renames)
+        return global_renames
 
     @staticmethod
     def _instruction_tokens_to_text(tokens: List[Token], html=False) -> str:
@@ -326,19 +331,13 @@ class Disassembly:
 
         return tokens
 
-    @staticmethod
-    def _unique_label(orig_label: str) -> str:
-        """Return a unique label. Respects locality (i.e. if orig_label
-        starts with a dot, the generated label will also start with a dot."""
-        return orig_label[0] + "l" + uuid4().hex
-        # TODO: check for meteors.
 
-
-class DisassemblyContainer:
+class DisassemblyContainer(Disassembly):
     HEADER = ";; ========================================\n"
 
-    def __init__(self, log: Log):
-        self.disassemblies = [Disassembly(sub) for sub in log.subroutines.values()]
+    def __init__(self, log: Log, subroutines: Iterable[Subroutine]):
+        super().__init__(next(iter(subroutines)))
+        self.disassemblies = [Disassembly(sub) for sub in subroutines]
 
     def edit(self) -> None:
         # Save the subroutines' disassembly in a temporary file.
@@ -357,7 +356,28 @@ class DisassemblyContainer:
         new_text = open(filename).read()
         os.remove(filename)
 
+        global_renames: Dict[str, str] = {}
         subroutine_texts = new_text.split(self.HEADER)
+
         for i, disassembly in enumerate(self.disassemblies):
             new_tokens = disassembly._text_to_tokens(subroutine_texts[i + 1])
-            disassembly._apply_changes(original_tokens[i], new_tokens)
+            renames = disassembly._apply_changes(original_tokens[i], new_tokens)
+
+            for old, new in renames.items():
+                if global_renames.get(old, new) != new:
+                    raise ParserError(
+                        'Ambiguous label change: "{}" -> "{}".'.format(old, new)
+                    )
+                global_renames[old] = new
+
+        apply_renames(self.log, global_renames)
+
+
+class SubroutineDisassembly(DisassemblyContainer):
+    def __init__(self, subroutine: Subroutine):
+        super().__init__(subroutine.log, [subroutine])
+
+
+class ROMDisassembly(DisassemblyContainer):
+    def __init__(self, log: Log):
+        super().__init__(log, log.subroutines.values())
