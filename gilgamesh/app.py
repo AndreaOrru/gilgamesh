@@ -462,17 +462,21 @@ class App(Repl):
         s.append("<green>PC:</green>   ${:06X}\n".format(self.rom._translate(pc)))
         print_html("".join(s))
 
-    def _label_to_pc(self, label_or_pc) -> int:
-        pc = self.log.get_label_value(
-            label_or_pc, self.subroutine.pc if self.subroutine else None
-        )
-        if pc is not None:
-            return pc
+    def _label_to_pc(self, label_or_pc: str) -> int:
+        if label_or_pc.startswith("$"):
+            try:
+                return int(label_or_pc[1:], 16)
+            except ValueError:
+                raise GilgameshError(
+                    "Provided value is neither a label nor an address."
+                )
 
-        try:
-            return int(label_or_pc, 16)
-        except ValueError:
-            raise GilgameshError("Provided value is neither a label nor an address.")
+        pc = self.log.get_label_value(
+            label_or_pc[1:], self.subroutine.pc if self.subroutine else None
+        )
+        if pc is None:
+            raise GilgameshError("Unknown label.")
+        return pc
 
     @staticmethod
     def _print_state_change(change: StateChange, newline=True) -> str:
