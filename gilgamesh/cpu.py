@@ -110,7 +110,7 @@ class CPU:
         elif instruction.is_sep_rep:
             self.sep_rep(instruction)
         elif instruction.does_change_stack:
-            return self.change_stack(instruction)
+            self.change_stack(instruction)
         elif instruction.does_change_a:
             self.change_a(instruction)
         elif instruction.is_pop:
@@ -234,14 +234,14 @@ class CPU:
         else:
             self.registers.a.set(None)
 
-    def change_stack(self, i: Instruction) -> bool:
+    def change_stack(self, i: Instruction) -> None:
         if i.operation == Op.TCS:
             a = self.registers.a.get_whole()
             if a is not None:
                 self.stack.pointer = a
-                return True
+                return
 
-        return self._unknown_subroutine_state(i, stack_manipulation=True)
+        i.does_manipulate_stack = True
 
     def push(self, instruction: Instruction) -> None:
         if instruction.operation == Op.PHP:

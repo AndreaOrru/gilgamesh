@@ -91,7 +91,7 @@ class Disassembly:
     ) -> Dict[str, str]:
         """Compare a collection of tokens describing a subroutine, with a new one
         with potentially updated content. Apply changes where possible."""
-        line_n = 1
+        line_n = 2
         renamed_labels: Dict[str, str] = {}
 
         for orig_instr_tokens, new_instr_tokens in zip_longest(
@@ -263,7 +263,7 @@ class Disassembly:
     def _text_to_tokens(text: str) -> List[List[Token]]:
         """Parse a subroutines's disassembly into a list of lists of tokens."""
         tokens = []
-        line_n = 1
+        line_n = 2
 
         for line in text.splitlines():
             line = line.strip()
