@@ -342,14 +342,22 @@ class App(Repl):
         pc = self._label_to_pc(label_or_pc)
         references = self.log.references[pc]
 
-        s = []
+        s, last_sub = [], None
         for instr_pc, sub_pc in references:
             subroutine = self.log.subroutines[sub_pc]
             instruction = subroutine.instructions[instr_pc]
             disassembly = Disassembly(subroutine)
-            s.append(f"<red>{subroutine.label}:</red>")
+            if not last_sub or sub_pc != last_sub.pc:
+                s.append(
+                    "{}<red>{:12}</red>".format(
+                        "\n" if last_sub else "", subroutine.label + ":"
+                    )
+                )
+            else:
+                s.append("{:12}".format(""))
             s.append(disassembly.get_instruction_html(instruction))
-        print_html("\n".join(s))
+            last_sub = subroutine
+        print_html("".join(s))
 
     @command()
     @argument("subroutine_or_pc", complete_subroutine)
