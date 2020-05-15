@@ -2,14 +2,20 @@ incsrc lorom.asm
 
 org $8000
 reset:
-  rep #$20                      ; $008000
-  jsr stack_manipulation        ; $008002
+  jsl stack_manipulation        ; $008000
 .loop:
-  jmp .loop                     ; $008005
+  jmp .loop                     ; $008004
 
 stack_manipulation:
-  pla                           ; $008008
-  lda #$8004                    ; $008009
-  pha                           ; $00800B
+  rep #$20                      ; $008007
+  pla                           ; $008009
+  sep #$20                      ; $00800A
+  pla                           ; $00800C
+
+  lda #$00                      ; $00800D
+  pha                           ; $00800F
+  rep #$20                      ; $008010
+  lda #$8004                    ; $008012
+  pha                           ; $008015
 .return:
-  rts                           ; $00800C
+  rtl                           ; $008016

@@ -1,4 +1,5 @@
 from copy import copy
+from typing import Optional
 
 from gilgamesh.instruction import Instruction, InstructionID
 from gilgamesh.opcodes import AddressMode, Op
@@ -169,11 +170,17 @@ class CPU:
             ret_size = 2 if instruction.operation == Op.RTS else 3
             call_op = Op.JSR if instruction.operation == Op.RTS else Op.JSL
             stack_entries = self.stack.pop(ret_size)
-            if not all(
-                s.instruction and s.instruction.operation == call_op
+            stack_manipulators = [
+                s.instruction
                 for s in stack_entries
-            ):
-                self._unknown_subroutine_state(instruction, stack_manipulation=True)
+                if not s.instruction or s.instruction.operation != call_op
+            ]
+            if stack_manipulators:
+                self._unknown_subroutine_state(
+                    instruction,
+                    stack_manipulation=True,
+                    stack_manipulator=stack_manipulators[-1],
+                )
                 return
 
         # Standard return.
@@ -243,11 +250,14 @@ class CPU:
 
     def pop(self, i: Instruction) -> bool:
         if i.operation == Op.PLP:
-            stack_entry = self.stack.pop_one()
-            if stack_entry.instruction and stack_entry.instruction.operation == Op.PHP:
-                self.state, self.state_change = stack_entry.data
+            entry = self.stack.pop_one()
+            if entry.instruction and entry.instruction.operation == Op.PHP:
+                self.state, self.state_change = entry.data
             else:
-                return self._unknown_subroutine_state(i, stack_manipulation=True)
+                return self._unknown_subroutine_state(
+                    i, stack_manipulation=True, stack_manipulator=entry.instruction
+                )
+
         elif i.operation in (Op.PLX, Op.PLY):
             self.stack.pop(self.state.x_size)
         elif i.operation == Op.PLB:
@@ -291,7 +301,10 @@ class CPU:
         return True
 
     def _unknown_subroutine_state(
-        self, instruction: Instruction, stack_manipulation=False
+        self,
+        instruction: Instruction,
+        stack_manipulation=False,
+        stack_manipulator: Optional[Instruction] = None,
     ) -> bool:
         # Check if the user defined a state assertion for the current instruction.
         if instruction.pc in self.log.instruction_assertions:
@@ -303,6 +316,8 @@ class CPU:
 
         if stack_manipulation:
             self.subroutine.has_stack_manipulation = True
+            if stack_manipulator:
+                stack_manipulator.does_manipulate_stack = True
 
         return False
 

@@ -18,10 +18,12 @@ class TokenType(Enum):
     ASSERTION = auto()
     COMMENT = auto()
     LABEL = auto()
+    NEWLINE = auto()
     OPERAND = auto()
     OPERAND_LABEL = auto()
     OPERATION = auto()
     PC = auto()
+    STACK_MANIPULATION = auto()
     UNKNOWN_STATE = auto()
 
 
@@ -31,7 +33,7 @@ EDITABLE_TOKENS = (TokenType.LABEL, TokenType.OPERAND_LABEL, TokenType.COMMENT)
 @dataclass
 class Token:
     typ: TokenType
-    val: str
+    val: str = ""
 
 
 class Disassembly:
@@ -83,10 +85,9 @@ class Disassembly:
         ):
             if (orig_instr_tokens is None) or (new_instr_tokens is None):
                 raise ParserError("Added or deleted an instruction.", line_n)
-            self._apply_instruction_changes(
+            line_n = self._apply_instruction_changes(
                 line_n, orig_instr_tokens, new_instr_tokens, renamed_labels
             )
-            line_n += 1
 
         self._apply_renamed_labels(renamed_labels)
 
@@ -96,11 +97,15 @@ class Disassembly:
         original_tokens: List[Token],
         new_tokens: List[Token],
         renamed_labels: Dict[str, str],
-    ) -> None:
+    ) -> int:
         pc = 0
         for orig, new in zip_longest(original_tokens, new_tokens):
+            # Count lines.
+            if new and new.typ == TokenType.NEWLINE:
+                line_n += 1
+
             # Error cases.
-            if (orig is None) or (new is None):
+            elif (orig is None) or (new is None):
                 raise ParserError("Added or deleted token.", line_n)
             elif orig.typ != new.typ:
                 raise ParserError("Changed the type of a token.", line_n)
@@ -126,6 +131,7 @@ class Disassembly:
                     if renamed_labels.get(orig.val, new.val) != new.val:
                         raise ParserError("Ambiguous label change.", line_n)
                     renamed_labels[orig.val] = new.val
+        return line_n
 
     def _apply_renamed_labels(self, renamed_labels: Dict[str, str]) -> None:
         """Safely perform bulk label renames."""
@@ -165,8 +171,12 @@ class Disassembly:
 
         s = []
         for token in tokens:
-            if token.typ == TokenType.LABEL:
-                s.append("{}{}{}:\n".format(o("red"), token.val, c("red")))
+            if token.typ == TokenType.NEWLINE:
+                s.append("\n")
+            elif token.typ == TokenType.LABEL:
+                s.append("{}{}{}:".format(o("red"), token.val, c("red")))
+            elif token.typ == TokenType.STACK_MANIPULATION:
+                s.append("  {}; Stack manipulation{}".format(o("grey"), c("grey")))
             elif token.typ == TokenType.OPERATION:
                 s.append("  {}{:4}{}".format(o("green"), token.val, c("green")))
             elif token.typ == TokenType.OPERAND:
@@ -179,17 +189,17 @@ class Disassembly:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.ASSERTION:
                 s.append(
-                    "\n  {}; Asserted state change: {}{}".format(
+                    "  {}; Asserted state change: {}{}".format(
                         o("grey"), token.val, c("grey")
                     )
                 )
             elif token.typ == TokenType.UNKNOWN_STATE:
                 s.append(
-                    "\n  {}; Unknown state at {}{}".format(
+                    "  {}; Unknown state at {}{}".format(
                         o("grey"), token.val, c("grey")
                     )
                 )
-        s.append("\n")
+
         return "".join(s)
 
     def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
@@ -201,6 +211,12 @@ class Disassembly:
         label = self.log.get_label(instruction.pc, subroutine_pc)
         if label:
             tokens.append(Token(TokenType.LABEL, label))
+            tokens.append(Token(TokenType.NEWLINE, "\n"))
+
+        # Stack manipulation.
+        if instruction.does_manipulate_stack:
+            tokens.append(Token(TokenType.STACK_MANIPULATION))
+            tokens.append(Token(TokenType.NEWLINE, "\n"))
 
         # Operation + Operand.
         tokens.append(Token(TokenType.OPERATION, instruction.name))
@@ -213,6 +229,7 @@ class Disassembly:
         tokens.append(Token(TokenType.PC, "${:06X}".format(instruction.pc)))
         comment = self.log.comments.get(instruction.pc, "")
         tokens.append(Token(TokenType.COMMENT, comment))
+        tokens.append(Token(TokenType.NEWLINE, "\n"))
 
         # Assertions or unknown state.
         subroutine = self.log.subroutines[subroutine_pc]
@@ -222,14 +239,19 @@ class Disassembly:
             # Subroutine with asserted return state.
             state_expr = subroutine.state_change.state_expr
             tokens.append(Token(TokenType.ASSERTION, state_expr))
+            tokens.append(Token(TokenType.NEWLINE, "\n"))
+
         elif instruction.pc in self.log.instruction_assertions:
             # Instruction with asserted state change.
             state_expr = self.log.instruction_assertions[instruction.pc].state_expr
             tokens.append(Token(TokenType.ASSERTION, state_expr))
+            tokens.append(Token(TokenType.NEWLINE, "\n"))
+
         elif instruction.stopped_execution:
             # Unknown state.
             next_pc = "${:06X}".format(instruction.next_pc)
             tokens.append(Token(TokenType.UNKNOWN_STATE, next_pc))
+            tokens.append(Token(TokenType.NEWLINE, "\n"))
 
         return tokens
 
@@ -249,9 +271,20 @@ class Disassembly:
             if len(words) == 1 and line[-1] == ":":
                 tokens.append([Token(TokenType.LABEL, line[:-1])])
 
+            # Stack manipulation.
+            elif len(words) == 3 and words[0:3] == "; Stack manipulation".split():
+                # Could be the beginning of a new instruction.
+                if tokens[-1][-2].typ != TokenType.LABEL:
+                    tokens.append([])
+                tokens[-1].append(Token(TokenType.STACK_MANIPULATION))
+
             # Instruction line.
             elif words[0].upper() in Op.__members__:
-                if tokens[-1][-1].typ != TokenType.LABEL:
+                # Could be the beginning of a new instruction.
+                if tokens[-1][-2].typ not in (
+                    TokenType.LABEL,
+                    TokenType.STACK_MANIPULATION,
+                ):
                     tokens.append([])
                 tokens[-1].append(Token(TokenType.OPERATION, words[0].lower()))
                 i = 1
@@ -285,10 +318,11 @@ class Disassembly:
                     tokens[-1].append(Token(TokenType.ASSERTION, words[4]))
                 elif words[1:4] == "Unknown state at".split():
                     tokens[-1].append(Token(TokenType.UNKNOWN_STATE, words[4]))
-
             else:
                 raise ParserError("Unable to parse line.", line_n)
 
+            # Signal end of line.
+            tokens[-1].append(Token(TokenType.NEWLINE, "\n"))
             line_n += 1
 
         return tokens

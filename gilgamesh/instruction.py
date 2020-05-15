@@ -37,6 +37,7 @@ class Instruction(Invalidable):
         self._argument = argument
 
         self.stopped_execution = False
+        self.does_manipulate_stack = False
 
     def __repr__(self) -> str:
         return "<{}{}>".format(
