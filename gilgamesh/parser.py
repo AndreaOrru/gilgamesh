@@ -20,7 +20,8 @@ class TokenType(Enum):
     OPERATION = auto()
     PC = auto()
     SEPARATOR_LINE = auto()
-    STACK_MANIPULATION = auto()
+    STACK_MANIPULATION_HEADER = auto()
+    UNKNOWN_STATE_HEADER = auto()
 
 
 EDITABLE_TOKENS = {
@@ -92,9 +93,8 @@ class Parser:
         self.tokens.append([])
 
     def maybe_add_instr(self, *args) -> None:
-        if self.tokens[-1][-2].typ == TokenType.SEPARATOR_LINE:
-            if self.tokens[-1][-4].typ != TokenType.STACK_MANIPULATION:
-                self.add_instr()
-
-        elif self.tokens[-1][-2].typ != TokenType.LABEL:
+        if self.tokens[-1][-2].typ not in (
+            TokenType.LABEL,
+            TokenType.STACK_MANIPULATION_HEADER,
+        ):
             self.add_instr()

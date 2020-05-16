@@ -45,7 +45,11 @@ def unique_label(orig_label: str) -> str:
 
 
 class Disassembly:
-    SEPARATOR_LINE = ";---------------------------------------"
+    # fmt: off
+    SEPARATOR_LINE            = ";---------------------------------------"  # noqa
+    STACK_MANIPULATION_HEADER = ";----------[STACK MANIPULATION]---------"  # noqa
+    UNKNOWN_STATE_HEADER      = ";------------[UNKNOWN STATE]------------"  # noqa
+    # fmt: on
 
     def __init__(self, subroutine: Subroutine):
         self.log = subroutine.log
@@ -188,8 +192,6 @@ class Disassembly:
                 s.append("\n")
             elif token.typ == TokenType.LABEL:
                 s.append("{}{}{}:".format(o("red"), token.val, c("red")))
-            elif token.typ == TokenType.STACK_MANIPULATION:
-                s.append("  {}; Stack manipulation{}".format(o("grey"), c("grey")))
             elif token.typ == TokenType.OPERATION:
                 s.append("  {}{:4}{}".format(o("green"), token.val, c("green")))
             elif token.typ == TokenType.OPERAND:
@@ -202,6 +204,10 @@ class Disassembly:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.SEPARATOR_LINE:
                 s.append(f'  {o("grey")}{cls.SEPARATOR_LINE}{c("grey")}')
+            elif token.typ == TokenType.STACK_MANIPULATION_HEADER:
+                s.append(f'  {o("grey")}{cls.STACK_MANIPULATION_HEADER}{c("grey")}')
+            elif token.typ == TokenType.UNKNOWN_STATE_HEADER:
+                s.append(f'  {o("grey")}{cls.UNKNOWN_STATE_HEADER}{c("grey")}')
             # fmt: off
             elif token.typ == TokenType.LAST_KNOWN_STATE:
                 s.append("  {}; Last known state change: {}{}".format(
@@ -232,9 +238,7 @@ class Disassembly:
 
         # Stack manipulation.
         if instruction.does_manipulate_stack:
-            add_line(TokenType.SEPARATOR_LINE)
-            add_line(TokenType.STACK_MANIPULATION)
-            add_line(TokenType.SEPARATOR_LINE)
+            add_line(TokenType.STACK_MANIPULATION_HEADER)
 
         # Label.
         subroutine_pc = instruction.subroutine
@@ -282,7 +286,7 @@ class Disassembly:
                 assertion_type = "instruction"
 
         if unknown_state:
-            add_line(TokenType.SEPARATOR_LINE)
+            add_line(TokenType.UNKNOWN_STATE_HEADER)
             add_line(TokenType.LAST_KNOWN_STATE, instruction.state_change)
             add_line(TokenType.SEPARATOR_LINE)
             add_line(TokenType.ASSERTION_TYPE, assertion_type)
@@ -306,27 +310,26 @@ class Disassembly:
                 p.add_instr()
                 p.add_line(TokenType.LABEL, p.line[:-1])
 
-            # Stack manipulation, assertion or unknown state.
-            elif p.maybe_match_line(cls.SEPARATOR_LINE):
-                if p.maybe_match_line("; Stack manipulation", 1):
-                    p.add_instr()
-                    p.add_line(TokenType.SEPARATOR_LINE)
-                    p.add_line(TokenType.STACK_MANIPULATION)
+            # Stack manipulation.
+            elif p.maybe_match_line(cls.STACK_MANIPULATION_HEADER):
+                p.add_instr()
+                p.add_line(TokenType.STACK_MANIPULATION_HEADER)
 
-                elif p.maybe_match_part("; Last known state change:", 1):
-                    p.add_line(TokenType.SEPARATOR_LINE)
-                    # TODO: validate the state_expr.
-                    state_expr = p.words[5]
-                    p.add_line(TokenType.LAST_KNOWN_STATE, state_expr)
-                    p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
+            elif p.maybe_match_line(cls.UNKNOWN_STATE_HEADER):
+                p.add_line(TokenType.UNKNOWN_STATE_HEADER)
+                p.match_part("; Last known state change:")
+                # TODO: validate the state_expr.
+                state_expr = p.words[5]
+                p.add_line(TokenType.LAST_KNOWN_STATE, state_expr)
+                p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
 
-                    # TODO: validate the assertion type.
-                    p.match_part("; ASSERTION TYPE:")
-                    p.add_line(TokenType.ASSERTION_TYPE, p.words[3])
+                # TODO: validate the assertion type.
+                p.match_part("; ASSERTION TYPE:")
+                p.add_line(TokenType.ASSERTION_TYPE, p.words[3])
 
-                    # TODO: validate the state_expr.
-                    p.match_part("; ASSERTED STATE CHANGE:")
-                    p.add_line(TokenType.ASSERTION, p.words[4])
+                # TODO: validate the state_expr.
+                p.match_part("; ASSERTED STATE CHANGE:")
+                p.add_line(TokenType.ASSERTION, p.words[4])
 
                 p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
 
@@ -366,7 +369,7 @@ class Disassembly:
 
 
 class DisassemblyContainer(Disassembly):
-    HEADER = ";; ========================================\n"
+    HEADER = ";;=========================================\n"
 
     def __init__(self, log: Log, subroutines: Iterable[Subroutine]):
         super().__init__(next(iter(subroutines)))
