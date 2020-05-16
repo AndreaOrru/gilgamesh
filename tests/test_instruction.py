@@ -6,10 +6,10 @@ from gilgamesh.opcodes import AddressMode, Op
 
 class InstructionTest(TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(self):
         instruction_id = InstructionID(pc=0x000000, p=0b0000_0000, subroutine=0x000000)
-        cls.brl = Instruction(None, *instruction_id, 0x82, 0xFFFD, None, None)
-        cls.lda = Instruction(None, *instruction_id, 0xA9, 0x1234, None, None)
+        self.brl = Instruction(None, *instruction_id, 0x82, 0xFFFD, None, None)
+        self.lda = Instruction(None, *instruction_id, 0xA9, 0x1234, None, None)
 
     def test_repr(self):
         self.assertEqual(repr(self.brl), "<BRL $FFFD>")

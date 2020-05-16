@@ -47,8 +47,8 @@ class ROMTest(ABC):
 
 class LoROMTest(ROMTest, TestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.rom = ROM(assemble("lorom.asm"))
+    def setUpClass(self):
+        self.rom = ROM(assemble("lorom.asm"))
 
     def test_type(self):
         self.assertEqual(self.rom.type, ROMType.LoROM)
@@ -64,8 +64,8 @@ class LoROMTest(ROMTest, TestCase):
 
 class HiROMTest(ROMTest, TestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.rom = ROM(assemble("hirom.asm"))
+    def setUpClass(self):
+        self.rom = ROM(assemble("hirom.asm"))
 
     def test_type(self):
         self.assertEqual(self.rom.type, ROMType.HiROM)
