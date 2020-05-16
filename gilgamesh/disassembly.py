@@ -100,19 +100,18 @@ class Disassembly:
 
             # Label line.
             elif len(p.words) == 1 and p.line[-1] == ":":
-                p.add_instr()
+                p.new_instruction()
                 p.add_line(T.LABEL, p.line[:-1])
 
             # Stack manipulation.
             elif p.maybe_match_line(self.string(T.STACK_MANIPULATION_HEADER)):
-                p.add_instr()
+                p.new_instruction()
                 p.add_line(T.STACK_MANIPULATION_HEADER)
 
             # Known return state.
             elif p.maybe_match_line(self.string(T.KNOWN_STATE_HEADER)):
                 p.add_line(T.KNOWN_STATE_HEADER)
-                state_expr = p.match_part(self.string(T.KNOWN_STATE))
-                p.add_line(T.KNOWN_STATE, state_expr)
+                p.add_line_rest(T.KNOWN_STATE, after=self.string(T.KNOWN_STATE))
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
             # Unknown or asserted (previously unknown) state.
@@ -123,24 +122,16 @@ class Disassembly:
                     p.add_line(T.ASSERTED_STATE_HEADER)
                 else:
                     p.add_line(T.UNKNOWN_STATE_HEADER)
-
-                # TODO: validate the state_expr.
-                state_expr = p.match_part(self.string(T.LAST_KNOWN_STATE))
-                p.add_line(T.LAST_KNOWN_STATE, state_expr)
+                # TODO: validate state_expr and assertion_type.
+                p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
-
-                # TODO: validate the assertion type.
-                assertion_type = p.match_part(self.string(T.ASSERTION_TYPE))
-                p.add_line(T.ASSERTION_TYPE, assertion_type)
-
-                # TODO: validate the state_expr.
-                assertion = p.match_part(self.string(T.ASSERTION))
-                p.add_line(T.ASSERTION, assertion)
+                p.add_line_rest(T.ASSERTION_TYPE, after=self.string(T.ASSERTION_TYPE))
+                p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
             # Instruction line.
             elif p.words[0].upper() in Op.__members__:
-                p.maybe_add_instr()
+                p.maybe_new_instruction()
                 p.add(T.OPERATION, p.words[0].lower())
                 i = 1
 

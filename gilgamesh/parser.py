@@ -91,19 +91,20 @@ class Parser:
             raise ParserError("Unable to parse line.", self.line_n)
         self.add_line(token_typ)
 
-    def match_part(self, s: str) -> str:
-        parts = s.split()
+    def add_line_rest(self, token_typ: TokenType, after: str) -> None:
+        parts = after.split()
         if not self.words[: len(parts)] == parts:
             raise ParserError("Unable to parse line.", self.line_n)
-        rest = self.words[len(parts) :]
-        return " ".join(rest)
 
-    def add_instr(self) -> None:
+        rest = " ".join(self.words[len(parts) :])
+        self.add_line(token_typ, rest)
+
+    def new_instruction(self) -> None:
         self.tokens.append([])
 
-    def maybe_add_instr(self, *args) -> None:
+    def maybe_new_instruction(self, *args) -> None:
         if self.tokens[-1][-2].typ not in (
             TokenType.LABEL,
             TokenType.STACK_MANIPULATION_HEADER,
         ):
-            self.add_instr()
+            self.new_instruction()
