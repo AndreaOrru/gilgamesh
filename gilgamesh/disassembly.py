@@ -47,6 +47,8 @@ def unique_label(orig_label: str) -> str:
 class Disassembly:
     # fmt: off
     SEPARATOR_LINE            = ";---------------------------------------"  # noqa
+    ASSERTED_STATE_HEADER     = ";------------[ASSERTED STATE]-----------"  # noqa
+    KNOWN_STATE_HEADER        = ";-------------[KNOWN STATE]-------------"  # noqa
     STACK_MANIPULATION_HEADER = ";----------[STACK MANIPULATION]---------"  # noqa
     UNKNOWN_STATE_HEADER      = ";------------[UNKNOWN STATE]------------"  # noqa
     # fmt: on
@@ -198,20 +200,32 @@ class Disassembly:
                 s.append("{:25}".format(token.val))
             elif token.typ == TokenType.OPERAND_LABEL:
                 s.append("{}{:25}{}".format(o("red"), token.val, c("red")))
+
             elif token.typ == TokenType.PC:
                 s.append(" {}; {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.COMMENT:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
-            elif token.typ == TokenType.SEPARATOR_LINE:
-                s.append(f'  {o("grey")}{cls.SEPARATOR_LINE}{c("grey")}')
-            elif token.typ == TokenType.STACK_MANIPULATION_HEADER:
-                s.append(f'  {o("grey")}{cls.STACK_MANIPULATION_HEADER}{c("grey")}')
+
+            elif token.typ == TokenType.ASSERTED_STATE_HEADER:
+                s.append(f'  {o("grey")}{cls.ASSERTED_STATE_HEADER}{c("grey")}')
+            elif token.typ == TokenType.KNOWN_STATE_HEADER:
+                s.append(f'  {o("grey")}{cls.KNOWN_STATE_HEADER}{c("grey")}')
             elif token.typ == TokenType.UNKNOWN_STATE_HEADER:
                 s.append(f'  {o("grey")}{cls.UNKNOWN_STATE_HEADER}{c("grey")}')
+            elif token.typ == TokenType.STACK_MANIPULATION_HEADER:
+                s.append(f'  {o("grey")}{cls.STACK_MANIPULATION_HEADER}{c("grey")}')
+
+            elif token.typ == TokenType.SEPARATOR_LINE:
+                s.append(f'  {o("grey")}{cls.SEPARATOR_LINE}{c("grey")}')
+
             # fmt: off
+            elif token.typ == TokenType.KNOWN_STATE:
+                s.append("  {}; Known return state change: {}{}".format(
+                    o("grey"), f"{o('green')}{token.val}{c('green')}", c("grey")))
             elif token.typ == TokenType.LAST_KNOWN_STATE:
                 s.append("  {}; Last known state change: {}{}".format(
                     o("grey"), f"{o('green')}{token.val}{c('green')}", c("grey")))
+
             elif token.typ == TokenType.ASSERTION_TYPE:
                 color = "red" if token.val == "none" else "magenta"
                 s.append("  {}; ASSERTION TYPE: {}{}".format(
@@ -285,8 +299,17 @@ class Disassembly:
             if assertion:
                 assertion_type = "instruction"
 
+        # A normal return.
+        elif not instruction.stopped_execution and instruction.is_return:
+            add_line(TokenType.KNOWN_STATE_HEADER)
+            add_line(TokenType.KNOWN_STATE, instruction.state_change)
+            add_line(TokenType.SEPARATOR_LINE)
+
         if unknown_state:
-            add_line(TokenType.UNKNOWN_STATE_HEADER)
+            if assertion:
+                add_line(TokenType.ASSERTED_STATE_HEADER)
+            else:
+                add_line(TokenType.UNKNOWN_STATE_HEADER)
             add_line(TokenType.LAST_KNOWN_STATE, instruction.state_change)
             add_line(TokenType.SEPARATOR_LINE)
             add_line(TokenType.ASSERTION_TYPE, assertion_type)
@@ -315,8 +338,23 @@ class Disassembly:
                 p.add_instr()
                 p.add_line(TokenType.STACK_MANIPULATION_HEADER)
 
-            elif p.maybe_match_line(cls.UNKNOWN_STATE_HEADER):
-                p.add_line(TokenType.UNKNOWN_STATE_HEADER)
+            # Known return state.
+            elif p.maybe_match_line(cls.KNOWN_STATE_HEADER):
+                p.add_line(TokenType.KNOWN_STATE_HEADER)
+                p.match_part("; Known return state change:")
+                state_expr = p.words[5]
+                p.add_line(TokenType.KNOWN_STATE, state_expr)
+                p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
+
+            # Unknown or asserted (previously unknown) state.
+            elif p.maybe_match_line(cls.UNKNOWN_STATE_HEADER) or p.maybe_match_line(
+                cls.ASSERTED_STATE_HEADER
+            ):
+                if p.maybe_match_line(cls.UNKNOWN_STATE_HEADER):
+                    p.add_line(TokenType.UNKNOWN_STATE_HEADER)
+                else:
+                    p.add_line(TokenType.ASSERTED_STATE_HEADER)
+
                 p.match_part("; Last known state change:")
                 # TODO: validate the state_expr.
                 state_expr = p.words[5]

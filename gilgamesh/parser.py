@@ -9,6 +9,7 @@ from gilgamesh.utils.cached_property import invalidate
 
 
 class TokenType(Enum):
+    ASSERTED_STATE_HEADER = auto()
     ASSERTION = auto()
     ASSERTION_TYPE = auto()
     COMMENT = auto()
@@ -19,6 +20,8 @@ class TokenType(Enum):
     OPERAND_LABEL = auto()
     OPERATION = auto()
     PC = auto()
+    KNOWN_STATE = auto()
+    KNOWN_STATE_HEADER = auto()
     SEPARATOR_LINE = auto()
     STACK_MANIPULATION_HEADER = auto()
     UNKNOWN_STATE_HEADER = auto()
