@@ -47,10 +47,10 @@ def unique_label(orig_label: str) -> str:
 class Disassembly:
     # fmt: off
     SEPARATOR_LINE            = ";---------------------------------------"  # noqa
-    ASSERTED_STATE_HEADER     = ";------------[ASSERTED STATE]-----------"  # noqa
-    KNOWN_STATE_HEADER        = ";-------------[KNOWN STATE]-------------"  # noqa
+    ASSERTED_STATE_HEADER     = ";------------<magenta>[ASSERTED STATE]</magenta>-----------"  # noqa
+    KNOWN_STATE_HEADER        = ";-------------<green>[KNOWN STATE]</green>-------------"  # noqa
     STACK_MANIPULATION_HEADER = ";----------[STACK MANIPULATION]---------"  # noqa
-    UNKNOWN_STATE_HEADER      = ";------------[UNKNOWN STATE]------------"  # noqa
+    UNKNOWN_STATE_HEADER      = ";------------<red>[UNKNOWN STATE]</red>------------"  # noqa
     # fmt: on
 
     def __init__(self, subroutine: Subroutine):
@@ -231,7 +231,7 @@ class Disassembly:
                 s.append("  {}; ASSERTION TYPE: {}{}".format(
                     o("grey"), f"{o(color)}{token.val}{c(color)}", c("grey")))
             elif token.typ == TokenType.ASSERTION:
-                color = "red" if token.val == "unknown" else "yellow"
+                color = "red" if token.val == "unknown" else "magenta"
                 s.append("  {}; ASSERTED STATE CHANGE: {}{}".format(
                     o("grey"), f"{o(color)}{token.val}{c(color)}", c("grey")))
             # fmt: on
