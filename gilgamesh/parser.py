@@ -92,5 +92,9 @@ class Parser:
         self.tokens.append([])
 
     def maybe_add_instr(self, *args) -> None:
-        if self.tokens[-1][-2].typ not in (TokenType.LABEL, TokenType.SEPARATOR_LINE):
+        if self.tokens[-1][-2].typ != TokenType.LABEL:
             self.add_instr()
+
+        elif self.tokens[-1][-2] == TokenType.SEPARATOR_LINE:
+            if self.tokens[-1][-4] != TokenType.STACK_MANIPULATION:
+                self.add_instr()

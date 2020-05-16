@@ -10,6 +10,7 @@ from gilgamesh.instruction import Instruction
 from gilgamesh.log import Log
 from gilgamesh.opcodes import Op
 from gilgamesh.parser import EDITABLE_TOKENS, Parser, Token, TokenType
+from gilgamesh.state import StateChange
 from gilgamesh.subroutine import Subroutine
 
 
@@ -91,7 +92,6 @@ class Disassembly:
         new_tokens: List[Token],
         renamed_labels: Dict[str, str],
     ) -> int:
-        pc = 0
         for orig, new in zip_longest(original_tokens, new_tokens):
             # Count lines.
             if new and new.typ == TokenType.NEWLINE:
@@ -111,16 +111,39 @@ class Disassembly:
             elif orig.typ == TokenType.PC:
                 pc = int(orig.val[1:], 16)
 
+            # Assertion type.
+            elif orig.typ == TokenType.ASSERTION_TYPE:
+                orig_assert_type = orig.val
+                new_assert_type = new.val
+                assertion_type_changed = orig_assert_type != new_assert_type
+
+            # Assertion.
+            elif orig.typ == TokenType.ASSERTION:
+                assertion_changed = orig.val != new.val
+                anything_changed = assertion_type_changed or assertion_changed
+                state_change = StateChange.from_state_expr(new.val)
+
+                if anything_changed and state_change.unknown:
+                    raise ParserError("Invalid assertion state.", line_n)
+
+                if assertion_type_changed:
+                    if orig_assert_type == "instruction":
+                        self.log.deassert_instruction_state_change(pc)
+                    elif orig_assert_type == "subroutine":
+                        self.log.deassert_subroutine_state_change(self.subroutine.pc)
+
+                if anything_changed:
+                    if new_assert_type == "instruction":
+                        self.log.assert_instruction_state_change(pc, state_change)
+                    elif new_assert_type == "subroutine":
+                        self.log.assert_subroutine_state_change(
+                            self.subroutine, state_change
+                        )
+
             # If the value of the current token has been changed:
             elif orig.val != new.val:
-                # Assertion.
-                if orig.typ == TokenType.ASSERTION:
-                    pass
-                # Assertion type.
-                elif orig.typ == TokenType.ASSERTION_TYPE:
-                    pass
                 # Comments.
-                elif orig.typ == TokenType.COMMENT:
+                if orig.typ == TokenType.COMMENT:
                     if new.val:
                         self.log.comments[pc] = new.val
                     else:

@@ -97,6 +97,8 @@ class StateChange:
         # TODO: Validate expression.
         if expr.lower() == "none":
             return cls()
+        elif expr.lower() == "unknown":
+            return cls(unknown=True)
 
         expressions = expr.split(",")
         if 1 <= len(expressions) <= 2:
