@@ -25,10 +25,10 @@ def command(container=False):
                     except KeyError:
                         return self._method_help(method, error=True)
             # Try to call the command.
-            try:
-                return method(self, *args)
-            except TypeError:
-                return self._method_help(method, error=True)
+            # try:
+            return method(self, *args)
+            # except TypeError:
+            #     return self._method_help(method, error=True)
 
         # Flag this method as a command.
         wrapper.cmd = True

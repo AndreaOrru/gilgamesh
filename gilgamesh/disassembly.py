@@ -1,6 +1,4 @@
 import os
-from dataclasses import dataclass
-from enum import Enum, auto
 from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
@@ -11,31 +9,8 @@ from gilgamesh.errors import ParserError
 from gilgamesh.instruction import Instruction
 from gilgamesh.log import Log
 from gilgamesh.opcodes import Op
+from gilgamesh.parser import EDITABLE_TOKENS, Parser, Token, TokenType
 from gilgamesh.subroutine import Subroutine
-
-
-class TokenType(Enum):
-    ASSERTION = auto()
-    ASSERTION_TYPE = auto()
-    COMMENT = auto()
-    LABEL = auto()
-    LAST_KNOWN_STATE = auto()
-    NEWLINE = auto()
-    OPERAND = auto()
-    OPERAND_LABEL = auto()
-    OPERATION = auto()
-    PC = auto()
-    SEPARATOR_LINE = auto()
-    STACK_MANIPULATION = auto()
-
-
-EDITABLE_TOKENS = (TokenType.LABEL, TokenType.OPERAND_LABEL, TokenType.COMMENT)
-
-
-@dataclass
-class Token:
-    typ: TokenType
-    val: str = ""
 
 
 def apply_renames(log: Log, renamed_labels: Dict[str, str]) -> None:
@@ -69,6 +44,8 @@ def unique_label(orig_label: str) -> str:
 
 
 class Disassembly:
+    SEPARATOR_LINE = ";---------------------------------------"
+
     def __init__(self, subroutine: Subroutine):
         self.log = subroutine.log
         self.subroutine = subroutine
@@ -136,8 +113,14 @@ class Disassembly:
 
             # If the value of the current token has been changed:
             elif orig.val != new.val:
+                # Assertion.
+                if orig.typ == TokenType.ASSERTION:
+                    pass
+                # Assertion type.
+                elif orig.typ == TokenType.ASSERTION_TYPE:
+                    pass
                 # Comments.
-                if orig.typ == TokenType.COMMENT:
+                elif orig.typ == TokenType.COMMENT:
                     if new.val:
                         self.log.comments[pc] = new.val
                     else:
@@ -165,8 +148,8 @@ class Disassembly:
         apply_renames(self.log, local_renames)
         return global_renames
 
-    @staticmethod
-    def _instruction_tokens_to_text(tokens: List[Token], html=False) -> str:
+    @classmethod
+    def _instruction_tokens_to_text(cls, tokens: List[Token], html=False) -> str:
         """Generate HTML or plain text from the list
         of tokens describing an instruction."""
 
@@ -195,9 +178,7 @@ class Disassembly:
             elif token.typ == TokenType.COMMENT:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.SEPARATOR_LINE:
-                s.append(
-                    f'  {o("grey")};---------------------------------------{c("grey")}'
-                )
+                s.append(f'  {o("grey")}{cls.SEPARATOR_LINE}{c("grey")}')
             # fmt: off
             elif token.typ == TokenType.LAST_KNOWN_STATE:
                 s.append("  {}; Last known state change: {}{}".format(
@@ -226,17 +207,17 @@ class Disassembly:
 
         tokens = []
 
-        # Label.
-        subroutine_pc = instruction.subroutine
-        label = self.log.get_label(instruction.pc, subroutine_pc)
-        if label:
-            add_line(TokenType.LABEL, label)
-
         # Stack manipulation.
         if instruction.does_manipulate_stack:
             add_line(TokenType.SEPARATOR_LINE)
             add_line(TokenType.STACK_MANIPULATION)
             add_line(TokenType.SEPARATOR_LINE)
+
+        # Label.
+        subroutine_pc = instruction.subroutine
+        label = self.log.get_label(instruction.pc, subroutine_pc)
+        if label:
+            add_line(TokenType.LABEL, label)
 
         # Operation + Operand.
         tokens.append(Token(TokenType.OPERATION, instruction.name))
@@ -287,77 +268,78 @@ class Disassembly:
 
         return tokens
 
-    @staticmethod
-    def _text_to_tokens(text: str) -> List[List[Token]]:
+    @classmethod
+    def _text_to_tokens(cls, text: str) -> List[List[Token]]:
         """Parse a subroutines's disassembly into a list of lists of tokens."""
-        tokens = []
-        line_n = 2
 
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            words = line.split()
+        p = Parser(text)
+        while p.line_idx < len(p.lines):
+            # Empty line.
+            if not p.line:
+                p.add_line()
 
             # Label line.
-            if len(words) == 1 and line[-1] == ":":
-                tokens.append([Token(TokenType.LABEL, line[:-1])])
+            elif len(p.words) == 1 and p.line[-1] == ":":
+                p.add_instr()
+                p.add_line(TokenType.LABEL, p.line[:-1])
 
-            # Stack manipulation.
-            elif len(words) == 3 and words[0:3] == "; Stack manipulation".split():
-                # Could be the beginning of a new instruction.
-                if tokens[-1][-2].typ != TokenType.LABEL:
-                    tokens.append([])
-                tokens[-1].append(Token(TokenType.STACK_MANIPULATION))
+            # Stack manipulation, assertion or unknown state.
+            elif p.maybe_match_line(cls.SEPARATOR_LINE):
+                if p.maybe_match_line("; Stack manipulation", 1):
+                    p.add_instr()
+                    p.add_line(TokenType.SEPARATOR_LINE)
+                    p.add_line(TokenType.STACK_MANIPULATION)
+
+                elif p.maybe_match_part("; Last known state change:", 1):
+                    p.add_line(TokenType.SEPARATOR_LINE)
+                    # TODO: validate the state_expr.
+                    state_expr = p.words[5]
+                    p.add_line(TokenType.LAST_KNOWN_STATE, state_expr)
+                    p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
+
+                    # TODO: validate the assertion type.
+                    p.match_part("; ASSERTION TYPE:")
+                    p.add_line(TokenType.ASSERTION_TYPE, p.words[3])
+
+                    # TODO: validate the state_expr.
+                    p.match_part("; ASSERTED STATE CHANGE:")
+                    p.add_line(TokenType.ASSERTION, p.words[4])
+
+                p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
 
             # Instruction line.
-            elif words[0].upper() in Op.__members__:
-                # Could be the beginning of a new instruction.
-                if tokens[-1][-2].typ not in (
-                    TokenType.LABEL,
-                    TokenType.STACK_MANIPULATION,
-                ):
-                    tokens.append([])
-                tokens[-1].append(Token(TokenType.OPERATION, words[0].lower()))
+            elif p.words[0].upper() in Op.__members__:
+                p.maybe_add_instr()
+                p.add(TokenType.OPERATION, p.words[0].lower())
                 i = 1
 
                 # Operand section.
-                if words[i] == ";":
-                    tokens[-1].append(Token(TokenType.OPERAND, ""))
+                if p.words[i] == ";":
+                    p.add(TokenType.OPERAND, "")
                 else:
-                    word = words[i]
+                    word = p.words[i]
                     if ("a" == word) or ("$" in word) or ("," in word):
-                        tokens[-1].append(Token(TokenType.OPERAND, word))
+                        p.add(TokenType.OPERAND, word)
                     elif word.isidentifier() or (
                         word[0] == "." and word[1:].isidentifier()
                     ):
-                        tokens[-1].append(Token(TokenType.OPERAND_LABEL, word))
+                        p.add(TokenType.OPERAND_LABEL, word)
                     i += 1
 
                 # Comment section.
-                if words[i] != ";":
-                    raise ParserError("Missing comment section.", line_n)
-                tokens[-1].append(Token(TokenType.PC, words[i + 1]))
+                if p.words[i] != ";":
+                    raise ParserError("Missing comment section.", p.line_n)
+                p.add(TokenType.PC, p.words[i + 1])
                 try:
-                    comment = line.split("|", maxsplit=1)[1].strip()
+                    comment = p.line.split("|", maxsplit=1)[1].strip()
                 except IndexError:
-                    raise ParserError("Expected | before comment.", line_n)
-                tokens[-1].append(Token(TokenType.COMMENT, comment))
+                    raise ParserError("Expected | before comment.", p.line_n)
+                p.add_line(TokenType.COMMENT, comment)
 
-            # Assertion/state line.
-            elif words[0] == ";":
-                if words[1:4] == "Asserted state change:".split():
-                    tokens[-1].append(Token(TokenType.ASSERTION, words[4]))
-                elif words[1:7] == "Unknown state. Last known state change:".split():
-                    tokens[-1].append(Token(TokenType.UNKNOWN_STATE, words[7]))
             else:
-                raise ParserError("Unable to parse line.", line_n)
+                raise ParserError("Unable to parse line.", p.line_n)
 
-            # Signal end of line.
-            tokens[-1].append(Token(TokenType.NEWLINE, "\n"))
-            line_n += 1
-
-        return tokens
+        return p.tokens
 
 
 class DisassemblyContainer(Disassembly):
