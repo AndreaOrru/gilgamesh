@@ -178,7 +178,6 @@ class Disassembly:
 
         s = []
         for token in tokens:
-            # fmt: off
             if token.typ == TokenType.NEWLINE:
                 s.append("\n")
             elif token.typ == TokenType.LABEL:
@@ -196,13 +195,21 @@ class Disassembly:
             elif token.typ == TokenType.COMMENT:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
             elif token.typ == TokenType.SEPARATOR_LINE:
-                s.append(f"  {o('grey')};---------------------------------------{c('grey')}")
+                s.append(
+                    f'  {o("grey")};---------------------------------------{c("grey")}'
+                )
+            # fmt: off
             elif token.typ == TokenType.LAST_KNOWN_STATE:
-                s.append("  {}; Last known state change: {}{}".format(o('grey'), token.val, c('grey')))
+                s.append("  {}; Last known state change: {}{}".format(
+                    o("grey"), f"{o('green')}{token.val}{c('green')}", c("grey")))
             elif token.typ == TokenType.ASSERTION_TYPE:
-                s.append("  {}; ASSERTION TYPE: {}{}".format(o('grey'), token.val, c('grey')))
+                color = "red" if token.val == "none" else "magenta"
+                s.append("  {}; ASSERTION TYPE: {}{}".format(
+                    o("grey"), f"{o(color)}{token.val}{c(color)}", c("grey")))
             elif token.typ == TokenType.ASSERTION:
-                s.append("  {}; ASSERTED STATE CHANGE: {}{}".format(o('grey'), token.val, c('grey')))
+                color = "red" if token.val == "unknown" else "yellow"
+                s.append("  {}; ASSERTED STATE CHANGE: {}{}".format(
+                    o("grey"), f"{o(color)}{token.val}{c(color)}", c("grey")))
             # fmt: on
 
         return "".join(s)
@@ -210,7 +217,11 @@ class Disassembly:
     def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
 
-        def newline():
+        def add(*args):
+            tokens.append(Token(*args))
+
+        def add_line(*args):
+            add(*args)
             tokens.append(Token(TokenType.NEWLINE, "\n"))
 
         tokens = []
@@ -219,26 +230,25 @@ class Disassembly:
         subroutine_pc = instruction.subroutine
         label = self.log.get_label(instruction.pc, subroutine_pc)
         if label:
-            tokens.append(Token(TokenType.LABEL, label))
-            tokens.append(Token(TokenType.NEWLINE, "\n"))
+            add_line(TokenType.LABEL, label)
 
         # Stack manipulation.
         if instruction.does_manipulate_stack:
-            tokens.append(Token(TokenType.STACK_MANIPULATION))
-            tokens.append(Token(TokenType.NEWLINE, "\n"))
+            add_line(TokenType.SEPARATOR_LINE)
+            add_line(TokenType.STACK_MANIPULATION)
+            add_line(TokenType.SEPARATOR_LINE)
 
         # Operation + Operand.
         tokens.append(Token(TokenType.OPERATION, instruction.name))
         if instruction.argument_alias:
-            tokens.append(Token(TokenType.OPERAND_LABEL, instruction.argument_alias))
+            add(TokenType.OPERAND_LABEL, instruction.argument_alias)
         else:
-            tokens.append(Token(TokenType.OPERAND, instruction.argument_string))
+            add(TokenType.OPERAND, instruction.argument_string)
 
         # PC + Comment.
-        tokens.append(Token(TokenType.PC, "${:06X}".format(instruction.pc)))
+        add(TokenType.PC, "${:06X}".format(instruction.pc))
         comment = self.log.comments.get(instruction.pc, "")
-        tokens.append(Token(TokenType.COMMENT, comment))
-        tokens.append(Token(TokenType.NEWLINE, "\n"))
+        add_line(TokenType.COMMENT, comment)
 
         # Assertions and unknown states.
         subroutine = self.log.subroutines[subroutine_pc]
@@ -268,14 +278,12 @@ class Disassembly:
                 assertion_type = "instruction"
 
         if unknown_state:
-            # fmt: off
-            tokens.append(Token(TokenType.SEPARATOR_LINE))                             ; newline()
-            tokens.append(Token(TokenType.LAST_KNOWN_STATE, instruction.state_change)) ; newline()
-            tokens.append(Token(TokenType.SEPARATOR_LINE))                             ; newline()
-            tokens.append(Token(TokenType.ASSERTION_TYPE, assertion_type))             ; newline()
-            tokens.append(Token(TokenType.ASSERTION, state_change))                    ; newline()
-            tokens.append(Token(TokenType.SEPARATOR_LINE))                             ; newline()
-            # fmt: on
+            add_line(TokenType.SEPARATOR_LINE)
+            add_line(TokenType.LAST_KNOWN_STATE, instruction.state_change)
+            add_line(TokenType.SEPARATOR_LINE)
+            add_line(TokenType.ASSERTION_TYPE, assertion_type)
+            add_line(TokenType.ASSERTION, state_change)
+            add_line(TokenType.SEPARATOR_LINE)
 
         return tokens
 
