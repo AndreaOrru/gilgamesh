@@ -1,18 +1,14 @@
-import os
 from itertools import zip_longest
-from subprocess import check_call
-from tempfile import NamedTemporaryFile
-from typing import Dict, Iterable, List, Optional, Tuple
-from uuid import uuid4
+from typing import Dict, List, Optional, Tuple
 
 from methodtools import lru_cache  # type: ignore
 
+from gilgamesh.disassembly.parser import EDITABLE_TOKENS, HEADER_TOKENS, Parser, Token
+from gilgamesh.disassembly.parser import TokenType as T
+from gilgamesh.disassembly.renames import apply_renames
 from gilgamesh.errors import ParserError
 from gilgamesh.instruction import Instruction
-from gilgamesh.log import Log
 from gilgamesh.opcodes import Op
-from gilgamesh.parser import EDITABLE_TOKENS, HEADER_TOKENS, Parser, Token
-from gilgamesh.parser import TokenType as T
 from gilgamesh.state import StateChange
 from gilgamesh.subroutine import Subroutine
 
@@ -91,7 +87,7 @@ class Disassembly:
         return tokens
 
     @classmethod
-    def _text_to_tokens(self, text: str) -> List[List[Token]]:
+    def _text_to_tokens(cls, text: str) -> List[List[Token]]:
         """Parse a subroutines's disassembly into a list of lists of tokens."""
 
         p = Parser(text)
@@ -106,30 +102,30 @@ class Disassembly:
                 p.add_line(T.LABEL, p.line[:-1])
 
             # Stack manipulation.
-            elif p.maybe_match_line(self.string(T.STACK_MANIPULATION_HEADER)):
+            elif p.maybe_match_line(cls.string(T.STACK_MANIPULATION_HEADER)):
                 p.new_instruction()
                 p.add_line(T.STACK_MANIPULATION_HEADER)
 
             # Known return state.
-            elif p.maybe_match_line(self.string(T.KNOWN_STATE_HEADER)):
+            elif p.maybe_match_line(cls.string(T.KNOWN_STATE_HEADER)):
                 p.add_line(T.KNOWN_STATE_HEADER)
-                p.add_line_rest(T.KNOWN_STATE, after=self.string(T.KNOWN_STATE))
-                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
+                p.add_line_rest(T.KNOWN_STATE, after=cls.string(T.KNOWN_STATE))
+                p.match_line(T.SEPARATOR_LINE, cls.SEPARATOR_LINE)
 
             # Unknown or asserted (previously unknown) state.
             elif p.maybe_match_line(
-                self.string(T.UNKNOWN_STATE_HEADER)
-            ) or p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
-                if p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
+                cls.string(T.UNKNOWN_STATE_HEADER)
+            ) or p.maybe_match_line(cls.string(T.ASSERTED_STATE_HEADER)):
+                if p.maybe_match_line(cls.string(T.ASSERTED_STATE_HEADER)):
                     p.add_line(T.ASSERTED_STATE_HEADER)
                 else:
                     p.add_line(T.UNKNOWN_STATE_HEADER)
                 # TODO: validate state_expr and assertion_type.
-                p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
-                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
-                p.add_line_rest(T.ASSERTION_TYPE, after=self.string(T.ASSERTION_TYPE))
-                p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
-                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
+                p.add_line_rest(T.LAST_KNOWN_STATE, cls.string(T.LAST_KNOWN_STATE))
+                p.match_line(T.SEPARATOR_LINE, cls.SEPARATOR_LINE)
+                p.add_line_rest(T.ASSERTION_TYPE, after=cls.string(T.ASSERTION_TYPE))
+                p.add_line_rest(T.ASSERTION, after=cls.string(T.ASSERTION))
+                p.match_line(T.SEPARATOR_LINE, cls.SEPARATOR_LINE)
 
             # Instruction line.
             elif p.words[0].upper() in Op.__members__:
@@ -166,10 +162,10 @@ class Disassembly:
         return p.tokens
 
     @classmethod
-    def _instruction_tokens_to_text(self, tokens: List[Token], html=False) -> str:
+    def _instruction_tokens_to_text(cls, tokens: List[Token], html=False) -> str:
         """Generate HTML or plain text from the list of tokens of an instruction."""
-        colorize = lambda s, c: self.colorize(s, c, html)  # noqa: E731
-        string = lambda t: self.string(t, html)  # noqa: E731
+        colorize = lambda s, c: cls.colorize(s, c, html)  # noqa: E731
+        string = lambda t: cls.string(t, html)  # noqa: E731
 
         s = []
         for t in tokens:
@@ -302,52 +298,6 @@ class Disassembly:
         apply_renames(self.log, local_renames)
         return global_renames
 
-    @staticmethod
-    def colorize(s: str, color: Optional[str] = None, html=False) -> str:
-        if html and color:
-            return f"<{color}>{s}</{color}>"
-        return s
-
-    @lru_cache(None)
-    @classmethod
-    def center(self, s: str, color: Optional[str] = None, html=False) -> str:
-        n = self.SEPARATOR_LINE.count("-")
-        left = (n // 2) - (len(s) // 2)
-        right = n - (left + len(s))
-
-        s = self.colorize(s, color, html)
-        result = ";" + ("-" * left) + s + ("-" * right)
-        return self.colorize(result, "grey", html)
-
-    @classmethod
-    def string(self, t: T, html=False) -> str:
-        colorize = lambda s, c: self.colorize(s, c, html)  # noqa: E731
-        center = lambda s, c=None: self.center(s, c, html)  # noqa: E731
-
-        if t == T.SEPARATOR_LINE:
-            return colorize(self.SEPARATOR_LINE, "grey")
-        elif t == T.STACK_MANIPULATION_HEADER:
-            return center("[STACK MANIPULATION]")
-        elif t == T.ASSERTED_STATE_HEADER:
-            return center("[ASSERTED STATE]", "magenta")
-        elif t == T.KNOWN_STATE_HEADER:
-            return center("[KNOWN STATE]", "green")
-        elif t == T.UNKNOWN_STATE_HEADER:
-            return center("[UNKNOWN STATE]", "red")
-
-        elif t == T.KNOWN_STATE:
-            return colorize("; Known return state change:", "grey")
-        elif t == T.LAST_KNOWN_STATE:
-            return colorize("; Last known state change:", "grey")
-
-        elif t == T.ASSERTION_TYPE:
-            return colorize("; ASSERTION TYPE:", "grey")
-        elif t == T.ASSERTION:
-            return colorize("; ASSERTED STATE CHANGE:", "grey")
-
-        breakpoint()
-        assert False
-
     def _get_unknown_state(self, instruction: Instruction):
         # TODO: what if there are both subroutine and instruction assertions?
         subroutine = self.log.subroutines[instruction.subroutine]
@@ -377,84 +327,47 @@ class Disassembly:
 
         return state_change, assertion_type
 
+    @staticmethod
+    def colorize(s: str, color: Optional[str] = None, html=False) -> str:
+        if html and color:
+            return f"<{color}>{s}</{color}>"
+        return s
 
-def apply_renames(log: Log, renamed_labels: Dict[str, str]) -> None:
-    def apply(labels: Dict[str, str], dry=False) -> None:
-        """Naively perform label renames."""
-        for old, new in labels.items():
-            log.rename_label(old, new, dry=dry)
+    @lru_cache(None)
+    @classmethod
+    def center(cls, s: str, color: Optional[str] = None, html=False) -> str:
+        n = cls.SEPARATOR_LINE.count("-")
+        left = (n // 2) - (len(s) // 2)
+        right = n - (left + len(s))
 
-    # Rename labels to temporary unique labels.
-    temp_renamed_labels = {old: unique_label(old) for old in renamed_labels.keys()}
-    # Perform a dry run to make sure there are no errors
-    # when renames are applied to the full disassembly.
-    apply(temp_renamed_labels, dry=True)
-    # Actually apply the renames if everything was ok.
-    apply(temp_renamed_labels)
+        s = cls.colorize(s, color, html)
+        result = ";" + ("-" * left) + s + ("-" * right)
+        return cls.colorize(result, "grey", html)
 
-    # Re-rename the unique labels to the target labels.
-    renamed_labels = {
-        unique_label: renamed_labels[old]
-        for old, unique_label in temp_renamed_labels.items()
-    }
-    apply(renamed_labels)
-    # NOTE: this is needed when swapping pairs of labels.
+    @classmethod
+    def string(cls, t: T, html=False) -> str:
+        colorize = lambda s, c: cls.colorize(s, c, html)  # noqa: E731
+        center = lambda s, c=None: cls.center(s, c, html)  # noqa: E731
 
+        if t == T.SEPARATOR_LINE:
+            return colorize(cls.SEPARATOR_LINE, "grey")
+        elif t == T.STACK_MANIPULATION_HEADER:
+            return center("[STACK MANIPULATION]")
+        elif t == T.ASSERTED_STATE_HEADER:
+            return center("[ASSERTED STATE]", "magenta")
+        elif t == T.KNOWN_STATE_HEADER:
+            return center("[KNOWN STATE]", "green")
+        elif t == T.UNKNOWN_STATE_HEADER:
+            return center("[UNKNOWN STATE]", "red")
 
-def unique_label(orig_label: str) -> str:
-    """Return a unique label. Respects locality (i.e. if orig_label
-    starts with a dot, the generated label will also start with a dot."""
-    return orig_label[0] + "l" + uuid4().hex
-    # TODO: check for meteors.
+        elif t == T.KNOWN_STATE:
+            return colorize("; Known return state change:", "grey")
+        elif t == T.LAST_KNOWN_STATE:
+            return colorize("; Last known state change:", "grey")
 
+        elif t == T.ASSERTION_TYPE:
+            return colorize("; ASSERTION TYPE:", "grey")
+        elif t == T.ASSERTION:
+            return colorize("; ASSERTED STATE CHANGE:", "grey")
 
-class DisassemblyContainer(Disassembly):
-    HEADER = ";;" + ("=" * 41) + "\n"
-
-    def __init__(self, log: Log, subroutines: Iterable[Subroutine]):
-        super().__init__(next(iter(subroutines)))
-        self.disassemblies = [Disassembly(sub) for sub in subroutines]
-
-    def edit(self) -> None:
-        # Save the subroutines' disassembly in a temporary file.
-        original_tokens: List[List[List[Token]]] = []
-        with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
-            for disassembly in self.disassemblies:
-                f.write(self.HEADER)
-                text, tokens = disassembly._get_text()
-                original_tokens.append(tokens)
-                f.write(text)
-                f.write("\n\n\n")
-            filename = f.name
-
-        # Edit the file in an editor.
-        check_call([*os.environ["EDITOR"].split(), filename])
-        new_text = open(filename).read()
-        os.remove(filename)
-
-        global_renames: Dict[str, str] = {}
-        subroutine_texts = new_text.split(self.HEADER)
-
-        # Apply all the changes local to the individual subroutines.
-        for i, disassembly in enumerate(self.disassemblies):
-            new_tokens = disassembly._text_to_tokens(subroutine_texts[i + 1])
-            renames = disassembly._apply_changes(original_tokens[i], new_tokens)
-
-            # Gather global renames.
-            for old, new in renames.items():
-                if global_renames.get(old, new) != new:
-                    raise ParserError(f'Ambiguous label change: "{old}" -> "{new}".')
-                global_renames[old] = new
-
-        # Apply the global renames.
-        apply_renames(self.log, global_renames)
-
-
-class SubroutineDisassembly(DisassemblyContainer):
-    def __init__(self, subroutine: Subroutine):
-        super().__init__(subroutine.log, [subroutine])
-
-
-class ROMDisassembly(DisassemblyContainer):
-    def __init__(self, log: Log):
-        super().__init__(log, log.subroutines.values())
+        assert False

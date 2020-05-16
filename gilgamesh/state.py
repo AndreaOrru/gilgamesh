@@ -20,7 +20,7 @@ class State:
             self.p |= x << X_BIT
 
     @classmethod
-    def from_state_expr(self, expr: str) -> "State":
+    def from_state_expr(cls, expr: str) -> "State":
         # TODO: Write tests for this.
         if not (
             re.match(r"m=(0|1),x=(0|1)", expr) or re.match(r"x=(0|1),m=(0|1)", expr)
@@ -28,7 +28,7 @@ class State:
             raise GilgameshError("Unknown syntax.")
 
         expressions = expr.split(",")
-        return self(
+        return cls(
             **{
                 str(register).lower(): int(value)
                 for register, value in (e.split("=") for e in expressions)
@@ -93,16 +93,16 @@ class StateChange:
         self.unknown = unknown
 
     @classmethod
-    def from_state_expr(self, expr: str) -> "StateChange":
+    def from_state_expr(cls, expr: str) -> "StateChange":
         # TODO: Validate expression.
         if expr.lower() == "none":
-            return self()
+            return cls()
         elif expr.lower() == "unknown":
-            return self(unknown=True)
+            return cls(unknown=True)
 
         expressions = expr.split(",")
         if 1 <= len(expressions) <= 2:
-            return self(
+            return cls(
                 **{
                     str(register).lower(): int(value)
                     for register, value in (e.split("=") for e in expressions)

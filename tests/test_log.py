@@ -9,8 +9,8 @@ from tests.test_rom import assemble
 
 class LogTest(ABC):
     @classmethod
-    def setUpClass(self):
-        self.rom = ROM(assemble(self.asm))
+    def setUpClass(cls):
+        cls.rom = ROM(assemble(cls.asm))
 
     def setUp(self):
         self.log = Log(self.rom)
