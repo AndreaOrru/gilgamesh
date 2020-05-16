@@ -5,7 +5,7 @@ from methodtools import lru_cache  # type: ignore
 
 from gilgamesh.disassembly.parser import EDITABLE_TOKENS, HEADER_TOKENS, Parser, Token
 from gilgamesh.disassembly.parser import TokenType as T
-from gilgamesh.disassembly.renames import apply_renames
+from gilgamesh.disassembly.renames import apply_local_renames
 from gilgamesh.errors import ParserError
 from gilgamesh.instruction import Instruction
 from gilgamesh.opcodes import Op
@@ -212,7 +212,8 @@ class Disassembly:
                 line_n, orig_instr_tokens, new_instr_tokens, renamed_labels
             )
 
-        return self._apply_renames(renamed_labels)
+        global_renames = apply_local_renames(self.subroutine, renamed_labels)
+        return global_renames
 
     def _apply_instruction_changes(
         self,
@@ -281,22 +282,6 @@ class Disassembly:
                 renamed_labels[orig.val] = new.val
         # Return the updated line index.
         return line_n
-
-    def _apply_renames(self, renamed_labels: Dict[str, str]) -> Dict[str, str]:
-        """Safely perform bulk label renames."""
-
-        # Separate local and global renames. Global renames
-        # will be performed by the DisassemblyContainer.
-        local_renames = {}
-        global_renames = {}
-        for old, new in renamed_labels.items():
-            if old[0] == ".":
-                local_renames[old] = new
-            else:
-                global_renames[old] = new
-
-        apply_renames(self.log, local_renames)
-        return global_renames
 
     def _get_unknown_state(self, instruction: Instruction):
         # TODO: what if there are both subroutine and instruction assertions?

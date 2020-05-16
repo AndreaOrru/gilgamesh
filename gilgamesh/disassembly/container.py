@@ -3,8 +3,9 @@ from subprocess import check_call
 from tempfile import NamedTemporaryFile
 from typing import Dict, Iterable, List
 
-from gilgamesh.disassembly.disassembly import Disassembly, apply_renames
+from gilgamesh.disassembly.disassembly import Disassembly
 from gilgamesh.disassembly.parser import Token
+from gilgamesh.disassembly.renames import apply_renames
 from gilgamesh.errors import ParserError
 from gilgamesh.log import Log
 from gilgamesh.subroutine import Subroutine
@@ -14,7 +15,7 @@ class DisassemblyContainer(Disassembly):
     HEADER = ";;" + ("=" * 41) + "\n"
 
     def __init__(self, log: Log, subroutines: Iterable[Subroutine]):
-        super().__init__(next(iter(subroutines)))
+        super().__init__(next(iter(subroutines)))  # HACK
         self.disassemblies = [Disassembly(sub) for sub in subroutines]
 
     def edit(self) -> None:
