@@ -47,10 +47,10 @@ def unique_label(orig_label: str) -> str:
 class Disassembly:
     # fmt: off
     SEPARATOR_LINE            = ";---------------------------------------"  # noqa
-    ASSERTED_STATE_HEADER     = ";------------<magenta>[ASSERTED STATE]</magenta>-----------"  # noqa
-    KNOWN_STATE_HEADER        = ";-------------<green>[KNOWN STATE]</green>-------------"  # noqa
     STACK_MANIPULATION_HEADER = ";----------[STACK MANIPULATION]---------"  # noqa
-    UNKNOWN_STATE_HEADER      = ";------------<red>[UNKNOWN STATE]</red>------------"  # noqa
+    ASSERTED_STATE_HEADER     = ";------------{}[ASSERTED STATE]{}-----------"  # noqa
+    KNOWN_STATE_HEADER        = ";-------------{}[KNOWN STATE]{}-------------"  # noqa
+    UNKNOWN_STATE_HEADER      = ";------------{}[UNKNOWN STATE]{}------------"  # noqa
     # fmt: on
 
     def __init__(self, subroutine: Subroutine):
@@ -207,11 +207,23 @@ class Disassembly:
                 s.append("{} | {}{}".format(o("grey"), token.val, c("grey")))
 
             elif token.typ == TokenType.ASSERTED_STATE_HEADER:
-                s.append(f'  {o("grey")}{cls.ASSERTED_STATE_HEADER}{c("grey")}')
+                s.append(
+                    f'  {o("grey")}'
+                    + cls.ASSERTED_STATE_HEADER.format(o("magenta"), c("magenta"))
+                    + c("grey")
+                )
             elif token.typ == TokenType.KNOWN_STATE_HEADER:
-                s.append(f'  {o("grey")}{cls.KNOWN_STATE_HEADER}{c("grey")}')
+                s.append(
+                    f'  {o("grey")}'
+                    + cls.KNOWN_STATE_HEADER.format(o("green"), c("green"))
+                    + c("grey")
+                )
             elif token.typ == TokenType.UNKNOWN_STATE_HEADER:
-                s.append(f'  {o("grey")}{cls.UNKNOWN_STATE_HEADER}{c("grey")}')
+                s.append(
+                    f'  {o("grey")}'
+                    + cls.UNKNOWN_STATE_HEADER.format(o("red"), c("red"))
+                    + c("grey")
+                )
             elif token.typ == TokenType.STACK_MANIPULATION_HEADER:
                 s.append(f'  {o("grey")}{cls.STACK_MANIPULATION_HEADER}{c("grey")}')
 
@@ -339,7 +351,7 @@ class Disassembly:
                 p.add_line(TokenType.STACK_MANIPULATION_HEADER)
 
             # Known return state.
-            elif p.maybe_match_line(cls.KNOWN_STATE_HEADER):
+            elif p.maybe_match_line(cls.KNOWN_STATE_HEADER.format("", "")):
                 p.add_line(TokenType.KNOWN_STATE_HEADER)
                 p.match_part("; Known return state change:")
                 state_expr = p.words[5]
@@ -347,10 +359,10 @@ class Disassembly:
                 p.match_line(TokenType.SEPARATOR_LINE, cls.SEPARATOR_LINE)
 
             # Unknown or asserted (previously unknown) state.
-            elif p.maybe_match_line(cls.UNKNOWN_STATE_HEADER) or p.maybe_match_line(
-                cls.ASSERTED_STATE_HEADER
-            ):
-                if p.maybe_match_line(cls.UNKNOWN_STATE_HEADER):
+            elif p.maybe_match_line(
+                cls.UNKNOWN_STATE_HEADER.format("", "")
+            ) or p.maybe_match_line(cls.ASSERTED_STATE_HEADER.format("", "")):
+                if p.maybe_match_line(cls.UNKNOWN_STATE_HEADER.format("", "")):
                     p.add_line(TokenType.UNKNOWN_STATE_HEADER)
                 else:
                     p.add_line(TokenType.ASSERTED_STATE_HEADER)
