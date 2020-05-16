@@ -2,5 +2,6 @@ bidict
 cached-property
 click
 dictlib
+methodtools
 prompt_toolkit
 sortedcontainers

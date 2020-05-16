@@ -2,8 +2,10 @@ import os
 from itertools import zip_longest
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 from uuid import uuid4
+
+from methodtools import lru_cache  # type: ignore
 
 from gilgamesh.errors import ParserError
 from gilgamesh.instruction import Instruction
@@ -166,37 +168,36 @@ class Disassembly:
     @classmethod
     def _instruction_tokens_to_text(self, tokens: List[Token], html=False) -> str:
         """Generate HTML or plain text from the list of tokens of an instruction."""
+        colorize = lambda s, c: self.colorize(s, c, html)  # noqa: E731
+        string = lambda t: self.string(t, html)  # noqa: E731
 
-        fmt = lambda s, c: f"<{c}>{s}</{c}>" if html else s  # noqa: E731
-        s = lambda t: self.string(t, html)  # noqa: E731
-
-        r = []
+        s = []
         for t in tokens:
             if t.typ == T.NEWLINE:
-                r.append("\n")
+                s.append("\n")
             elif t.typ == T.LABEL:
-                r.append("{}:".format(fmt(t.val, "red")))
+                s.append("{}:".format(colorize(t.val, "red")))
             elif t.typ == T.OPERATION:
-                r.append(fmt(f"  {t.val:4}", "green"))
+                s.append(colorize(f"  {t.val:4}", "green"))
             elif t.typ == T.OPERAND:
-                r.append(f"{t.val:25}")
+                s.append(f"{t.val:25}")
             elif t.typ == T.OPERAND_LABEL:
-                r.append(fmt(f"{t.val:25}", "red"))
+                s.append(colorize(f"{t.val:25}", "red"))
             elif t.typ == T.PC:
-                r.append(fmt(f" ; {t.val}", "grey"))
+                s.append(colorize(f" ; {t.val}", "grey"))
             elif t.typ == T.COMMENT:
-                r.append(fmt(f" | {t.val}", "grey"))
+                s.append(colorize(f" | {t.val}", "grey"))
             elif t.typ in HEADER_TOKENS:
-                r.append(f"  {s(t.typ)}")
+                s.append(f"  {string(t.typ)}")
             elif t.typ in (T.KNOWN_STATE, T.LAST_KNOWN_STATE):
-                r.append(f'  {s(t.typ)} {fmt(t.val, "green")}')
-            elif t.typ in (T.ASSERTION, T.ASSERTION_TYPE):
-                if t.typ == T.ASSERTION:
-                    color = "red" if t.val == "unknown" else "magenta"
-                elif t.typ == T.ASSERTION_TYPE:
-                    color = "red" if t.val == "none" else "magenta"
-                r.append(f"  {s(t.typ)} {fmt(t.val, color)}")
-        return "".join(r)
+                s.append(f'  {string(t.typ)} {colorize(t.val, "green")}')
+            elif t.typ == T.ASSERTION_TYPE:
+                color = "red" if t.val == "none" else "magenta"
+                s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
+            elif t.typ == T.ASSERTION:
+                color = "red" if t.val == "unknown" else "magenta"
+                s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
+        return "".join(s)
 
     def _apply_changes(
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
@@ -301,22 +302,30 @@ class Disassembly:
         apply_renames(self.log, local_renames)
         return global_renames
 
+    @staticmethod
+    def colorize(s: str, color: Optional[str] = None, html=False) -> str:
+        if html and color:
+            return f"<{color}>{s}</{color}>"
+        return s
+
+    @lru_cache(None)
+    @classmethod
+    def center(self, s: str, color: Optional[str] = None, html=False) -> str:
+        n = self.SEPARATOR_LINE.count("-")
+        left = (n // 2) - (len(s) // 2)
+        right = n - (left + len(s))
+
+        s = self.colorize(s, color, html)
+        result = ";" + ("-" * left) + s + ("-" * right)
+        return self.colorize(result, "grey", html)
+
     @classmethod
     def string(self, t: T, html=False) -> str:
-        def fmt(s: str, color=None) -> str:
-            if html and color:
-                s = f"<{color}>{s}</{color}>"
-            return s
-
-        def center(s: str, color=None) -> str:
-            n = self.SEPARATOR_LINE.count("-")
-            left = (n // 2) - (len(s) // 2)
-            right = n - (left + len(s))
-            s = fmt(s, color)
-            return fmt(";" + ("-" * left) + s + ("-" * right), "grey")
+        colorize = lambda s, c: self.colorize(s, c, html)  # noqa: E731
+        center = lambda s, c=None: self.center(s, c, html)  # noqa: E731
 
         if t == T.SEPARATOR_LINE:
-            return fmt(self.SEPARATOR_LINE, "grey")
+            return colorize(self.SEPARATOR_LINE, "grey")
         elif t == T.STACK_MANIPULATION_HEADER:
             return center("[STACK MANIPULATION]")
         elif t == T.ASSERTED_STATE_HEADER:
@@ -327,14 +336,14 @@ class Disassembly:
             return center("[UNKNOWN STATE]", "red")
 
         elif t == T.KNOWN_STATE:
-            return fmt("; Known return state change:", "grey")
+            return colorize("; Known return state change:", "grey")
         elif t == T.LAST_KNOWN_STATE:
-            return fmt("; Last known state change:", "grey")
+            return colorize("; Last known state change:", "grey")
 
         elif t == T.ASSERTION_TYPE:
-            return fmt("; ASSERTION TYPE:", "grey")
+            return colorize("; ASSERTION TYPE:", "grey")
         elif t == T.ASSERTION:
-            return fmt("; ASSERTED STATE CHANGE:", "grey")
+            return colorize("; ASSERTED STATE CHANGE:", "grey")
 
         breakpoint()
         assert False
