@@ -422,7 +422,7 @@ class DisassemblyContainer(Disassembly):
                 text, tokens = disassembly._get_text()
                 original_tokens.append(tokens)
                 f.write(text)
-                f.write("\n\n")
+                f.write("\n\n\n")
             filename = f.name
 
         # Edit the file in an editor.

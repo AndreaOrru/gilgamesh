@@ -226,7 +226,7 @@ class StackManipulationTest(LogTest, TestCase):
         reset = self.log.subroutines_by_label["reset"]
         self.assertNotIn(0x8004, reset.instructions)
 
-        manipulation_sub = self.log.subroutines[0x8008]
+        manipulation_sub = self.log.subroutines[0x8007]
         self.assertTrue(manipulation_sub.has_unknown_return_state)
 
 
