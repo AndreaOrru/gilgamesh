@@ -136,14 +136,16 @@ class Disassembly:
                     if orig_assert_type == "instruction":
                         self.log.deassert_instruction_state_change(pc)
                     elif orig_assert_type == "subroutine":
-                        self.log.deassert_subroutine_state_change(self.subroutine.pc)
+                        self.log.deassert_subroutine_state_change(
+                            pc, self.subroutine.pc
+                        )
 
                 if anything_changed:
                     if new_assert_type == "instruction":
                         self.log.assert_instruction_state_change(pc, state_change)
                     elif new_assert_type == "subroutine":
                         self.log.assert_subroutine_state_change(
-                            self.subroutine, state_change
+                            pc, self.subroutine, state_change
                         )
 
             # If the value of the current token has been changed:
@@ -278,11 +280,13 @@ class Disassembly:
         unknown_state = False
 
         # TODO: what if there are both subroutine and instruction assertions?
-        if subroutine.has_asserted_state_change and (
-            instruction.stopped_execution or instruction.is_return
-        ):
+        if (
+            subroutine.has_asserted_state_change
+            and self.log.subroutine_assertions[subroutine.pc].get(instruction.pc)
+        ) and (instruction.stopped_execution or instruction.is_return):
             unknown_state = True
-            assertion = self.log.subroutine_assertions.get(subroutine_pc)
+            assertions = self.log.subroutine_assertions.get(subroutine_pc)
+            assertion = assertions.get(instruction.pc)
             state_change = (
                 assertion.state_expr if assertion else instruction.state_change
             )

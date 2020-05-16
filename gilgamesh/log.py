@@ -23,7 +23,9 @@ class Log:
 
     def reset(self) -> None:
         self.instruction_assertions: Dict[int, StateChange] = {}
-        self.subroutine_assertions: Dict[int, StateChange] = {}
+        self.subroutine_assertions: DefaultDict[
+            int, Dict[int, StateChange]
+        ] = defaultdict(dict)
         self.preserved_labels: Dict[int, str] = {}
         self.comments: Dict[int, str] = {}
 
@@ -121,18 +123,18 @@ class Log:
             self.subroutines_by_label[label] = subroutine
 
         # Apply existing state change assertions.
-        state_change = self.subroutine_assertions.get(pc)
-        if state_change:
-            subroutine.assert_state_change(state_change)
+        state_changes = self.subroutine_assertions.get(pc, {})
+        for state_change in state_changes.items():
+            subroutine.assert_state_change(*state_change)
 
     def add_subroutine_state(
-        self, subroutine_pc: int, state_change: StateChange
+        self, instruction_pc: int, subroutine_pc: int, state_change: StateChange
     ) -> None:
         if subroutine_pc not in self.subroutine_assertions:
             # Keep track of the processor state changes
             # caused by the execution of a subroutine.
             subroutine = self.subroutines[subroutine_pc]
-            subroutine.state_changes.add(state_change)
+            subroutine.state_changes[instruction_pc] = state_change
 
     def assert_instruction_state_change(
         self, instruction_pc: int, state_change: StateChange
@@ -145,14 +147,20 @@ class Log:
         self.dirty = True
 
     def assert_subroutine_state_change(
-        self, subroutine: Subroutine, state_change: StateChange
+        self, instruction_pc: int, subroutine: Subroutine, state_change: StateChange
     ) -> None:
-        self.subroutine_assertions[subroutine.pc] = state_change
+        self.subroutine_assertions[subroutine.pc][instruction_pc] = state_change
         self.dirty = True
 
-    def deassert_subroutine_state_change(self, subroutine_pc: int) -> None:
-        self.subroutine_assertions.pop(subroutine_pc, None)
-        self.dirty = True
+    def deassert_subroutine_state_change(
+        self, instruction_pc: int, subroutine_pc: int
+    ) -> None:
+        sub_assertions = self.subroutine_assertions.get(subroutine_pc, None)
+        if sub_assertions:
+            sub_assertions.pop(instruction_pc, None)
+            if not sub_assertions:
+                del self.subroutine_assertions[subroutine_pc]
+            self.dirty = True
 
     def add_reference(self, instruction: Instruction, target: int) -> None:
         self.references[target].add((instruction.pc, instruction.subroutine))

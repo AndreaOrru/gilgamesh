@@ -96,8 +96,9 @@ class App(Repl):
         self.log.assert_instruction_state_change(instruction_pc, state_change)
 
     @command()
+    @argument("label_or_pc", complete_label)
     @argument("state_expr")
-    def do_assert_subroutine(self, state_expr: str) -> None:
+    def do_assert_subroutine(self, label_or_pc: str, state_expr: str) -> None:
         """Define a known processor return state for a given subroutine.
 
         STATE_EXPR can accept the following values:
@@ -110,8 +111,10 @@ class App(Repl):
           - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
+        # TODO: check that pc is an instruction inside the subroutine.
+        pc = self._label_to_pc(label_or_pc)
         state_change = StateChange.from_state_expr(state_expr)
-        self.log.assert_subroutine_state_change(self.subroutine, state_change)
+        self.log.assert_subroutine_state_change(pc, self.subroutine, state_change)
 
     @command()
     @argument("label_or_pc", complete_label)
@@ -143,11 +146,13 @@ class App(Repl):
         self.log.deassert_instruction_state_change(pc)
 
     @command()
+    @argument("label_or_pc", complete_label)
     @argument("subroutine_or_pc", complete_subroutine)
-    def do_deassert_subroutine(self, subroutine_or_pc: str) -> None:
+    def do_deassert_subroutine(self, label_or_pc: str, subroutine_or_pc: str) -> None:
         """Remove previously defined subroutine assertions."""
-        pc = self._label_to_pc(subroutine_or_pc)
-        self.log.deassert_subroutine_state_change(pc)
+        instr_pc = self._label_to_pc(label_or_pc)
+        sub_pc = self._label_to_pc(subroutine_or_pc)
+        self.log.deassert_subroutine_state_change(instr_pc, sub_pc)
 
     @command()
     def do_disassembly(self) -> None:
@@ -248,13 +253,16 @@ class App(Repl):
             return
 
         s = ["<red>ASSERTED SUBROUTINE STATE CHANGES:</red>\n"]
-        for pc, change in self.log.subroutine_assertions.items():
-            try:
-                sub = "<magenta>{}</magenta>".format(self.log.subroutines[pc].label)
-            except KeyError:
-                sub = "<red>${:06X}</red>".format(pc)
-            s.append(f"  {sub} -> ")
-            s.append(self._print_state_change(change))
+        for sub_pc, state_changes in self.log.subroutine_assertions.items():
+            for instr_pc, change in state_changes.items():
+                try:
+                    sub = "<magenta>{}</magenta>".format(
+                        self.log.subroutines[sub_pc].label
+                    )
+                except KeyError:
+                    sub = "<red>${:06X}</red>".format(sub_pc)
+                s.append(f"  {sub} -> ")
+                s.append(self._print_state_change(change))
         print_html("".join(s))
 
     @command()
@@ -382,16 +390,18 @@ class App(Repl):
     def do_query_statechange(self, subroutine_or_pc: str) -> None:
         """Show the change in processor state caused by executing a subroutine."""
         pc = self._label_to_pc(subroutine_or_pc)
-        asserted_change = self.log.subroutine_assertions.get(pc)
-        if asserted_change:
-            return print_html(
-                "{} <magenta>(asserted)</magenta>".format(
-                    self._print_state_change(asserted_change, newline=False)
+        asserted_changes = self.log.subroutine_assertions.get(pc)
+        if asserted_changes:
+            for asserted_change in asserted_changes.values():
+                print_html(
+                    "{} <magenta>(asserted)</magenta>".format(
+                        self._print_state_change(asserted_change, newline=False)
+                    )
                 )
-            )
+            return
 
         s = []
-        for change in self.log.subroutines[pc].state_changes:
+        for instr_pc, change in self.log.subroutines[pc].state_changes.items():
             s.append(self._print_state_change(change))
         print_html("".join(s))
 
