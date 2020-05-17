@@ -30,13 +30,17 @@ class State:
         expressions = expr.split(",")
         return cls(
             **{
-                str(register).lower(): int(value)
+                str(register): int(value)
                 for register, value in (e.split("=") for e in expressions)
             }
         )
 
+    @property
+    def state_expr(self) -> str:
+        return f"m={self.m},x={self.x}"
+
     def __repr__(self) -> str:
-        return f"<State: M={self.m}, X={self.x}>"
+        return f"<State: {self.state_expr}>"
 
     def __eq__(self, other) -> bool:
         return self.p == other.p
@@ -95,16 +99,16 @@ class StateChange:
     @classmethod
     def from_state_expr(cls, expr: str) -> "StateChange":
         # TODO: Validate expression.
-        if expr.lower() == "none":
+        if expr == "none":
             return cls()
-        elif expr.lower() == "unknown":
+        elif expr == "unknown":
             return cls(unknown=True)
 
         expressions = expr.split(",")
         if 1 <= len(expressions) <= 2:
             return cls(
                 **{
-                    str(register).lower(): int(value)
+                    str(register): int(value)
                     for register, value in (e.split("=") for e in expressions)
                 }
             )
@@ -114,15 +118,15 @@ class StateChange:
     @property
     def state_expr(self) -> str:
         if self.unknown:
-            return "UNKNOWN"
+            return "unknown"
 
         r = ""
-        m_str = [f"M={self.m}"] if self.m is not None else []
-        x_str = [f"X={self.x}"] if self.x is not None else []
+        m_str = [f"m={self.m}"] if self.m is not None else []
+        x_str = [f"x={self.x}"] if self.x is not None else []
         if m_str or x_str:
             r += ",".join([*m_str, *x_str])
         else:
-            r += "None"
+            r += "none"
         return r
 
     def __repr__(self) -> str:

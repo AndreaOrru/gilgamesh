@@ -235,7 +235,7 @@ class App(Repl):
                 if not instruction.argument_string:
                     disassembly = disassembly[:-1]  # Delete extra space.
             except IndexError:
-                disassembly = "<red>UNKNOWN</red> "
+                disassembly = "<red>unknown</red> "
 
             s.append("  <magenta>${:06X}</magenta>  {}-> ".format(pc, disassembly))
             s.append(self._print_state_change(change))

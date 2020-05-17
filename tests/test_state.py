@@ -6,7 +6,7 @@ from gilgamesh.snes.state import State, StateChange
 class StateTest(TestCase):
     def test_repr(self):
         state = State(m=1, x=1)
-        self.assertEqual(repr(state), "<State: M=1, X=1>")
+        self.assertEqual(repr(state), "<State: m=1,x=1>")
 
     def test_defaults_to_8bits(self):
         state = State()
@@ -49,50 +49,57 @@ class StateTest(TestCase):
         self.assertEqual(state.m, 0)
         self.assertEqual(state.x, 0)
 
+    def test_from_state_expr(self):
+        state = State.from_state_expr("m=0,x=1")
+        self.assertEqual(state, State(m=0, x=1))
+
+        state = State.from_state_expr("x=0,m=1")
+        self.assertEqual(state, State(x=0, m=1))
+
+    def test_state_expr(self):
+        state = State(m=1, x=1)
+        self.assertEqual(state.state_expr, "m=1,x=1")
+
 
 class StateChangeTest(TestCase):
     def test_repr(self):
         change = StateChange()
-        self.assertEqual(repr(change), "<StateChange: None>")
+        self.assertEqual(repr(change), "<StateChange: none>")
 
         change = StateChange(unknown=True)
-        self.assertEqual(repr(change), "<StateChange: UNKNOWN>")
+        self.assertEqual(repr(change), "<StateChange: unknown>")
 
         change = StateChange(m=1)
-        self.assertEqual(repr(change), "<StateChange: M=1>")
+        self.assertEqual(repr(change), "<StateChange: m=1>")
 
         change = StateChange(m=1, x=1)
-        self.assertEqual(repr(change), "<StateChange: M=1,X=1>")
+        self.assertEqual(repr(change), "<StateChange: m=1,x=1>")
 
     def test_from_state_expr(self):
         change = StateChange.from_state_expr("none")
         self.assertEqual(change, StateChange())
-        change = StateChange.from_state_expr("None")
-        self.assertEqual(change, StateChange())
 
-        change = StateChange.from_state_expr("M=0")
+        change = StateChange.from_state_expr("m=0")
         self.assertEqual(change, StateChange(m=0))
         change = StateChange.from_state_expr("x=1")
         self.assertEqual(change, StateChange(x=1))
 
-        change = StateChange.from_state_expr("m=0,X=1")
+        change = StateChange.from_state_expr("m=0,x=1")
         self.assertEqual(change, StateChange(m=0, x=1))
-        change = StateChange.from_state_expr("x=0,M=1")
-        self.assertEqual(change, StateChange(m=1, x=0))
+        change = StateChange.from_state_expr("x=0,m=1")
+        self.assertEqual(change, StateChange(x=0, m=1))
 
     def test_state_expr(self):
         change = StateChange()
-        self.assertEqual(change.state_expr, "None")
+        self.assertEqual(change.state_expr, "none")
 
         change = StateChange(m=0)
-        self.assertEqual(change.state_expr, "M=0")
+        self.assertEqual(change.state_expr, "m=0")
         change = StateChange(x=1)
-        self.assertEqual(change.state_expr, "X=1")
+        self.assertEqual(change.state_expr, "x=1")
 
         change = StateChange(m=0, x=1)
-        self.assertEqual(change.state_expr, "M=0,X=1")
-        change = StateChange(m=1, x=0)
-        self.assertEqual(change.state_expr, "M=1,X=0")
+        self.assertEqual(change.state_expr, "m=0,x=1")
 
     def test_eq_hash(self):
         changes = set()
