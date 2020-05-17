@@ -90,6 +90,15 @@ class Log:
 
         self.analyze(preserve_labels=False)
 
+    @property
+    def num_suspect_subroutines(self) -> int:
+        return sum(
+            1 if s.has_suspect_instructions else 0 for s in self.subroutines.values()
+        )
+
+    def instruction_subroutines(self, instr_pc: int) -> List[Subroutine]:
+        return [self.subroutines[i.subroutine] for i in self.instructions[instr_pc]]
+
     def add_entry_point(self, pc: int, name: str, state: State):
         if (pc in self.entry_points) or (pc in self.instructions):
             raise GilgameshError("This address is already covered by the analysis.")
@@ -156,7 +165,7 @@ class Log:
         self.dirty = True
 
     def assert_subroutine_state_change(
-        self, instruction_pc: int, subroutine: Subroutine, state_change: StateChange
+        self, subroutine: Subroutine, instruction_pc: int, state_change: StateChange
     ) -> None:
         if subroutine.pc not in self.subroutine_assertions:
             self.subroutine_assertions[subroutine.pc] = {}
@@ -164,7 +173,7 @@ class Log:
         self.dirty = True
 
     def deassert_subroutine_state_change(
-        self, instruction_pc: int, subroutine_pc: int
+        self, subroutine_pc: int, instruction_pc: int,
     ) -> None:
         sub_assertions = self.subroutine_assertions.get(subroutine_pc, None)
         if sub_assertions:
@@ -188,30 +197,30 @@ class Log:
         return None
 
     def get_label_value(
-        self, label: str, subroutine_pc: Optional[int] = None
+        self, label: str, subroutine: Optional[Subroutine] = None
     ) -> Optional[int]:
         # If there's a match with a subroutine.
-        subroutine = self.subroutines_by_label.get(label)
-        if subroutine is not None:
-            return subroutine.pc
+        target_subroutine = self.subroutines_by_label.get(label)
+        if target_subroutine is not None:
+            return target_subroutine.pc
 
         # If there's a match with a local label inside the given subroutine.
-        if subroutine_pc is not None:
-            return self.local_labels[subroutine_pc].get(label[1:])
+        if subroutine is not None:
+            return self.local_labels[subroutine.pc].get(label[1:])
 
         return None
 
     def rename_label(
-        self, old: str, new: str, subroutine_pc: Optional[int] = None, dry=False
+        self, old: str, new: str, subroutine: Optional[Subroutine] = None, dry=False
     ) -> None:
         if old.startswith("."):
-            if subroutine_pc is None:
+            if subroutine is None:
                 raise GilgameshError("No selected subroutine.")
             if not new.startswith("."):
                 raise GilgameshError(
                     "Tried to transform a local label into a global one."
                 )
-            self._rename_local_label(old[1:], new[1:], subroutine_pc, dry)
+            self._rename_local_label(old[1:], new[1:], subroutine.pc, dry)
         else:
             if new.startswith("."):
                 raise GilgameshError(
@@ -256,12 +265,6 @@ class Log:
     def is_visited(self, instruction_id: InstructionID) -> bool:
         elements = self.instructions.get(instruction_id.pc, set())
         return instruction_id in elements
-
-    @property
-    def num_suspect_subroutines(self) -> int:
-        return sum(
-            1 if s.has_suspect_instructions else 0 for s in self.subroutines.values()
-        )
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():

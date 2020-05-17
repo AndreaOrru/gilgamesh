@@ -130,7 +130,7 @@ class UnknownJumpTest(LogTest, TestCase):
     def test_assert_state_change(self):
         # Assertion.
         unknown = self.log.subroutines[0x800B]
-        self.log.assert_subroutine_state_change(0x800B, unknown, StateChange())
+        self.log.assert_subroutine_state_change(unknown, 0x800B, StateChange())
         self.assertTrue(self.log.dirty)
         self.log.analyze()
         self.assertFalse(self.log.dirty)

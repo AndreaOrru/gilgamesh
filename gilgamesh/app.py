@@ -113,9 +113,9 @@ class App(Repl):
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
         # TODO: check that pc is an instruction inside the subroutine.
-        pc = self._label_to_pc(label_or_pc)
+        instr_pc = self._label_to_pc(label_or_pc)
         state_change = StateChange.from_state_expr(state_expr)
-        self.log.assert_subroutine_state_change(pc, self.subroutine, state_change)
+        self.log.assert_subroutine_state_change(self.subroutine, instr_pc, state_change)
 
     @command()
     @argument("label_or_pc", complete_label)
@@ -153,7 +153,7 @@ class App(Repl):
         if self.subroutine_pc is None:
             raise GilgameshError("No selected subroutine.")
         instr_pc = self._label_to_pc(label_or_pc)
-        self.log.deassert_subroutine_state_change(instr_pc, self.subroutine_pc)
+        self.log.deassert_subroutine_state_change(self.subroutine_pc, instr_pc)
 
     @command()
     def do_disassembly(self) -> None:
@@ -220,9 +220,7 @@ class App(Repl):
 
         s = ["<red>ASSERTED INSTRUCTION STATE CHANGES:</red>\n"]
         for pc, change in self.log.instruction_assertions.items():
-            subroutines = [
-                self.log.subroutines[i.subroutine] for i in self.log.instructions[pc]
-            ]
+            subroutines = self.log.instruction_subroutines(pc)
             instruction = subroutines[0].instructions[pc]
             disassembly = self._print_instruction(instruction)
 
@@ -413,7 +411,7 @@ class App(Repl):
     @argument("new")
     def do_rename(self, old: str, new: str) -> None:
         """Rename a label or subroutine."""
-        self.log.rename_label(old, new, self.subroutine.pc if self.subroutine else None)
+        self.log.rename_label(old, new, self.subroutine)
 
     @command()
     def do_reset(self) -> None:
@@ -488,9 +486,7 @@ class App(Repl):
                 raise GilgameshError("The given PC is not valid for this ROM.")
             return pc
 
-        label_pc = self.log.get_label_value(
-            label_or_pc, self.subroutine.pc if self.subroutine else None
-        )
+        label_pc = self.log.get_label_value(label_or_pc, self.subroutine)
         if label_pc is None:
             raise GilgameshError("Unknown label.")
         return label_pc

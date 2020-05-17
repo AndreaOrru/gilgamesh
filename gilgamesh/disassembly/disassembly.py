@@ -283,14 +283,14 @@ class Disassembly:
                         self.log.deassert_instruction_state_change(pc)
                     elif orig_assert_type == "subroutine":
                         self.log.deassert_subroutine_state_change(
-                            pc, self.subroutine.pc
+                            self.subroutine.pc, pc
                         )
                 if anything_changed:
                     if new_assert_type == "instruction":
                         self.log.assert_instruction_state_change(pc, state_change)
                     elif new_assert_type == "subroutine":
                         self.log.assert_subroutine_state_change(
-                            pc, self.subroutine, state_change
+                            self.subroutine, pc, state_change
                         )
 
             # Comments.

@@ -11,7 +11,7 @@ def apply_renames(
     def apply(labels: Dict[str, str], dry=False) -> None:
         """Naively perform label renames."""
         for old, new in labels.items():
-            log.rename_label(old, new, subroutine.pc if subroutine else None, dry=dry)
+            log.rename_label(old, new, subroutine, dry=dry)
 
     # Rename labels to temporary unique labels.
     temp_renamed_labels = {old: unique_label(old) for old in renamed_labels.keys()}
