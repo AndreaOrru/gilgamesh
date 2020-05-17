@@ -9,7 +9,7 @@ from gilgamesh.errors import GilgameshError
 from gilgamesh.snes.cpu import CPU
 from gilgamesh.snes.instruction import Instruction, InstructionID
 from gilgamesh.snes.rom import ROM
-from gilgamesh.snes.state import StateChange
+from gilgamesh.snes.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
 from gilgamesh.utils.invalidable import bulk_invalidate
 
@@ -89,6 +89,12 @@ class Log:
         self.comments = data["comments"]
 
         self.analyze(preserve_labels=False)
+
+    def add_entry_point(self, pc: int, name: str, state: State):
+        if (pc in self.entry_points) or (pc in self.instructions):
+            raise GilgameshError("This address is already covered by the analysis.")
+        self.entry_points[pc] = EntryPoint(name, state.p)
+        self.dirty = True
 
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc].add(instruction.id)

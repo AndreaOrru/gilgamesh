@@ -193,17 +193,11 @@ class App(Repl):
           - "m=0,x=1" -> The subroutine changes the state of m to 0 and x to 1.
           - "m=1,x=0" -> The subroutine changes the state of m to 1 and x to 0.
           - "m=1,x=1" -> The subroutine changes the state of m to 1 and x to 1."""
-        try:
-            pc_int = int(pc, 16)
-            self.rom._translate(pc_int)  # Verify that the address exists in the ROM.
-        except ValueError:
-            raise GilgameshError("Invalid PC format.")
+        if not pc.startswith("$"):
+            raise GilgameshError("Please specify a valid address.")
+        pc_int = self._label_to_pc(pc)
         state = State.from_state_expr(state_expr)
-
-        if (pc_int in self.log.entry_points) or (pc_int in self.log.instructions):
-            raise GilgameshError("This address is already covered by the analysis.")
-
-        self.log.entry_points[pc_int] = EntryPoint(name, state.p)
+        self.log.add_entry_point(pc_int, name, state)
         # TODO: add reference instruction (i.e. a jump table).
 
     @command(container=True)
@@ -220,10 +214,10 @@ class App(Repl):
 
     @command()
     def do_list_assertions_instructions(self) -> None:
+        """List all instruction assertions provided by the user."""
         if not self.log.instruction_assertions:
             return
 
-        """List all instruction assertions provided by the user."""
         s = ["<red>ASSERTED INSTRUCTION STATE CHANGES:</red>\n"]
         for pc, change in self.log.instruction_assertions.items():
             subroutines = [
@@ -380,8 +374,8 @@ class App(Repl):
 
     @command()
     @argument("subroutine_or_pc", complete_subroutine)
-    def do_query_stacktrace(self, subroutine_or_pc: Optional[str] = None) -> None:
-        """Given a subroutine, show its stack of calling subroutines."""
+    def do_query_subroutine(self, subroutine_or_pc: Optional[str] = None) -> None:
+        """Show information on a subroutine (such as state and stack trace)."""
         if (subroutine_or_pc is None) and self.subroutine:
             subroutine = self.subroutine
         elif subroutine_or_pc is not None:
@@ -390,24 +384,29 @@ class App(Repl):
         else:
             raise GilgameshError("No selected subroutine.")
 
-        s = []
-        for caller_pc in subroutine.stack_trace:
-            caller = self.log.subroutines[caller_pc]
-            s.append(self._print_subroutine(caller))
-        print_html("".join(s))
+        print_html(self._print_stacktrace(subroutine))
+        print_html(self._print_statechange(subroutine))
 
-    @command()
-    @argument("subroutine_or_pc", complete_subroutine)
-    def do_query_statechange(self, subroutine_or_pc: str) -> None:
+    def _print_stacktrace(self, sub: Subroutine) -> str:
+        """Given a subroutine, show its stack of calling subroutines."""
+        s = ["<red>STACK TRACE:</red>\n"]
+        if sub.stack_trace:
+            for caller_pc in sub.stack_trace:
+                caller = self.log.subroutines[caller_pc]
+                s.append("  " + self._print_subroutine(caller))
+        else:
+            assert sub.is_entry_point
+            s.append("  Entry point.\n")
+        return "".join(s)
+
+    def _print_statechange(self, sub: Subroutine) -> str:
         """Show the change in processor state caused by executing a subroutine."""
-        pc = self._label_to_pc(subroutine_or_pc)
-        asserted_changes = self.log.subroutine_assertions.get(pc, {})
-
-        s = []
-        for instr_pc, change in self.log.subroutines[pc].state_changes.items():
-            s.append("${:06X}  ".format(instr_pc))
+        s = ["<red>STATE CHANGES:</red>\n"]
+        asserted_changes = self.log.subroutine_assertions.get(sub.pc, {})
+        for instr_pc, change in self.log.subroutines[sub.pc].state_changes.items():
+            s.append("  ${:06X}  ".format(instr_pc))
             s.append(self._print_state_change(change, instr_pc in asserted_changes))
-        print_html("".join(s))
+        return "".join(s)
 
     @command()
     @argument("old", complete_label)
@@ -480,18 +479,21 @@ class App(Repl):
     def _label_to_pc(self, label_or_pc: str) -> int:
         if label_or_pc.startswith("$"):
             try:
-                return int(label_or_pc[1:], 16)
+                pc = int(label_or_pc[1:], 16)
             except ValueError:
-                raise GilgameshError(
-                    "Provided value is neither a label nor an address."
-                )
+                raise GilgameshError("Provided value is not a label or an address.")
+            try:
+                self.rom._translate(pc)
+            except ValueError:
+                raise GilgameshError("The given PC is not valid for this ROM.")
+            return pc
 
-        pc = self.log.get_label_value(
+        label_pc = self.log.get_label_value(
             label_or_pc, self.subroutine.pc if self.subroutine else None
         )
-        if pc is None:
+        if label_pc is None:
             raise GilgameshError("Unknown label.")
-        return pc
+        return label_pc
 
     @staticmethod
     def _print_instruction(instruction: Instruction) -> str:
