@@ -24,8 +24,8 @@ class Disassembly:
     def get_html(self) -> str:
         return self._get_text(html=True)[1]
 
-    def get_instruction_html(self, instruction: Instruction) -> str:
-        tokens = self._instruction_to_tokens(instruction)
+    def get_instruction_html(self, instruction: Instruction, verbose=False) -> str:
+        tokens = self._instruction_to_tokens(instruction, verbose)
         return self._instruction_tokens_to_text(tokens, html=True)[1]
 
     def _get_text(self, html=False) -> Tuple[int, str, List[List[Token]]]:
@@ -41,7 +41,9 @@ class Disassembly:
 
         return n_lines, "".join(s), tokens
 
-    def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
+    def _instruction_to_tokens(
+        self, instruction: Instruction, verbose=True
+    ) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
         tokens = []
 
@@ -53,7 +55,7 @@ class Disassembly:
             tokens.append(Token(T.NEWLINE))
 
         # Stack manipulation.
-        if instruction.does_manipulate_stack:
+        if verbose and instruction.does_manipulate_stack:
             add_line(T.STACK_MANIPULATION_HEADER)
 
         # Label.
@@ -71,6 +73,10 @@ class Disassembly:
         add(T.PC, "${:06X}".format(instruction.pc))
         comment = self.log.comments.get(instruction.pc, "")
         add_line(T.COMMENT, comment)
+
+        # Don't show extra information on state in non-verbose mode.
+        if not verbose:
+            return tokens
 
         # Asserted or unknown state.
         state_change, assertion_type = self._get_unknown_state(instruction)

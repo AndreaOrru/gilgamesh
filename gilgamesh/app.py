@@ -394,18 +394,12 @@ class App(Repl):
     def do_query_statechange(self, subroutine_or_pc: str) -> None:
         """Show the change in processor state caused by executing a subroutine."""
         pc = self._label_to_pc(subroutine_or_pc)
-        asserted_changes = self.log.subroutine_assertions.get(pc)
-        if asserted_changes:
-            for asserted_change in asserted_changes.values():
-                print_html(
-                    "{} <magenta>(asserted)</magenta>".format(
-                        self._print_state_change(asserted_change, newline=False)
-                    )
-                )
+        asserted_changes = self.log.subroutine_assertions.get(pc, {})
 
         s = []
         for instr_pc, change in self.log.subroutines[pc].state_changes.items():
-            s.append(self._print_state_change(change))
+            s.append("${:06X}  ".format(instr_pc))
+            s.append(self._print_state_change(change, instr_pc in asserted_changes))
         print_html("".join(s))
 
     @command()
@@ -493,7 +487,7 @@ class App(Repl):
         return pc
 
     @staticmethod
-    def _print_state_change(change: StateChange, newline=True) -> str:
+    def _print_state_change(change: StateChange, asserted=False) -> str:
         # TODO: use state expressions inside the StateChange class.
         s = []
 
@@ -509,8 +503,10 @@ class App(Repl):
                     s.append(", ")
                 s.append(f"<yellow>x</yellow>=<green>{change.x}</green>")
 
-        if newline:
-            s.append("\n")
+        if asserted:
+            s.append(" <magenta>(asserted)</magenta>")
+
+        s.append("\n")
         return "".join(s)
 
     @staticmethod
