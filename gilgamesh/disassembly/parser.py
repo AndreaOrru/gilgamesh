@@ -51,14 +51,15 @@ class Token:
 
 
 class Parser:
-    def __init__(self, text: str):
+    def __init__(self, text: str, base_line_n: int):
         self.lines = text.splitlines()
         self.line_idx = 0
+        self.base_line_n = base_line_n
         self.tokens: List[List[Token]] = []
 
     @property
     def line_n(self) -> int:
-        return self.line_idx + 2
+        return self.line_idx + self.base_line_n
 
     @cached_property
     def line(self) -> str:

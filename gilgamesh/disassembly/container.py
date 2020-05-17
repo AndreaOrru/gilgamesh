@@ -21,13 +21,21 @@ class DisassemblyContainer(Disassembly):
     def edit(self) -> None:
         # Save the subroutines' disassembly in a temporary file.
         original_tokens: List[List[List[Token]]] = []
+        line_n = 1
+
         with NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
             for disassembly in self.disassemblies:
                 f.write(self.HEADER)
-                text, tokens = disassembly._get_text()
+                line_n += 1
+
+                disassembly.base_line_n = line_n
+                sub_n_lines, text, tokens = disassembly._get_text()
                 original_tokens.append(tokens)
+
                 f.write(text)
+                line_n += sub_n_lines
                 f.write("\n\n\n")
+                line_n += 3
             filename = f.name
 
         # Edit the file in an editor.

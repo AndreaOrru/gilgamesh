@@ -16,24 +16,30 @@ from gilgamesh.subroutine import Subroutine
 class Disassembly:
     SEPARATOR_LINE = ";" + ("-" * 40)
 
-    def __init__(self, subroutine: Subroutine):
+    def __init__(self, subroutine: Subroutine, base_line_n: int = 1):
         self.log = subroutine.log
         self.subroutine = subroutine
+        self.base_line_n = base_line_n
 
     def get_html(self) -> str:
-        return self._get_text(html=True)[0]
+        return self._get_text(html=True)[1]
 
     def get_instruction_html(self, instruction: Instruction) -> str:
         tokens = self._instruction_to_tokens(instruction)
-        return self._instruction_tokens_to_text(tokens, html=True)
+        return self._instruction_tokens_to_text(tokens, html=True)[1]
 
-    def _get_text(self, html=False) -> Tuple[str, List[List[Token]]]:
-        s, tokens = [], []
+    def _get_text(self, html=False) -> Tuple[int, str, List[List[Token]]]:
+        n_lines, s, tokens = 0, [], []
+
         for instruction in self.subroutine.instructions.values():
             instr_tokens = self._instruction_to_tokens(instruction)
             tokens.append(instr_tokens)
-            s.append(self._instruction_tokens_to_text(instr_tokens, html))
-        return "".join(s), tokens
+
+            instr_lines, text = self._instruction_tokens_to_text(instr_tokens, html)
+            n_lines += instr_lines
+            s.append(text)
+
+        return n_lines, "".join(s), tokens
 
     def _instruction_to_tokens(self, instruction: Instruction) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
@@ -86,11 +92,10 @@ class Disassembly:
 
         return tokens
 
-    @classmethod
-    def _text_to_tokens(cls, text: str) -> List[List[Token]]:
+    def _text_to_tokens(self, text: str) -> List[List[Token]]:
         """Parse a subroutines's disassembly into a list of lists of tokens."""
 
-        p = Parser(text)
+        p = Parser(text, self.base_line_n)
         while p.line_idx < len(p.lines):
             # Empty line.
             if not p.line:
@@ -102,30 +107,30 @@ class Disassembly:
                 p.add_line(T.LABEL, p.line[:-1])
 
             # Stack manipulation.
-            elif p.maybe_match_line(cls.string(T.STACK_MANIPULATION_HEADER)):
+            elif p.maybe_match_line(self.string(T.STACK_MANIPULATION_HEADER)):
                 p.new_instruction()
                 p.add_line(T.STACK_MANIPULATION_HEADER)
 
             # Known return state.
-            elif p.maybe_match_line(cls.string(T.KNOWN_STATE_HEADER)):
+            elif p.maybe_match_line(self.string(T.KNOWN_STATE_HEADER)):
                 p.add_line(T.KNOWN_STATE_HEADER)
-                p.add_line_rest(T.KNOWN_STATE, after=cls.string(T.KNOWN_STATE))
-                p.match_line(T.SEPARATOR_LINE, cls.SEPARATOR_LINE)
+                p.add_line_rest(T.KNOWN_STATE, after=self.string(T.KNOWN_STATE))
+                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
             # Unknown or asserted (previously unknown) state.
             elif p.maybe_match_line(
-                cls.string(T.UNKNOWN_STATE_HEADER)
-            ) or p.maybe_match_line(cls.string(T.ASSERTED_STATE_HEADER)):
-                if p.maybe_match_line(cls.string(T.ASSERTED_STATE_HEADER)):
+                self.string(T.UNKNOWN_STATE_HEADER)
+            ) or p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
+                if p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
                     p.add_line(T.ASSERTED_STATE_HEADER)
                 else:
                     p.add_line(T.UNKNOWN_STATE_HEADER)
                 # TODO: validate state_expr and assertion_type.
-                p.add_line_rest(T.LAST_KNOWN_STATE, cls.string(T.LAST_KNOWN_STATE))
-                p.match_line(T.SEPARATOR_LINE, cls.SEPARATOR_LINE)
-                p.add_line_rest(T.ASSERTION_TYPE, after=cls.string(T.ASSERTION_TYPE))
-                p.add_line_rest(T.ASSERTION, after=cls.string(T.ASSERTION))
-                p.match_line(T.SEPARATOR_LINE, cls.SEPARATOR_LINE)
+                p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
+                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
+                p.add_line_rest(T.ASSERTION_TYPE, after=self.string(T.ASSERTION_TYPE))
+                p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
+                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
             # Instruction line.
             elif p.words[0].upper() in Op.__members__:
@@ -162,15 +167,18 @@ class Disassembly:
         return p.tokens
 
     @classmethod
-    def _instruction_tokens_to_text(cls, tokens: List[Token], html=False) -> str:
+    def _instruction_tokens_to_text(
+        cls, tokens: List[Token], html=False
+    ) -> Tuple[int, str]:
         """Generate HTML or plain text from the list of tokens of an instruction."""
         colorize = lambda s, c: cls.colorize(s, c, html)  # noqa: E731
         string = lambda t: cls.string(t, html)  # noqa: E731
 
-        s = []
+        s, n_lines = [], 0
         for t in tokens:
             if t.typ == T.NEWLINE:
                 s.append("\n")
+                n_lines += 1
             elif t.typ == T.LABEL:
                 s.append("{}:".format(colorize(t.val, "red")))
             elif t.typ == T.OPERATION:
@@ -193,14 +201,15 @@ class Disassembly:
             elif t.typ == T.ASSERTION:
                 color = "red" if t.val == "unknown" else "magenta"
                 s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
-        return "".join(s)
+
+        return n_lines, "".join(s)
 
     def _apply_changes(
         self, original_tokens: List[List[Token]], new_tokens: List[List[Token]]
     ) -> Dict[str, str]:
         """Compare a collection of tokens describing a subroutine, with a new one
         with potentially updated content. Apply changes where possible."""
-        line_n = 2  # First line is the separator.
+        line_n = self.base_line_n
         renamed_labels: Dict[str, str] = {}
 
         for orig_instr_tokens, new_instr_tokens in zip_longest(
