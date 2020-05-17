@@ -23,9 +23,7 @@ class Log:
 
     def reset(self) -> None:
         self.instruction_assertions: Dict[int, StateChange] = {}
-        self.subroutine_assertions: DefaultDict[
-            int, Dict[int, StateChange]
-        ] = defaultdict(dict)
+        self.subroutine_assertions: Dict[int, Dict[int, StateChange]] = {}
         self.preserved_labels: Dict[int, str] = {}
         self.comments: Dict[int, str] = {}
 
@@ -154,6 +152,8 @@ class Log:
     def assert_subroutine_state_change(
         self, instruction_pc: int, subroutine: Subroutine, state_change: StateChange
     ) -> None:
+        if subroutine.pc not in self.subroutine_assertions:
+            self.subroutine_assertions[subroutine.pc] = {}
         self.subroutine_assertions[subroutine.pc][instruction_pc] = state_change
         self.dirty = True
 
