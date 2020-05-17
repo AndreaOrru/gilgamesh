@@ -6,7 +6,7 @@ from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.disassembly import ROMDisassembly, SubroutineDisassembly
 from gilgamesh.errors import GilgameshError
-from gilgamesh.log import EntryPoint, Log
+from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.snes.instruction import Instruction
 from gilgamesh.snes.rom import ROM
