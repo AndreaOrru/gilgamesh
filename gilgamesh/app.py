@@ -147,12 +147,12 @@ class App(Repl):
 
     @command()
     @argument("label_or_pc", complete_label)
-    @argument("subroutine_or_pc", complete_subroutine)
-    def do_deassert_subroutine(self, label_or_pc: str, subroutine_or_pc: str) -> None:
+    def do_deassert_subroutine(self, label_or_pc: str) -> None:
         """Remove previously defined subroutine assertions."""
+        if self.subroutine_pc is None:
+            raise GilgameshError("No selected subroutine.")
         instr_pc = self._label_to_pc(label_or_pc)
-        sub_pc = self._label_to_pc(subroutine_or_pc)
-        self.log.deassert_subroutine_state_change(instr_pc, sub_pc)
+        self.log.deassert_subroutine_state_change(instr_pc, self.subroutine_pc)
 
     @command()
     def do_disassembly(self) -> None:
@@ -402,7 +402,6 @@ class App(Repl):
                         self._print_state_change(asserted_change, newline=False)
                     )
                 )
-            return
 
         s = []
         for instr_pc, change in self.log.subroutines[pc].state_changes.items():
@@ -495,19 +494,20 @@ class App(Repl):
 
     @staticmethod
     def _print_state_change(change: StateChange, newline=True) -> str:
+        # TODO: use state expressions inside the StateChange class.
         s = []
 
         if change.unknown:
-            s.append("<red>Unknown</red>")
+            s.append("<red>unknown</red>")
         elif (change.m is None) and (change.x is None):
-            s.append("<green>None</green>")
+            s.append("<green>none</green>")
         else:
             if change.m is not None:
-                s.append(f"<yellow>M</yellow>=<green>{change.m}</green>")
+                s.append(f"<yellow>m</yellow>=<green>{change.m}</green>")
             if change.x is not None:
                 if change.m is not None:
                     s.append(", ")
-                s.append(f"<yellow>X</yellow>=<green>{change.x}</green>")
+                s.append(f"<yellow>x</yellow>=<green>{change.x}</green>")
 
         if newline:
             s.append("\n")

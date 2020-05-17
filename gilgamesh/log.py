@@ -130,11 +130,16 @@ class Log:
     def add_subroutine_state(
         self, instruction_pc: int, subroutine_pc: int, state_change: StateChange
     ) -> None:
-        if subroutine_pc not in self.subroutine_assertions:
-            # Keep track of the processor state changes
-            # caused by the execution of a subroutine.
-            subroutine = self.subroutines[subroutine_pc]
-            subroutine.state_changes[instruction_pc] = state_change
+        # Try to retrieve a state change assertion, if it exists.
+        try:
+            state_change = self.subroutine_assertions[subroutine_pc][instruction_pc]
+        except KeyError:
+            pass
+
+        # Keep track of the processor state changes
+        # caused by the execution of a subroutine.
+        subroutine = self.subroutines[subroutine_pc]
+        subroutine.state_changes[instruction_pc] = state_change
 
     def assert_instruction_state_change(
         self, instruction_pc: int, state_change: StateChange
