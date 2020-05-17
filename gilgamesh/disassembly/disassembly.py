@@ -3,11 +3,17 @@ from typing import Dict, List, Optional, Tuple
 
 from methodtools import lru_cache  # type: ignore
 
-from gilgamesh.disassembly.parser import EDITABLE_TOKENS, HEADER_TOKENS, Parser, Token
+from gilgamesh.disassembly.parser import (
+    EDITABLE_TOKENS,
+    EQUIVALENT_TOKENS,
+    HEADER_TOKENS,
+    Parser,
+    Token,
+)
 from gilgamesh.disassembly.parser import TokenType as T
 from gilgamesh.disassembly.renames import apply_local_renames
 from gilgamesh.errors import ParserError
-from gilgamesh.snes.instruction import Instruction
+from gilgamesh.snes.instruction import Instruction, StackManipulation
 from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.state import StateChange
 from gilgamesh.subroutine import Subroutine
@@ -55,8 +61,11 @@ class Disassembly:
             tokens.append(Token(T.NEWLINE))
 
         # Stack manipulation.
-        if verbose and instruction.does_manipulate_stack:
-            add_line(T.STACK_MANIPULATION_HEADER)
+        if verbose and instruction.stack_manipulation != StackManipulation.NONE:
+            if instruction.stack_manipulation == StackManipulation.CAUSES_UNKNOWN_STATE:
+                add_line(T.FATAL_STACK_MANIPULATION_HEADER)
+            else:
+                add_line(T.STACK_MANIPULATION_HEADER)
 
         # Label.
         subroutine_pc = instruction.subroutine
@@ -246,7 +255,7 @@ class Disassembly:
             # Error cases.
             elif (orig is None) or (new is None):
                 raise ParserError("Added or deleted token.", line_n)
-            elif orig.typ != new.typ:
+            elif orig.typ != new.typ and new.typ not in EQUIVALENT_TOKENS[orig.typ]:
                 raise ParserError("Changed the type of a token.", line_n)
             elif orig.typ not in EDITABLE_TOKENS and orig.val != new.val:
                 raise ParserError(
@@ -358,6 +367,8 @@ class Disassembly:
             return colorize(cls.SEPARATOR_LINE, "grey")
         elif t == T.STACK_MANIPULATION_HEADER:
             return center("[STACK MANIPULATION]")
+        elif t == T.FATAL_STACK_MANIPULATION_HEADER:
+            return center("[STACK MANIPULATION]", "red")
         elif t == T.ASSERTED_STATE_HEADER:
             return center("[ASSERTED STATE]", "magenta")
         elif t == T.KNOWN_STATE_HEADER:

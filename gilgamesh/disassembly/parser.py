@@ -13,6 +13,7 @@ class TokenType(Enum):
     ASSERTION = auto()
     ASSERTION_TYPE = auto()
     COMMENT = auto()
+    FATAL_STACK_MANIPULATION_HEADER = auto()
     LABEL = auto()
     LAST_KNOWN_STATE = auto()
     NEWLINE = auto()
@@ -27,6 +28,15 @@ class TokenType(Enum):
     UNKNOWN_STATE_HEADER = auto()
 
 
+HEADER_TOKENS = {
+    TokenType.ASSERTED_STATE_HEADER,
+    TokenType.FATAL_STACK_MANIPULATION_HEADER,
+    TokenType.KNOWN_STATE_HEADER,
+    TokenType.SEPARATOR_LINE,
+    TokenType.STACK_MANIPULATION_HEADER,
+    TokenType.UNKNOWN_STATE_HEADER,
+}
+
 EDITABLE_TOKENS = {
     TokenType.ASSERTION,
     TokenType.ASSERTION_TYPE,
@@ -35,12 +45,8 @@ EDITABLE_TOKENS = {
     TokenType.OPERAND_LABEL,
 }
 
-HEADER_TOKENS = {
-    TokenType.ASSERTED_STATE_HEADER,
-    TokenType.KNOWN_STATE_HEADER,
-    TokenType.SEPARATOR_LINE,
-    TokenType.STACK_MANIPULATION_HEADER,
-    TokenType.UNKNOWN_STATE_HEADER,
+EQUIVALENT_TOKENS = {
+    TokenType.FATAL_STACK_MANIPULATION_HEADER: {TokenType.STACK_MANIPULATION_HEADER}
 }
 
 

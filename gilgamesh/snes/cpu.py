@@ -1,7 +1,7 @@
 from copy import copy
 from typing import List, Optional
 
-from gilgamesh.snes.instruction import Instruction, InstructionID
+from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipulation
 from gilgamesh.snes.opcodes import AddressMode, Op
 from gilgamesh.snes.registers import Registers
 from gilgamesh.snes.state import State, StateChange
@@ -243,7 +243,7 @@ class CPU:
                 self.stack.pointer = a
                 return
 
-        i.does_manipulate_stack = True
+        i.stack_manipulation = StackManipulation.HARMLESS
 
     def push(self, instruction: Instruction) -> None:
         if instruction.operation == Op.PHP:
@@ -330,7 +330,9 @@ class CPU:
         if stack_manipulation:
             self.subroutine.has_stack_manipulation = True
             if stack_manipulator:
-                stack_manipulator.does_manipulate_stack = True
+                stack_manipulator.stack_manipulation = (
+                    StackManipulation.CAUSES_UNKNOWN_STATE
+                )
 
         return False
 

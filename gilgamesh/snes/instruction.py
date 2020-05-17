@@ -1,4 +1,5 @@
 from collections import namedtuple
+from enum import Enum, auto
 from typing import Dict, Optional
 
 from cached_property import cached_property  # type: ignore
@@ -13,6 +14,12 @@ from gilgamesh.utils.signed_types import s8, s16
 # as the unique identifier of an instruction executed in a specific
 # state and subroutine.
 InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
+
+
+class StackManipulation(Enum):
+    NONE = auto()
+    HARMLESS = auto()
+    CAUSES_UNKNOWN_STATE = auto()
 
 
 class Instruction(Invalidable):
@@ -40,7 +47,7 @@ class Instruction(Invalidable):
         self._argument = argument
 
         self.stopped_execution = False
-        self.does_manipulate_stack = False
+        self.stack_manipulation = StackManipulation.NONE
 
     def __repr__(self) -> str:
         return "<{}{}>".format(
