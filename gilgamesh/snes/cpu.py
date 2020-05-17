@@ -194,7 +194,7 @@ class CPU:
 
         # Standard return.
         self.log.add_subroutine_state(
-            instruction.pc, self.subroutine_pc, self.state_change
+            self.subroutine.pc, instruction.pc, self.state_change
         )
 
     def sep_rep(self, instruction: Instruction) -> None:
@@ -323,7 +323,7 @@ class CPU:
 
         # No custom assertion, we need to stop here.
         self.log.add_subroutine_state(
-            instruction.pc, self.subroutine_pc, StateChange(unknown=True)
+            self.subroutine_pc, instruction.pc, StateChange(unknown=True)
         )
         instruction.stopped_execution = True
 
