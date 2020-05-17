@@ -117,7 +117,7 @@ class UnknownJumpTest(LogTest, TestCase):
         reset = self.log.subroutines_by_label["reset"]
         sub = self.log.subroutines[0x800B]
 
-        self.assertSetEqual(sub.state_changes, {StateChange(unknown=True)})
+        self.assertDictEqual(sub.state_changes, {0x800B: StateChange(unknown=True)})
         self.assertTrue(sub.has_jump_table)
         self.assertTrue(sub.has_unknown_return_state)
 
@@ -130,7 +130,7 @@ class UnknownJumpTest(LogTest, TestCase):
     def test_assert_state_change(self):
         # Assertion.
         unknown = self.log.subroutines[0x800B]
-        self.log.assert_subroutine_state_change(unknown, StateChange())
+        self.log.assert_subroutine_state_change(0x800B, unknown, StateChange())
         self.assertTrue(self.log.dirty)
         self.log.analyze()
         self.assertFalse(self.log.dirty)
@@ -145,7 +145,7 @@ class UnknownJumpTest(LogTest, TestCase):
         self.assertFalse(unknown.has_unknown_return_state)
 
         # Deassertion.
-        self.log.deassert_subroutine_state_change(0x800B)
+        self.log.deassert_subroutine_state_change(0x800B, 0x800B)
         self.assertTrue(self.log.dirty)
         self.log.analyze()
         self.assertFalse(self.log.dirty)

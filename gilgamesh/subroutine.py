@@ -18,7 +18,7 @@ class Subroutine(Invalidable):
         # Instructions belonging to the subroutine.
         self.instructions: Dict[int, Instruction] = SortedDict()
         # Calling the subroutine results in the following state changes.
-        self.state_changes: Set[StateChange] = set()
+        self.state_changes: Dict[int, StateChange] = {}
         # The stack of calls that brought us to the current subroutine.
         self.stack_trace = stack_trace
 
@@ -35,7 +35,7 @@ class Subroutine(Invalidable):
     @property
     def state_change(self) -> StateChange:
         assert len(self.state_changes) == 1
-        return next(iter(self.state_changes))
+        return next(iter(self.state_changes.values()))
 
     @property
     def is_entry_point(self) -> bool:
@@ -43,7 +43,7 @@ class Subroutine(Invalidable):
 
     @property
     def has_unknown_return_state(self) -> bool:
-        return any(s for s in self.state_changes if s.unknown)
+        return any(s for s in self.state_changes.values() if s.unknown)
 
     def invalidate(self) -> None:
         bulk_invalidate(self.instructions.values())
@@ -59,8 +59,10 @@ class Subroutine(Invalidable):
         ):
             self.has_jump_table = True
 
-    def assert_state_change(self, state_change: StateChange) -> None:
-        self.state_changes = {state_change}
+    def assert_state_change(
+        self, instruction_pc: int, state_change: StateChange
+    ) -> None:
+        self.state_changes[instruction_pc] = state_change
         self.has_asserted_state_change = True
 
     def simplify_return_states(self, state: State) -> Tuple[Set[StateChange], bool]:
@@ -70,7 +72,7 @@ class Subroutine(Invalidable):
         unknown = False
         changes = set()
 
-        for change in self.state_changes:
+        for change in self.state_changes.values():
             changes.add(change.simplify(state))
             if change.unknown:
                 unknown = True

@@ -258,13 +258,15 @@ class Disassembly:
                     if orig_assert_type == "instruction":
                         self.log.deassert_instruction_state_change(pc)
                     elif orig_assert_type == "subroutine":
-                        self.log.deassert_subroutine_state_change(self.subroutine.pc)
+                        self.log.deassert_subroutine_state_change(
+                            pc, self.subroutine.pc
+                        )
                 if anything_changed:
                     if new_assert_type == "instruction":
                         self.log.assert_instruction_state_change(pc, state_change)
                     elif new_assert_type == "subroutine":
                         self.log.assert_subroutine_state_change(
-                            self.subroutine, state_change
+                            pc, self.subroutine, state_change
                         )
 
             # Comments.
@@ -291,10 +293,11 @@ class Disassembly:
         state_change = instruction.state_change
 
         # Subroutine assertion.
-        if subroutine.has_asserted_state_change and (
-            instruction.stopped_execution or instruction.is_return
-        ):
-            assertion = self.log.subroutine_assertions.get(subroutine.pc)
+        if subroutine.has_asserted_state_change and self.log.subroutine_assertions[
+            subroutine.pc
+        ].get(instruction.pc)(instruction.stopped_execution or instruction.is_return):
+            assertions = self.log.subroutine_assertions.get(subroutine.pc)
+            assertion = assertions.get(instruction.pc)
             state_change = (
                 assertion.state_expr if assertion else instruction.state_change
             )
