@@ -30,9 +30,17 @@ class TokenType(Enum):
 EDITABLE_TOKENS = {
     TokenType.ASSERTION,
     TokenType.ASSERTION_TYPE,
+    TokenType.COMMENT,
     TokenType.LABEL,
     TokenType.OPERAND_LABEL,
-    TokenType.COMMENT,
+}
+
+HEADER_TOKENS = {
+    TokenType.ASSERTED_STATE_HEADER,
+    TokenType.KNOWN_STATE_HEADER,
+    TokenType.SEPARATOR_LINE,
+    TokenType.STACK_MANIPULATION_HEADER,
+    TokenType.UNKNOWN_STATE_HEADER,
 }
 
 
@@ -70,34 +78,33 @@ class Parser:
     def add_line(self, *args) -> None:
         if args:
             self.add(*args)
-        self.tokens[-1].append(Token(TokenType.NEWLINE, "\n"))
+        self.add(TokenType.NEWLINE)
         self.line_idx += 1
         invalidate(self, "line")
         invalidate(self, "words")
 
-    def maybe_match_line(self, s: str, lookahead=0) -> bool:
-        return self.lookahead_words(lookahead) == s.split()
+    def maybe_match_line(self, s: str) -> bool:
+        return self.words == s.split()
 
     def match_line(self, token_typ: TokenType, s: str) -> None:
         if not self.maybe_match_line(s):
             raise ParserError("Unable to parse line.", self.line_n)
         self.add_line(token_typ)
 
-    def maybe_match_part(self, s: str, lookahead=0) -> bool:
-        parts = s.split()
-        lookahead_words = self.lookahead_words(lookahead)
-        return lookahead_words[: len(parts)] == parts
-
-    def match_part(self, s: str) -> None:
-        if not self.maybe_match_part(s):
+    def add_line_rest(self, token_typ: TokenType, after: str) -> None:
+        parts = after.split()
+        if not self.words[: len(parts)] == parts:
             raise ParserError("Unable to parse line.", self.line_n)
 
-    def add_instr(self) -> None:
+        rest = " ".join(self.words[len(parts) :])
+        self.add_line(token_typ, rest)
+
+    def new_instruction(self) -> None:
         self.tokens.append([])
 
-    def maybe_add_instr(self, *args) -> None:
+    def maybe_new_instruction(self, *args) -> None:
         if self.tokens[-1][-2].typ not in (
             TokenType.LABEL,
             TokenType.STACK_MANIPULATION_HEADER,
         ):
-            self.add_instr()
+            self.new_instruction()
