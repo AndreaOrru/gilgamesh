@@ -2,8 +2,8 @@ from abc import ABC
 from unittest import TestCase
 
 from gilgamesh.log import EntryPoint, Log
-from gilgamesh.rom import ROM
-from gilgamesh.state import StateChange
+from gilgamesh.snes.rom import ROM
+from gilgamesh.snes.state import StateChange
 from tests.test_rom import assemble
 
 

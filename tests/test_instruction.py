@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from gilgamesh.instruction import Instruction, InstructionID
-from gilgamesh.opcodes import AddressMode, Op
+from gilgamesh.snes.instruction import Instruction, InstructionID
+from gilgamesh.snes.opcodes import AddressMode, Op
 
 
 class InstructionTest(TestCase):

@@ -1,11 +1,11 @@
 from copy import copy
 from typing import List, Optional
 
-from gilgamesh.instruction import Instruction, InstructionID
-from gilgamesh.opcodes import AddressMode, Op
-from gilgamesh.registers import Registers
+from gilgamesh.snes.instruction import Instruction, InstructionID
+from gilgamesh.snes.opcodes import AddressMode, Op
+from gilgamesh.snes.registers import Registers
+from gilgamesh.snes.state import State, StateChange
 from gilgamesh.stack import Stack
-from gilgamesh.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
 
 

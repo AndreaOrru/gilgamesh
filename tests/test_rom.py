@@ -4,7 +4,7 @@ from os.path import dirname, join, splitext
 from subprocess import check_call
 from unittest import TestCase
 
-from gilgamesh.rom import ROM, ROMType
+from gilgamesh.snes.rom import ROM, ROMType
 
 
 def rom_path(filename: str) -> str:

@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from gilgamesh.registers import Register
-from gilgamesh.state import State
+from gilgamesh.snes.registers import Register
+from gilgamesh.snes.state import State
 
 
 class RegisterTest(TestCase):

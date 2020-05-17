@@ -3,8 +3,8 @@ from typing import Dict, Optional
 
 from cached_property import cached_property  # type: ignore
 
-from gilgamesh.opcodes import AddressMode, Op, argument_size_table, opcode_table
-from gilgamesh.state import State
+from gilgamesh.snes.opcodes import AddressMode, Op, argument_size_table, opcode_table
+from gilgamesh.snes.state import State
 from gilgamesh.utils.invalidable import Invalidable
 from gilgamesh.utils.signed_types import s8, s16
 

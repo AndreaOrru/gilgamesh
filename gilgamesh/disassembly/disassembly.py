@@ -7,9 +7,9 @@ from gilgamesh.disassembly.parser import EDITABLE_TOKENS, HEADER_TOKENS, Parser,
 from gilgamesh.disassembly.parser import TokenType as T
 from gilgamesh.disassembly.renames import apply_local_renames
 from gilgamesh.errors import ParserError
-from gilgamesh.instruction import Instruction
-from gilgamesh.opcodes import Op
-from gilgamesh.state import StateChange
+from gilgamesh.snes.instruction import Instruction
+from gilgamesh.snes.opcodes import Op
+from gilgamesh.snes.state import StateChange
 from gilgamesh.subroutine import Subroutine
 
 
@@ -293,9 +293,11 @@ class Disassembly:
         state_change = instruction.state_change
 
         # Subroutine assertion.
-        if subroutine.has_asserted_state_change and self.log.subroutine_assertions[
-            subroutine.pc
-        ].get(instruction.pc)(instruction.stopped_execution or instruction.is_return):
+        if (
+            subroutine.has_asserted_state_change
+            and self.log.subroutine_assertions[subroutine.pc].get(instruction.pc)
+            and (instruction.stopped_execution or instruction.is_return)
+        ):
             assertions = self.log.subroutine_assertions.get(subroutine.pc)
             assertion = assertions.get(instruction.pc)
             state_change = (

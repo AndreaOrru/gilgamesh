@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from gilgamesh.state import State, StateChange
+from gilgamesh.snes.state import State, StateChange
 
 
 class StateTest(TestCase):

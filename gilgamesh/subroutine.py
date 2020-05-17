@@ -2,9 +2,9 @@ from typing import Dict, List, Set, Tuple
 
 from sortedcontainers import SortedDict  # type: ignore
 
-from gilgamesh.instruction import Instruction
-from gilgamesh.opcodes import Op
-from gilgamesh.state import State, StateChange
+from gilgamesh.snes.instruction import Instruction
+from gilgamesh.snes.opcodes import Op
+from gilgamesh.snes.state import State, StateChange
 from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
 

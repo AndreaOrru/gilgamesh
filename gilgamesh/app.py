@@ -8,8 +8,8 @@ from gilgamesh.disassembly import ROMDisassembly, SubroutineDisassembly
 from gilgamesh.errors import GilgameshError
 from gilgamesh.log import EntryPoint, Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
-from gilgamesh.rom import ROM
-from gilgamesh.state import State, StateChange
+from gilgamesh.snes.rom import ROM
+from gilgamesh.snes.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
 
 HISTORY_FILE = "~/.local/share/gilgamesh/history.log"

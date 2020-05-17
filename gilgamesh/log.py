@@ -5,11 +5,11 @@ from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple
 from bidict import bidict  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
 
-from gilgamesh.cpu import CPU
 from gilgamesh.errors import GilgameshError
-from gilgamesh.instruction import Instruction, InstructionID
-from gilgamesh.rom import ROM
-from gilgamesh.state import StateChange
+from gilgamesh.snes.cpu import CPU
+from gilgamesh.snes.instruction import Instruction, InstructionID
+from gilgamesh.snes.rom import ROM
+from gilgamesh.snes.state import StateChange
 from gilgamesh.subroutine import Subroutine
 from gilgamesh.utils.invalidable import bulk_invalidate
 

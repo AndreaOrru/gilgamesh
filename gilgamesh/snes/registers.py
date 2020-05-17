@@ -1,7 +1,7 @@
 from copy import copy
 from typing import Dict, Optional
 
-from gilgamesh.state import State
+from gilgamesh.snes.state import State
 
 
 class Register:
