@@ -169,12 +169,16 @@ class App(Repl):
             raise GilgameshError("No selected subroutine.")
         disassembly = SubroutineDisassembly(self.subroutine)
         disassembly.edit()
+        if self.log.dirty:
+            self.do_analyze()
 
     @command()
     def do_edit_all(self) -> None:
         """Interactively edit all subroutines using an external editor."""
         disassembly = ROMDisassembly(self.log)
         disassembly.edit()
+        if self.log.dirty:
+            self.do_analyze()
 
     @command()
     @argument("pc")
@@ -417,6 +421,7 @@ class App(Repl):
         """Reset the analysis (start from scratch)."""
         if self.yes_no_prompt("Are you sure you want to reset the entire analysis?"):
             self.log.reset()
+            self.log.analyze()
             self.subroutine_pc = None
 
     @command()
