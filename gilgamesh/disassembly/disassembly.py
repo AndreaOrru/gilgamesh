@@ -186,7 +186,7 @@ class Disassembly:
                 s.append("\n")
                 n_lines += 1
             elif t.typ == T.LABEL:
-                s.append("{}:".format(colorize(t.val, "red")))
+                s.append(colorize(f"{t.val}:", "red"))
             elif t.typ == T.OPERATION:
                 s.append(colorize(f"  {t.val:4}", "green"))
             elif t.typ == T.OPERAND:

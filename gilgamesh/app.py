@@ -8,6 +8,7 @@ from gilgamesh.disassembly import ROMDisassembly, SubroutineDisassembly
 from gilgamesh.errors import GilgameshError
 from gilgamesh.log import EntryPoint, Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
+from gilgamesh.snes.instruction import Instruction
 from gilgamesh.snes.rom import ROM
 from gilgamesh.snes.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
@@ -228,14 +229,8 @@ class App(Repl):
             subroutines = [
                 self.log.subroutines[i.subroutine] for i in self.log.instructions[pc]
             ]
-            try:
-                instruction = subroutines[0].instructions[pc]
-                operation = "<green>{:4}</green>".format(instruction.name)
-                disassembly = f"{operation}{instruction.argument_string} "
-                if not instruction.argument_string:
-                    disassembly = disassembly[:-1]  # Delete extra space.
-            except IndexError:
-                disassembly = "<red>unknown</red> "
+            instruction = subroutines[0].instructions[pc]
+            disassembly = self._print_instruction(instruction)
 
             s.append("  <magenta>${:06X}</magenta>  {}-> ".format(pc, disassembly))
             s.append(self._print_state_change(change))
@@ -257,16 +252,28 @@ class App(Repl):
             return
 
         s = ["<red>ASSERTED SUBROUTINE STATE CHANGES:</red>\n"]
+        last_sub = None
+
         for sub_pc, state_changes in self.log.subroutine_assertions.items():
+            subroutine = self.log.subroutines[sub_pc]
+
             for instr_pc, change in state_changes.items():
-                try:
-                    sub = "<magenta>{}</magenta>".format(
-                        self.log.subroutines[sub_pc].label
-                    )
-                except KeyError:
-                    sub = "<red>${:06X}</red>".format(sub_pc)
-                s.append(f"  {sub} -> ")
+                if not last_sub or sub_pc != last_sub.pc:
+                    try:
+                        sub = "<magenta>{:12}</magenta>".format(subroutine.label + ":")
+                    except KeyError:
+                        sub = "<red>${:06X}{:5}</red>".format(sub_pc, "")
+                    s.append("{}{}".format("\n" if last_sub else "", sub))
+                else:
+                    s.append("{:12}".format(""))
+
+                instruction = subroutine.instructions[instr_pc]
+                code = self._print_instruction(instruction)
+                s.append(f"  ${instr_pc:06X}  {code}-> ")
                 s.append(self._print_state_change(change))
+
+                last_sub = subroutine
+
         print_html("".join(s))
 
     @command()
@@ -485,6 +492,18 @@ class App(Repl):
         if pc is None:
             raise GilgameshError("Unknown label.")
         return pc
+
+    @staticmethod
+    def _print_instruction(instruction: Instruction) -> str:
+        try:
+            operation = "<green>{:4}</green>".format(instruction.name)
+            disassembly = f"{operation}{instruction.argument_string} "
+            if not instruction.argument_string:
+                disassembly = disassembly[:-1]  # Delete extra space.
+        except IndexError:
+            disassembly = "<red>unknown</red> "
+
+        return disassembly
 
     @staticmethod
     def _print_state_change(change: StateChange, asserted=False) -> str:
