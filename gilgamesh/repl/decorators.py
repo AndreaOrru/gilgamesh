@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from functools import wraps
 from inspect import Parameter, signature
@@ -23,12 +24,14 @@ def command(container=False):
                     try:
                         return method.subcmds[subcmd](self, *args)
                     except KeyError:
-                        return self._method_help(method, error=True)
+                        return self._method_help(method, "Unknown subcommand.")
             # Try to call the command.
-            # try:
-            return method(self, *args)
-            # except TypeError:
-            #    return self._method_help(method, error=True)
+            try:
+                return method(self, *args)
+            except TypeError as e:
+                if msg := get_unknown_syntax_message(method, e):
+                    return self._method_help(method, msg)
+                raise
 
         # Flag this method as a command.
         wrapper.cmd = True
@@ -62,3 +65,20 @@ def argument(name, completion=None):
         return method
 
     return wrapper
+
+
+def get_unknown_syntax_message(method, exception) -> Optional[str]:
+    match = re.match(
+        r"{}\(\) takes (\d+) positional arguments but (\d+) were given".format(
+            method.__name__
+        ),
+        exception.args[0],
+    )
+    if not match:
+        return None
+
+    required, given = int(match.group(1)), int(match.group(2))
+    name = " ".join(method.__name__.split("_")[1:])
+    return '"{}" takes {} positional arguments but {} were given.'.format(
+        name, required - 1, given - 1
+    )

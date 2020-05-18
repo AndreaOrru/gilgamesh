@@ -186,16 +186,16 @@ class Repl:
 
         return NestedCompleter.from_nested_dict(completer_dict)
 
-    def _method_help(self, method, error=False) -> None:
+    def _method_help(self, method, error="") -> None:
         # Unpack the method in its components (i.e 'list', 'subroutines')
         # and invoke the actual help method.
         parts = method.__name__.split("_")[1:]
         self.do_help(*parts)
         if error:
-            print_error("Unknown syntax.")
+            print_error(error)
 
     @staticmethod
-    def _help_list(commands: Dict[str, Any], header="Commands", error=False) -> None:
+    def _help_list(commands: Dict[str, Any], header="Commands", error="") -> None:
         # Print help for a collection of commands.
         s = f"<yellow>{header}:</yellow>\n"
         for name, cmd in commands.items():
@@ -204,7 +204,7 @@ class Repl:
             s += "  <green>{:15}</green>{}\n".format(name, doc)
         print_html(s)
         if error:
-            print_error("Unknown syntax.")
+            print_error(error)
 
     @staticmethod
     def _help_usage(*parts) -> None:

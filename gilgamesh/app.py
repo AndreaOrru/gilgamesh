@@ -110,6 +110,7 @@ class App(Repl):
           - "m=0,x=1"      -> The subroutine changes the state of m to 0 and x to 1.
           - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
           - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
+        raise TypeError("lol")
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
         # TODO: check that pc is an instruction inside the subroutine.
