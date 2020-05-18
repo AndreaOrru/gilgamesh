@@ -50,15 +50,15 @@ class StateTest(TestCase):
         self.assertEqual(state.x, 0)
 
     def test_from_state_expr(self):
-        state = State.from_state_expr("m=0,x=1")
+        state = State.from_expr("m=0,x=1")
         self.assertEqual(state, State(m=0, x=1))
 
-        state = State.from_state_expr("x=0,m=1")
+        state = State.from_expr("x=0,m=1")
         self.assertEqual(state, State(x=0, m=1))
 
     def test_state_expr(self):
         state = State(m=1, x=1)
-        self.assertEqual(state.state_expr, "m=1,x=1")
+        self.assertEqual(state.expr, "m=1,x=1")
 
 
 class StateChangeTest(TestCase):
@@ -76,30 +76,30 @@ class StateChangeTest(TestCase):
         self.assertEqual(repr(change), "<StateChange: m=1,x=1>")
 
     def test_from_state_expr(self):
-        change = StateChange.from_state_expr("none")
+        change = StateChange.from_expr("none")
         self.assertEqual(change, StateChange())
 
-        change = StateChange.from_state_expr("m=0")
+        change = StateChange.from_expr("m=0")
         self.assertEqual(change, StateChange(m=0))
-        change = StateChange.from_state_expr("x=1")
+        change = StateChange.from_expr("x=1")
         self.assertEqual(change, StateChange(x=1))
 
-        change = StateChange.from_state_expr("m=0,x=1")
+        change = StateChange.from_expr("m=0,x=1")
         self.assertEqual(change, StateChange(m=0, x=1))
-        change = StateChange.from_state_expr("x=0,m=1")
+        change = StateChange.from_expr("x=0,m=1")
         self.assertEqual(change, StateChange(x=0, m=1))
 
     def test_state_expr(self):
         change = StateChange()
-        self.assertEqual(change.state_expr, "none")
+        self.assertEqual(change.expr, "none")
 
         change = StateChange(m=0)
-        self.assertEqual(change.state_expr, "m=0")
+        self.assertEqual(change.expr, "m=0")
         change = StateChange(x=1)
-        self.assertEqual(change.state_expr, "x=1")
+        self.assertEqual(change.expr, "x=1")
 
         change = StateChange(m=0, x=1)
-        self.assertEqual(change.state_expr, "m=0,x=1")
+        self.assertEqual(change.expr, "m=0,x=1")
 
     def test_eq_hash(self):
         changes = set()

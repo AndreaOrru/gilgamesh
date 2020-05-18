@@ -92,7 +92,7 @@ class App(Repl):
           - "m=0,x=1"      -> The subroutine changes the state of m to 0 and x to 1.
           - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
           - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
-        state_change = StateChange.from_state_expr(state_expr)
+        state_change = StateChange.from_expr(state_expr)
         instruction_pc = self._label_to_pc(label_or_pc)
         self.log.assert_instruction_state_change(instruction_pc, state_change)
 
@@ -114,7 +114,7 @@ class App(Repl):
             raise GilgameshError("No selected subroutine.")
         # TODO: check that pc is an instruction inside the subroutine.
         instr_pc = self._label_to_pc(label_or_pc)
-        state_change = StateChange.from_state_expr(state_expr)
+        state_change = StateChange.from_expr(state_expr)
         self.log.assert_subroutine_state_change(self.subroutine, instr_pc, state_change)
 
     @command()
@@ -196,7 +196,7 @@ class App(Repl):
         if not pc.startswith("$"):
             raise GilgameshError("Please specify a valid address.")
         pc_int = self._label_to_pc(pc)
-        state = State.from_state_expr(state_expr)
+        state = State.from_expr(state_expr)
         self.log.add_entry_point(pc_int, name, state)
         # TODO: add reference instruction (i.e. a jump table).
 

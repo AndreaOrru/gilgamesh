@@ -20,7 +20,7 @@ class State:
             self.p |= x << X_BIT
 
     @classmethod
-    def from_state_expr(cls, expr: str) -> "State":
+    def from_expr(cls, expr: str) -> "State":
         # TODO: Write tests for this.
         if not (
             re.match(r"m=(0|1),x=(0|1)", expr) or re.match(r"x=(0|1),m=(0|1)", expr)
@@ -36,11 +36,11 @@ class State:
         )
 
     @property
-    def state_expr(self) -> str:
+    def expr(self) -> str:
         return f"m={self.m},x={self.x}"
 
     def __repr__(self) -> str:
-        return f"<State: {self.state_expr}>"
+        return f"<State: {self.expr}>"
 
     def __eq__(self, other) -> bool:
         return self.p == other.p
@@ -97,7 +97,7 @@ class StateChange:
         self.unknown = unknown
 
     @classmethod
-    def from_state_expr(cls, expr: str) -> "StateChange":
+    def from_expr(cls, expr: str) -> "StateChange":
         # TODO: Validate expression.
         if expr == "none":
             return cls()
@@ -116,7 +116,7 @@ class StateChange:
             raise GilgameshError("Unknown syntax.")
 
     @property
-    def state_expr(self) -> str:
+    def expr(self) -> str:
         if self.unknown:
             return "unknown"
 
@@ -130,7 +130,7 @@ class StateChange:
         return r
 
     def __repr__(self) -> str:
-        return "<StateChange: {}>".format(self.state_expr)
+        return "<StateChange: {}>".format(self.expr)
 
     def __eq__(self, other) -> bool:
         return (self.unknown and other.unknown) or (

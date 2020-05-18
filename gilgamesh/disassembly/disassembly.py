@@ -274,7 +274,7 @@ class Disassembly:
             elif orig.typ == T.ASSERTION:
                 assertion_changed = orig.val != new.val
                 anything_changed = assertion_type_changed or assertion_changed
-                state_change = StateChange.from_state_expr(new.val)
+                state_change = StateChange.from_expr(new.val)
                 if anything_changed and state_change.unknown:
                     raise ParserError("Invalid assertion state.", line_n)
                 if assertion_type_changed:

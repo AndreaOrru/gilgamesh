@@ -5,7 +5,7 @@ from typing import Dict, Optional
 from cached_property import cached_property  # type: ignore
 
 from gilgamesh.snes.opcodes import AddressMode, Op, argument_size_table, opcode_table
-from gilgamesh.snes.state import State
+from gilgamesh.snes.state import State, StateChange
 from gilgamesh.utils.invalidable import Invalidable
 from gilgamesh.utils.signed_types import s8, s16
 
@@ -32,20 +32,20 @@ class Instruction(Invalidable):
         opcode: int,
         argument: int,
         registers: Dict[str, Optional[int]],
-        state_change_before: str,
+        state_change_before: StateChange,
     ):
         super().__init__()
         self.log = log
         self.pc = pc
         self.state = State(p)
+        self.registers = registers
 
         self.subroutine_pc = subroutine_pc
         self.opcode = opcode
         self._argument = argument
 
-        self.registers = registers
         self.state_change_before = state_change_before
-        self.state_change_after = ""
+        self.state_change_after = StateChange(unknown=True)
         self.stack_manipulation = StackManipulation.NONE
 
     def __repr__(self) -> str:
@@ -329,7 +329,7 @@ class Instruction(Invalidable):
 
     @property
     def stopped_execution(self) -> bool:
-        return self.state_change_after == "unknown"
+        return self.state_change_after.unknown
 
     @property
     def has_asserted_state_change(self) -> bool:
@@ -346,6 +346,6 @@ class Instruction(Invalidable):
         # fmt: on
 
         if sub_assertion and instr_assertion:
-            return sub_assertion.state_expr
+            return sub_assertion.expr
         else:
             return None

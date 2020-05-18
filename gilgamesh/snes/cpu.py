@@ -75,7 +75,7 @@ class CPU:
             opcode,
             argument,
             self.registers.snapshot(),
-            self.state_change.state_expr
+            copy(self.state_change)
         )
         self.log.add_instruction(instruction)
 
@@ -86,9 +86,9 @@ class CPU:
         asserted_state = self.log.instruction_assertions.get(instruction.pc)
         if asserted_state:
             self._apply_state_change(asserted_state)
-            instruction.state_change_after = asserted_state.state_expr
+            instruction.state_change_after = asserted_state
         else:
-            instruction.state_change_after = self.state_change.state_expr
+            instruction.state_change_after = copy(self.state_change)
         return keep_going
 
     def execute(self, instruction: Instruction) -> bool:
@@ -153,6 +153,7 @@ class CPU:
         cpu.subroutine_pc = target
         cpu.pc = target
 
+        # Emulate the called subroutine.
         self.log.add_reference(instruction, target)
         self.log.add_subroutine(target, stack_trace=cpu.stack_trace)
         cpu.run()
@@ -182,6 +183,8 @@ class CPU:
             ret_size = 2 if instruction.operation == Op.RTS else 3
             call_op = Op.JSR if instruction.operation == Op.RTS else Op.JSL
             stack_entries = self.stack.pop(ret_size)
+            # Non-call instructions which operated on the region of the
+            # stack containing the return address from the subroutine.
             stack_manipulators = [
                 s.instruction
                 for s in stack_entries
@@ -245,7 +248,8 @@ class CPU:
             if a is not None:
                 self.stack.pointer = a
                 return
-
+        # We keep the disassembly going if the stack manipulation
+        # doesn't otherwise influence the state of the processor.
         i.stack_manipulation = StackManipulation.HARMLESS
 
     def push(self, instruction: Instruction) -> None:
@@ -267,6 +271,8 @@ class CPU:
             entry = self.stack.pop_one()
             if entry.instruction and entry.instruction.operation == Op.PHP:
                 self.state, self.state_change = entry.data
+            # We can't trust the disassembly if we don't know
+            # which state the PLP instruction is restoring.
             else:
                 return self._unknown_subroutine_state(
                     i, stack_manipulation=True, stack_manipulator=entry.instruction
@@ -325,14 +331,16 @@ class CPU:
             return True  # Execution can proceed.
 
         # No custom assertion, we need to stop here.
-        self.log.add_subroutine_state(
-            self.subroutine_pc, instruction.pc, StateChange(unknown=True)
-        )
         self.state_change = StateChange(unknown=True)
-        instruction.state_change_after = "unknown"
+        self.log.add_subroutine_state(
+            self.subroutine_pc, instruction.pc, copy(self.state_change)
+        )
 
+        # If the unkown state is due to stack manipulation:
         if stack_manipulation:
             self.subroutine.has_stack_manipulation = True
+            # If we know which instruction performed the
+            # manipulation, we flag it.
             if stack_manipulator:
                 stack_manipulator.stack_manipulation = (
                     StackManipulation.CAUSES_UNKNOWN_STATE
