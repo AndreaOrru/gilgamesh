@@ -262,7 +262,7 @@ class App(Repl):
                 instruction = subroutine.instructions[instr_pc]
                 code = self._print_instruction(instruction)
                 s.append(f"  ${instr_pc:06X}  {code}-> ")
-                s.append(self._print_state_change(change))
+                s.append(self._print_state_change(change, show_asserted=False))
 
                 last_sub = subroutine
 
@@ -400,10 +400,9 @@ class App(Repl):
     def _print_statechange(self, sub: Subroutine) -> str:
         """Show the change in processor state caused by executing a subroutine."""
         s = ["<red>STATE CHANGES:</red>\n"]
-        asserted_changes = self.log.subroutine_assertions.get(sub.pc, {})
         for instr_pc, change in self.log.subroutines[sub.pc].state_changes.items():
             s.append("  ${:06X}  ".format(instr_pc))
-            s.append(self._print_state_change(change, instr_pc in asserted_changes))
+            s.append(self._print_state_change(change))
         return "".join(s)
 
     @command()
@@ -504,7 +503,7 @@ class App(Repl):
         return disassembly
 
     @staticmethod
-    def _print_state_change(change: StateChange, asserted=False) -> str:
+    def _print_state_change(change: StateChange, show_asserted=True) -> str:
         # TODO: use state expressions inside the StateChange class.
         s = []
 
@@ -520,7 +519,7 @@ class App(Repl):
                     s.append(", ")
                 s.append(f"<yellow>x</yellow>=<green>{change.x}</green>")
 
-        if asserted:
+        if show_asserted and change.asserted:
             s.append(" <magenta>(asserted)</magenta>")
 
         s.append("\n")

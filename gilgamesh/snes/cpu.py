@@ -338,6 +338,7 @@ class CPU:
             # If we know which instruction performed the
             # manipulation, we flag it.
             if stack_manipulator:
+                self.subroutine.has_stack_manipulation = True
                 stack_manipulator.stack_manipulation = (
                     StackManipulation.CAUSES_UNKNOWN_STATE
                 )

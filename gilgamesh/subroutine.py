@@ -23,6 +23,9 @@ class Subroutine(Invalidable):
         # The stack of calls that brought us to the current subroutine.
         self.stack_trace = stack_trace
 
+        # Whether an instruction inside the subroutine performs stack manipulation.
+        self.has_stack_manipulation = False
+
     @property
     def local_labels(self) -> Dict[str, int]:
         return self.log.local_labels[self.pc]
