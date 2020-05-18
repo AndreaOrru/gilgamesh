@@ -278,16 +278,18 @@ class Disassembly:
                 if anything_changed and state_change.unknown:
                     raise ParserError("Invalid assertion state.", line_n)
                 if assertion_type_changed:
-                    if orig_assert_type == "instruction":
+                    if "instruction".startswith(orig_assert_type):
                         self.log.deassert_instruction_state_change(pc)
-                    elif orig_assert_type == "subroutine":
+                    elif "subroutine".startswith(orig_assert_type):
                         self.log.deassert_subroutine_state_change(
                             self.subroutine.pc, pc
                         )
                 if anything_changed:
-                    if new_assert_type == "instruction":
+                    if new_assert_type == "":
+                        continue
+                    elif "instruction".startswith(new_assert_type):
                         self.log.assert_instruction_state_change(pc, state_change)
-                    elif new_assert_type == "subroutine":
+                    elif "subroutine".startswith(new_assert_type):
                         self.log.assert_subroutine_state_change(
                             self.subroutine, pc, state_change
                         )
