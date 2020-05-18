@@ -253,12 +253,12 @@ class App(Repl):
             for instr_pc, change in state_changes.items():
                 if not last_sub or sub_pc != last_sub.pc:
                     try:
-                        sub = "<magenta>{:12}</magenta>".format(subroutine.label + ":")
+                        sub = "<magenta>{:16}</magenta>".format(subroutine.label + ":")
                     except KeyError:
                         sub = "<red>${:06X}{:5}</red>".format(sub_pc, "")
-                    s.append("{}{}".format("\n" if last_sub else "", sub))
+                    s.append("{}  {}".format("\n" if last_sub else "", sub))
                 else:
-                    s.append("{:12}".format(""))
+                    s.append("  {:16}".format(""))
 
                 instruction = subroutine.instructions[instr_pc]
                 code = self._print_instruction(instruction)
@@ -361,12 +361,12 @@ class App(Repl):
             disassembly = SubroutineDisassembly(subroutine)
             if not last_sub or sub_pc != last_sub.pc:
                 s.append(
-                    "{}<red>{:12}</red>".format(
+                    "{}<red>{:16}</red>".format(
                         "\n" if last_sub else "", subroutine.label + ":"
                     )
                 )
             else:
-                s.append("{:12}".format(""))
+                s.append("{:16}".format(""))
             s.append(disassembly.get_instruction_html(instruction))
             last_sub = subroutine
         print_html("".join(s))
@@ -388,15 +388,19 @@ class App(Repl):
 
     def _print_stacktrace(self, sub: Subroutine) -> str:
         """Given a subroutine, show its stack of calling subroutines."""
-        s = ["<red>STACK TRACE:</red>\n"]
-        if sub.stack_trace:
-            for caller_pc in sub.stack_trace:
-                caller = self.log.subroutines[caller_pc]
-                s.append("  " + self._print_subroutine(caller))
-        else:
-            assert sub.is_entry_point
+        s = ["<red>STACK TRACES:</red>"]
+
+        if sub.is_entry_point:
             s.append("  Entry point.\n")
-        return "".join(s)
+        else:
+            for stack_trace in sub.stack_traces:
+                ss = []
+                for caller_pc in stack_trace:
+                    caller = self.log.subroutines[caller_pc]
+                    ss.append("  " + self._print_subroutine(caller))
+                s.append("".join(ss))
+
+        return "\n".join(s)
 
     def _print_statechange(self, sub: Subroutine) -> str:
         """Show the change in processor state caused by executing a subroutine."""

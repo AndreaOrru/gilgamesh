@@ -10,7 +10,7 @@ from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
 
 class Subroutine(Invalidable):
-    def __init__(self, log, pc: int, label: str, stack_trace: List[int]):
+    def __init__(self, log, pc: int, label: str):
         super().__init__()
         self.log = log
         self.pc = pc
@@ -21,7 +21,7 @@ class Subroutine(Invalidable):
         # Calling the subroutine results in the following state changes.
         self.state_changes: Dict[int, StateChange] = {}
         # The stack of calls that brought us to the current subroutine.
-        self.stack_trace = stack_trace
+        self.stack_traces: Set[Tuple[int, ...]] = set()
 
         # Whether an instruction inside the subroutine performs stack manipulation.
         self.has_stack_manipulation = False

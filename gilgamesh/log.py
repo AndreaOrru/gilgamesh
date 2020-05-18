@@ -53,7 +53,7 @@ class Log:
 
         # Add entry points.
         for pc, entry in self.entry_points.items():
-            self.add_subroutine(pc, label=entry.name, stack_trace=[])
+            self.add_subroutine(pc, label=entry.name)
 
         self.dirty = False
 
@@ -131,9 +131,10 @@ class Log:
         # Create and register subroutine (unless it exists already).
         subroutine = self.subroutines.get(pc)
         if subroutine is None:
-            subroutine = Subroutine(self, pc, label, stack_trace)
+            subroutine = Subroutine(self, pc, label)
             self.subroutines[pc] = subroutine
             self.subroutines_by_label[label] = subroutine
+        subroutine.stack_traces.add(tuple(stack_trace) if stack_trace else ())
 
         # Apply existing state change assertions.
         state_changes = self.subroutine_assertions.get(pc, {})
