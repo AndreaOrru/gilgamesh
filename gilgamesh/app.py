@@ -319,6 +319,48 @@ class App(Repl):
             print_html(f'<green>"{self.rom.glm_name}" loaded successfully.</green>\n')
             return True
 
+    @command()
+    @argument("addr", complete_label)
+    @argument("size", complete_label)
+    @argument("step", complete_label)
+    def do_memory(self, addr: str, size: str, step: str) -> None:
+        """Show an hex view of a region of ROM, starting from
+        ADDR and spanning SIZE bytes, in groups of STEP bytes."""
+
+        def build_header(step: int) -> str:
+            s = []
+            for n in range(0, (16 // step) * step, step):
+                s.append(f"{n:02X}")
+            s.append("")
+            return (" " * ((2 * step) - 1)).join(s)
+
+        addr_int = self._label_to_pc(addr)
+        size_int = int(size[1:] if size[0] == "$" else int(size))
+        step_int = int(step)
+        if step_int > 16:
+            raise GilgameshError("Can only build groups up to 16 bytes.")
+
+        s = []
+        s += ["<grey>" + (" " * 8) + "│ "]
+        s += [header := build_header(step_int)]
+        s += ["\n" + ("─" * 8) + "┼" + ("─" * len(header)) + "</grey>\n"]
+
+        colors, color_idx = ["white", "cyan"], 0
+        nl_threshold = (16 // step_int) * step_int
+
+        for i in range(addr_int, addr_int + size_int, step_int):
+            color = colors[color_idx % len(colors)]
+            color_idx += 1
+            if (i - addr_int) % nl_threshold == 0:
+                if i - addr_int:
+                    s.append("\n")
+                s.append("<grey>${:06X} │</grey> ".format(i))
+            value = "".join(reversed([f"{x:02X}" for x in self.rom.read(i, step_int)]))
+            s.append("<{}>{}</{}> ".format(color, value, color))
+        s.append("\n")
+
+        print_html("".join(s))
+
     @command(container=True)
     def do_query(self) -> None:
         """Query the analysis log in various ways."""
