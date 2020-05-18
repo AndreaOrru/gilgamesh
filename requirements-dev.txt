@@ -13,3 +13,4 @@ ipython
 pdbpp
 pre-commit
 pytest
+pytest-cov
