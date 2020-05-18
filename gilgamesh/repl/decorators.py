@@ -68,17 +68,28 @@ def argument(name, completion=None):
 
 
 def get_unknown_syntax_message(method, exception) -> Optional[str]:
-    match = re.match(
+    more = re.match(
         r"{}\(\) takes (\d+) positional arguments but (\d+) were given".format(
             method.__name__
         ),
         exception.args[0],
     )
-    if not match:
-        return None
-
-    required, given = int(match.group(1)), int(match.group(2))
-    name = " ".join(method.__name__.split("_")[1:])
-    return '"{}" takes {} positional arguments but {} were given.'.format(
-        name, required - 1, given - 1
+    less = re.match(
+        r"{}\(\) missing (\d+) required positional arguments?: (.*)".format(
+            method.__name__
+        ),
+        exception.args[0],
     )
+    if more or less:
+        name = " ".join(method.__name__.split("_")[1:])
+
+    if more:
+        required, given = int(more.group(1)), int(more.group(2))
+        return '"{}" takes {} positional arguments but {} were given.'.format(
+            name, required - 1, given - 1
+        )
+    elif less:
+        missing = int(less.group(1))
+        return '"{}" missing {} required positional argument(s).'.format(name, missing)
+
+    return None
