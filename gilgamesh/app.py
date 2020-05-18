@@ -474,7 +474,7 @@ class App(Repl):
         """Translate a SNES address to a PC address."""
         pc = self._label_to_pc(label_or_pc)
         s = []
-        s.append("<green>SNES:</green> ${:06X}".format(pc))
+        s.append("<green>SNES:</green> ${:06X}\n".format(pc))
         s.append("<green>PC:</green>   ${:06X}\n".format(self.rom._translate(pc)))
         print_html("".join(s))
 
