@@ -93,7 +93,7 @@ class Disassembly:
                 add_line(T.UNKNOWN_STATE_HEADER)
             else:
                 add_line(T.ASSERTED_STATE_HEADER)
-            add_line(T.LAST_KNOWN_STATE, instruction.state_change_before)
+            add_line(T.LAST_KNOWN_STATE, str(instruction.state_change_before))
             add_line(T.SEPARATOR_LINE)
             add_line(T.ASSERTION_TYPE, assertion_type)
             add_line(T.ASSERTION, state_change)
@@ -308,16 +308,16 @@ class Disassembly:
         # Return the updated line index.
         return line_n
 
-    def _get_unknown_state(self, instruction: Instruction):
-        if instruction.asserted_subroutine_state_change:
+    def _get_unknown_state(self, i: Instruction) -> Tuple[str, str]:
+        if i.asserted_subroutine_state_change:
             assertion_type = "subroutine"
-            state_change = instruction.asserted_subroutine_state_change
-        elif instruction.has_asserted_state_change:
+            state_change = str(i.asserted_subroutine_state_change)
+        elif i.has_asserted_state_change:
             assertion_type = "instruction"
-            state_change = instruction.state_change_after
+            state_change = str(i.state_change_after)
         else:
             assertion_type = "none"
-            state_change = instruction.state_change_after
+            state_change = str(i.state_change_after)
         return state_change, assertion_type
 
     @staticmethod

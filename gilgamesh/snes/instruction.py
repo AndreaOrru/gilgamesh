@@ -336,7 +336,7 @@ class Instruction(Invalidable):
         return self.pc in self.log.instruction_assertions
 
     @property
-    def asserted_subroutine_state_change(self) -> Optional[str]:
+    def asserted_subroutine_state_change(self) -> Optional[StateChange]:
         # fmt: off
         sub_assertion = (
             self.subroutine.has_asserted_state_change and
@@ -346,6 +346,5 @@ class Instruction(Invalidable):
         # fmt: on
 
         if sub_assertion and instr_assertion:
-            return sub_assertion.expr
-        else:
-            return None
+            return sub_assertion
+        return None

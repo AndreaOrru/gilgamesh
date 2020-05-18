@@ -35,12 +35,11 @@ class State:
             }
         )
 
-    @property
-    def expr(self) -> str:
+    def __str__(self) -> str:
         return f"m={self.m},x={self.x}"
 
     def __repr__(self) -> str:
-        return f"<State: {self.expr}>"
+        return f"<State: {self}>"
 
     def __eq__(self, other) -> bool:
         return self.p == other.p
@@ -115,8 +114,7 @@ class StateChange:
         else:
             raise GilgameshError("Unknown syntax.")
 
-    @property
-    def expr(self) -> str:
+    def __str__(self) -> str:
         if self.unknown:
             return "unknown"
 
@@ -130,7 +128,7 @@ class StateChange:
         return r
 
     def __repr__(self) -> str:
-        return "<StateChange: {}>".format(self.expr)
+        return f"<StateChange: {self}>"
 
     def __eq__(self, other) -> bool:
         return (self.unknown and other.unknown) or (
