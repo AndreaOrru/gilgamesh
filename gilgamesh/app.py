@@ -64,10 +64,10 @@ class App(Repl):
     @command()
     def do_analyze(self) -> None:
         """Run the analysis on the ROM."""
-        n_suspect = self.log.num_suspect_subroutines
+        n_suspect = self.log.n_suspect_subroutines
         self.log.analyze()
 
-        new_suspect = self.log.num_suspect_subroutines - n_suspect
+        new_suspect = self.log.n_suspect_subroutines - n_suspect
         if new_suspect > 0:
             print_html(
                 f"<yellow>Discovered {new_suspect} new suspect subroutine(s).</yellow>\n"  # noqa

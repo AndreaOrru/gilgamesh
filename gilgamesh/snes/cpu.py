@@ -81,14 +81,11 @@ class CPU:
 
         # Emulate the instruction.
         keep_going = self.execute(instruction)
+        # Apply asserted state changes if any, and log it inside the instruction object.
+        instruction.state_change_after = self._maybe_apply_asserted_state_change(
+            instruction
+        )
 
-        # Apply asserted state changes, if any.
-        asserted_state = self.log.instruction_assertions.get(instruction.pc)
-        if asserted_state:
-            self._apply_state_change(asserted_state)
-            instruction.state_change_after = asserted_state
-        else:
-            instruction.state_change_after = copy(self.state_change)
         return keep_going
 
     def execute(self, instruction: Instruction) -> bool:
@@ -336,9 +333,8 @@ class CPU:
             self.subroutine_pc, instruction.pc, copy(self.state_change)
         )
 
-        # If the unkown state is due to stack manipulation:
+        # If the unknown state is due to stack manipulation:
         if stack_manipulation:
-            self.subroutine.has_stack_manipulation = True
             # If we know which instruction performed the
             # manipulation, we flag it.
             if stack_manipulator:
@@ -353,3 +349,14 @@ class CPU:
             self.state_change.m = self.state.m = state_change.m
         if state_change.x is not None:
             self.state_change.x = self.state.x = state_change.x
+
+    def _maybe_apply_asserted_state_change(self, i: Instruction) -> StateChange:
+        """Apply asserted state changes if any. Return the asserted
+        state change if there is one, or a copy of the current state
+        change otherwise."""
+        asserted_state = self.log.instruction_assertions.get(i.pc)
+        if asserted_state:
+            self._apply_state_change(asserted_state)
+            return asserted_state
+        else:
+            return copy(self.state_change)

@@ -91,7 +91,7 @@ class Log:
         self.analyze(preserve_labels=False)
 
     @property
-    def num_suspect_subroutines(self) -> int:
+    def n_suspect_subroutines(self) -> int:
         return sum(
             1 if s.has_suspect_instructions else 0 for s in self.subroutines.values()
         )
@@ -106,16 +106,16 @@ class Log:
         self.dirty = True
 
     def add_instruction(self, instruction: Instruction) -> None:
+        # Log instruction.
         self.instructions[instruction.pc].add(instruction.id)
+        # Log instruction inside its subroutine.
         subroutine = instruction.subroutine
         subroutine.add_instruction(instruction)
-
-        if instruction.pc in self.instruction_assertions:
-            subroutine.instruction_has_asserted_state_change = True
 
     def add_subroutine(
         self, pc: int, label: str = "", stack_trace: List[int] = None
     ) -> None:
+        # Do not log subroutines in RAM.
         if self.rom.is_ram(pc):
             return
         if stack_trace is None:
@@ -157,6 +157,7 @@ class Log:
     def assert_instruction_state_change(
         self, instruction_pc: int, state_change: StateChange
     ) -> None:
+        state_change.asserted = True
         self.instruction_assertions[instruction_pc] = state_change
         self.dirty = True
 
@@ -167,6 +168,7 @@ class Log:
     def assert_subroutine_state_change(
         self, subroutine: Subroutine, instruction_pc: int, state_change: StateChange
     ) -> None:
+        state_change.asserted = True
         if subroutine.pc not in self.subroutine_assertions:
             self.subroutine_assertions[subroutine.pc] = {}
         self.subroutine_assertions[subroutine.pc][instruction_pc] = state_change

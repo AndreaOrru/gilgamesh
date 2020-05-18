@@ -94,6 +94,7 @@ class StateChange:
         self.m = m
         self.x = x
         self.unknown = unknown
+        self.asserted = False
 
     @classmethod
     def from_expr(cls, expr: str) -> "StateChange":

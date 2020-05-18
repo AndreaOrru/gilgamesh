@@ -1,5 +1,6 @@
 from typing import Dict, List, Set, Tuple
 
+from cached_property import cached_property  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.snes.instruction import Instruction
@@ -22,13 +23,6 @@ class Subroutine(Invalidable):
         # The stack of calls that brought us to the current subroutine.
         self.stack_trace = stack_trace
 
-        self.has_asserted_state_change = False
-        self.instruction_has_asserted_state_change = False
-
-        self.has_jump_table = False
-        self.has_stack_manipulation = False
-        self.has_suspect_instructions = False
-
     @property
     def local_labels(self) -> Dict[str, int]:
         return self.log.local_labels[self.pc]
@@ -43,8 +37,27 @@ class Subroutine(Invalidable):
         return self.pc in self.log.entry_points
 
     @property
+    def has_asserted_state_change(self) -> bool:
+        return any(s.asserted for s in self.state_changes.values())
+
+    @property
     def has_unknown_return_state(self) -> bool:
-        return any(s for s in self.state_changes.values() if s.unknown)
+        return any(s.unknown for s in self.state_changes.values())
+
+    @cached_property
+    def instruction_has_asserted_state_change(self) -> bool:
+        return any(i.has_asserted_state_change for i in self.instructions.values())
+
+    @cached_property
+    def has_suspect_instructions(self) -> bool:
+        return any(i.operation == Op.BRK for i in self.instructions.values())
+
+    @cached_property
+    def has_jump_table(self) -> bool:
+        return any(
+            (i.is_jump or i.is_call) and (i.absolute_argument is None)
+            for i in self.instructions.values()
+        )
 
     def invalidate(self) -> None:
         bulk_invalidate(self.instructions.values())
@@ -53,18 +66,10 @@ class Subroutine(Invalidable):
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc] = instruction
 
-        if instruction.operation == Op.BRK:
-            self.has_suspect_instructions = True
-        elif (instruction.absolute_argument is None) and (
-            instruction.is_jump or instruction.is_call
-        ):
-            self.has_jump_table = True
-
     def assert_state_change(
         self, instruction_pc: int, state_change: StateChange
     ) -> None:
         self.state_changes[instruction_pc] = state_change
-        self.has_asserted_state_change = True
 
     def simplify_return_states(self, state: State) -> Tuple[Set[StateChange], bool]:
         assert len(self.state_changes) > 0
