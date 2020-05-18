@@ -13,7 +13,7 @@ from gilgamesh.utils.signed_types import s8, s16
 # part of different subroutines. We define a InstructionID struct
 # as the unique identifier of an instruction executed in a specific
 # state and subroutine.
-InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine"])
+InstructionID = namedtuple("InstructionID", ["pc", "p", "subroutine_pc"])
 
 
 class StackManipulation(Enum):
@@ -28,25 +28,24 @@ class Instruction(Invalidable):
         log,
         pc: int,
         p: int,
-        subroutine: int,
+        subroutine_pc: int,
         opcode: int,
         argument: int,
         registers: Dict[str, Optional[int]],
-        state_change: str,
+        state_change_before: str,
     ):
         super().__init__()
         self.log = log
         self.pc = pc
         self.state = State(p)
 
-        self.registers = registers
-        self.state_change = state_change
-
-        self.subroutine = subroutine
+        self.subroutine_pc = subroutine_pc
         self.opcode = opcode
         self._argument = argument
 
-        self.stopped_execution = False
+        self.registers = registers
+        self.state_change_before = state_change_before
+        self.state_change_after = ""
         self.stack_manipulation = StackManipulation.NONE
 
     def __repr__(self) -> str:
@@ -57,7 +56,7 @@ class Instruction(Invalidable):
 
     @property
     def id(self) -> InstructionID:
-        return InstructionID(self.pc, self.state.p, self.subroutine)
+        return InstructionID(self.pc, self.state.p, self.subroutine_pc)
 
     @property
     def name(self) -> str:
@@ -131,8 +130,12 @@ class Instruction(Invalidable):
         return self.pc + self.size
 
     @property
+    def subroutine(self):
+        return self.log.subroutines[self.subroutine_pc]
+
+    @property
     def label(self) -> Optional[str]:
-        return self.log.get_label(self.pc, self.subroutine)
+        return self.log.get_label(self.pc, self.subroutine_pc)
 
     @property
     def does_change_stack(self) -> bool:
@@ -321,5 +324,28 @@ class Instruction(Invalidable):
         if self.is_control:
             target = self.absolute_argument
             if target is not None:
-                return self.log.get_label(target, self.subroutine)
+                return self.log.get_label(target, self.subroutine_pc)
         return None
+
+    @property
+    def stopped_execution(self) -> bool:
+        return self.state_change_after == "unknown"
+
+    @property
+    def has_asserted_state_change(self) -> bool:
+        return self.pc in self.log.instruction_assertions
+
+    @property
+    def asserted_subroutine_state_change(self) -> Optional[str]:
+        # fmt: off
+        sub_assertion = (
+            self.subroutine.has_asserted_state_change and
+            self.log.subroutine_assertions[self.subroutine_pc].get(self.pc)
+        )
+        instr_assertion = self.stopped_execution or self.is_return
+        # fmt: on
+
+        if sub_assertion and instr_assertion:
+            return sub_assertion.state_expr
+        else:
+            return None

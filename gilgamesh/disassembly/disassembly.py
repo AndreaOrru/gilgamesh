@@ -68,8 +68,7 @@ class Disassembly:
                 add_line(T.STACK_MANIPULATION_HEADER)
 
         # Label.
-        subroutine_pc = instruction.subroutine
-        label = self.log.get_label(instruction.pc, subroutine_pc)
+        label = self.log.get_label(instruction.pc, instruction.subroutine_pc)
         if label:
             add_line(T.LABEL, label)
         # Operation + Operand.
@@ -89,12 +88,12 @@ class Disassembly:
 
         # Asserted or unknown state.
         state_change, assertion_type = self._get_unknown_state(instruction)
-        if state_change == "unknown" or assertion_type != "none":
+        if assertion_type != "none" or state_change == "unknown":
             if state_change == "unknown":
                 add_line(T.UNKNOWN_STATE_HEADER)
             else:
                 add_line(T.ASSERTED_STATE_HEADER)
-            add_line(T.LAST_KNOWN_STATE, instruction.state_change)
+            add_line(T.LAST_KNOWN_STATE, instruction.state_change_before)
             add_line(T.SEPARATOR_LINE)
             add_line(T.ASSERTION_TYPE, assertion_type)
             add_line(T.ASSERTION, state_change)
@@ -310,35 +309,15 @@ class Disassembly:
         return line_n
 
     def _get_unknown_state(self, instruction: Instruction):
-        # TODO: what if there are both subroutine and instruction assertions?
-        subroutine = self.log.subroutines[instruction.subroutine]
-
-        assertion_type = "none"
-        state_change = instruction.state_change
-
-        # Subroutine assertion.
-        if (
-            subroutine.has_asserted_state_change
-            and self.log.subroutine_assertions[subroutine.pc].get(instruction.pc)
-            and (instruction.stopped_execution or instruction.is_return)
-        ):
-            assertions = self.log.subroutine_assertions.get(subroutine.pc)
-            assertion = assertions.get(instruction.pc)
-            state_change = (
-                assertion.state_expr if assertion else instruction.state_change
-            )
-            if assertion:
-                assertion_type = "subroutine"
-        # Instruction assertion or unknown state.
-        elif (
-            instruction.pc in self.log.instruction_assertions
-            or instruction.stopped_execution
-        ):
-            assertion = self.log.instruction_assertions.get(instruction.pc)
-            state_change = assertion.state_expr if assertion else "unknown"
-            if assertion:
-                assertion_type = "instruction"
-
+        if instruction.asserted_subroutine_state_change:
+            assertion_type = "subroutine"
+            state_change = instruction.asserted_subroutine_state_change
+        elif instruction.has_asserted_state_change:
+            assertion_type = "instruction"
+            state_change = instruction.state_change_after
+        else:
+            assertion_type = "none"
+            state_change = instruction.state_change_after
         return state_change, assertion_type
 
     @staticmethod

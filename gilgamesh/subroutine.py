@@ -22,11 +22,12 @@ class Subroutine(Invalidable):
         # The stack of calls that brought us to the current subroutine.
         self.stack_trace = stack_trace
 
+        self.has_asserted_state_change = False
+        self.instruction_has_asserted_state_change = False
+
         self.has_jump_table = False
         self.has_stack_manipulation = False
         self.has_suspect_instructions = False
-        self.has_asserted_state_change = False
-        self.instruction_has_asserted_state_change = False
 
     @property
     def local_labels(self) -> Dict[str, int]:

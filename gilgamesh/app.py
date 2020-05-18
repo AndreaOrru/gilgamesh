@@ -334,7 +334,7 @@ class App(Repl):
             return
 
         s = ["<red>SUBROUTINES:</red>\n"]
-        subroutines = {i.subroutine for i in instr_ids}
+        subroutines = {i.subroutine_pc for i in instr_ids}
         for subroutine_pc in sorted(subroutines):
             subroutine = self.log.subroutines[subroutine_pc]
             s.append("  " + self._print_subroutine(subroutine))

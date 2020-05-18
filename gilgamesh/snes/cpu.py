@@ -86,6 +86,9 @@ class CPU:
         asserted_state = self.log.instruction_assertions.get(instruction.pc)
         if asserted_state:
             self._apply_state_change(asserted_state)
+            instruction.state_change_after = asserted_state.state_expr
+        else:
+            instruction.state_change_after = self.state_change.state_expr
         return keep_going
 
     def execute(self, instruction: Instruction) -> bool:
@@ -325,7 +328,8 @@ class CPU:
         self.log.add_subroutine_state(
             self.subroutine_pc, instruction.pc, StateChange(unknown=True)
         )
-        instruction.stopped_execution = True
+        self.state_change = StateChange(unknown=True)
+        instruction.state_change_after = "unknown"
 
         if stack_manipulation:
             self.subroutine.has_stack_manipulation = True

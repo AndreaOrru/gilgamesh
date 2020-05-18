@@ -97,7 +97,7 @@ class Log:
         )
 
     def instruction_subroutines(self, instr_pc: int) -> List[Subroutine]:
-        return [self.subroutines[i.subroutine] for i in self.instructions[instr_pc]]
+        return [self.subroutines[i.subroutine_pc] for i in self.instructions[instr_pc]]
 
     def add_entry_point(self, pc: int, name: str, state: State):
         if (pc in self.entry_points) or (pc in self.instructions):
@@ -107,7 +107,7 @@ class Log:
 
     def add_instruction(self, instruction: Instruction) -> None:
         self.instructions[instruction.pc].add(instruction.id)
-        subroutine = self.subroutines[instruction.subroutine]
+        subroutine = instruction.subroutine
         subroutine.add_instruction(instruction)
 
         if instruction.pc in self.instruction_assertions:
@@ -183,7 +183,7 @@ class Log:
             self.dirty = True
 
     def add_reference(self, instruction: Instruction, target: int) -> None:
-        self.references[target].add((instruction.pc, instruction.subroutine))
+        self.references[target].add((instruction.pc, instruction.subroutine_pc))
 
     def get_label(self, pc: int, subroutine_pc: int) -> Optional[str]:
         subroutine = self.subroutines.get(pc)
