@@ -99,6 +99,12 @@ class Log:
     def instruction_subroutines(self, instr_pc: int) -> List[Subroutine]:
         return [self.subroutines[i.subroutine_pc] for i in self.instructions[instr_pc]]
 
+    def any_instruction(self, instr_pc: int) -> Instruction:
+        subroutines = self.instruction_subroutines(instr_pc)
+        if not subroutines:
+            raise GilgameshError("No instruction at the given address.")
+        return subroutines[0].instructions[instr_pc]
+
     def add_entry_point(self, pc: int, name: str, state: State):
         if (pc in self.entry_points) or (pc in self.instructions):
             raise GilgameshError("This address is already covered by the analysis.")
@@ -268,6 +274,19 @@ class Log:
     def is_visited(self, instruction_id: InstructionID) -> bool:
         elements = self.instructions.get(instruction_id.pc, set())
         return instruction_id in elements
+
+    def find_instruction(self, addr: int) -> Optional[int]:
+        get_size = lambda addr: self.any_instruction(addr).size  # noqa: E731
+
+        if addr in self.instructions:
+            return addr
+        elif addr - 1 in self.instructions and get_size(addr - 1) >= 2:
+            return addr - 1
+        elif addr - 2 in self.instructions and get_size(addr - 2) >= 3:
+            return addr - 2
+        elif addr - 3 in self.instructions and get_size(addr - 3) >= 4:
+            return addr - 3
+        return None
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():

@@ -222,7 +222,7 @@ class App(Repl):
         s = ["<red>ASSERTED INSTRUCTION STATE CHANGES:</red>\n"]
         for pc, change in self.log.instruction_assertions.items():
             subroutines = self.log.instruction_subroutines(pc)
-            instruction = subroutines[0].instructions[pc]
+            instruction = self.log.any_instruction(pc)
             disassembly = self._print_instruction(instruction)
 
             s.append("  <magenta>${:06X}</magenta>  {}-> ".format(pc, disassembly))
@@ -345,20 +345,27 @@ class App(Repl):
         s += [header := build_header(step_int)]
         s += ["\n" + ("─" * 8) + "┼" + ("─" * len(header)) + "</grey>\n"]
 
-        colors, color_idx = ["white", "cyan"], 0
+        colors, color_idx = ["lightgrey", "cyan"], 0
         nl_threshold = (16 // step_int) * step_int
 
         for i in range(addr_int, addr_int + size_int, step_int):
-            color = colors[color_idx % len(colors)]
-            color_idx += 1
             if (i - addr_int) % nl_threshold == 0:
                 if i - addr_int:
                     s.append("\n")
                 s.append("<grey>${:06X} │</grey> ".format(i))
-            value = "".join(reversed([f"{x:02X}" for x in self.rom.read(i, step_int)]))
-            s.append("<{}>{}</{}> ".format(color, value, color))
-        s.append("\n")
 
+            for j, b in enumerate(self.rom.read(i, step_int)):
+                color = (
+                    "yellow"
+                    if self.log.find_instruction(i + j) is not None
+                    else colors[color_idx % len(colors)]
+                )
+                s.append("<{}>{:02X}</{}>".format(color, b, color))
+
+            s.append(" ")
+            color_idx += 1
+
+        s.append("\n")
         print_html("".join(s))
 
     @command(container=True)
@@ -374,19 +381,30 @@ class App(Repl):
         pc = self._label_to_pc(label_or_pc)
         instr_ids = self.log.instructions.get(pc, None)
         if instr_ids is None:
+            actual_pc = self.log.find_instruction(pc)
+            if actual_pc is not None:
+                print_html(
+                    "The given PC belongs to an instruction that "
+                    + f"starts at <red>${actual_pc:06X}</red>.\n"
+                )
             return
 
-        s = ["<red>SUBROUTINES:</red>\n"]
+        s = ["<red>DISASSEMBLY:</red>\n"]
+        instruction = self.log.any_instruction(pc)
+        s.append("  " + self._print_instruction(instruction))
+
+        s.append("\n\n<red>STATES:</red>\n")
+        states = {State(x.p) for x in instr_ids}
+        for state in states:
+            s.append(f"  <yellow>M</yellow>=<green>{state.m}</green>, ")
+            s.append(f"<yellow>X</yellow>=<green>{state.x}</green>\n")
+
+        s.append("\n<red>SUBROUTINES:</red>\n")
         subroutines = {i.subroutine_pc for i in instr_ids}
         for subroutine_pc in sorted(subroutines):
             subroutine = self.log.subroutines[subroutine_pc]
             s.append("  " + self._print_subroutine(subroutine))
 
-        s.append("\n<red>STATES:</red>\n")
-        states = {State(x.p) for x in instr_ids}
-        for state in states:
-            s.append(f"  <yellow>M</yellow>=<green>{state.m}</green>, ")
-            s.append(f"<yellow>X</yellow>=<green>{state.x}</green>\n")
         print_html("".join(s))
 
     @command()
