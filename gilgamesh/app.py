@@ -216,18 +216,15 @@ class App(Repl):
             self.log.assert_jump(caller_pc_int, target_pc)
         else:
             caller = self.log.any_instruction(caller_pc_int)
-            step = caller.argument_size
-            assert caller.argument is not None
             assert caller.is_call or caller.is_jump
+            assert caller.argument_size == 2
+            assert caller.argument is not None
 
             first, last = [int(n, 16) for n in range_or_target_pc.split("..")]
-            for x in range(first, last + 1, step):
+            for x in range(first, last + 1, 2):
                 offset = caller.argument + x
-                if step == 2:
-                    bank = caller.pc & 0xFF0000
-                    target_pc = bank | (self.rom.read_word(bank | offset))
-                else:
-                    target_pc = self.rom.read_address(offset)
+                bank = caller.pc & 0xFF0000
+                target_pc = bank | (self.rom.read_word(bank | offset))
                 self.log.assert_jump(caller_pc_int, target_pc)
 
     @command()
