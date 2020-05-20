@@ -24,6 +24,7 @@ class Log:
     def reset(self) -> None:
         self.jump_assertions: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
         self.jump_table_targets: DefaultDict[int, int] = defaultdict(int)
+        self.complete_jump_tables: Set[int] = set()
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, Dict[int, StateChange]] = {}
         self.preserved_labels: Dict[int, str] = {}
@@ -80,6 +81,7 @@ class Log:
             "instruction_assertions": self.instruction_assertions,
             "jump_assertions": self.jump_assertions,
             "jump_table_targets": self.jump_table_targets,
+            "complete_jump_tables": self.complete_jump_tables,
             "subroutine_assertions": self.subroutine_assertions,
             "preserved_labels": self.preserved_labels,
             "comments": self.comments,

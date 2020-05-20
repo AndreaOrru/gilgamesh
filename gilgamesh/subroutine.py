@@ -60,11 +60,12 @@ class Subroutine(Invalidable):
         return any(i.operation == Op.BRK for i in self.instructions.values())
 
     @cached_property
-    def has_jump_table(self) -> bool:
-        return any(
-            (i.is_jump or i.is_call) and (i.absolute_argument is None)
-            for i in self.instructions.values()
-        )
+    def indirect_jumps(self) -> List[int]:
+        return [i.pc for i in self.instructions.values() if i.is_indirect_jump]
+
+    @property
+    def has_incomplete_jump_table(self) -> bool:
+        return any(i not in self.log.complete_jump_tables for i in self.indirect_jumps)
 
     def invalidate(self) -> None:
         bulk_invalidate(self.instructions.values())

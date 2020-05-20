@@ -118,7 +118,7 @@ class UnknownJumpTest(LogTest, TestCase):
         sub = self.log.subroutines[0x800B]
 
         self.assertDictEqual(sub.state_changes, {0x800B: StateChange(unknown=True)})
-        self.assertTrue(sub.has_jump_table)
+        self.assertTrue(sub.indirect_jumps)
         self.assertTrue(sub.has_unknown_return_state)
 
         self.assertNotIn(0x8005, reset.instructions)
@@ -140,7 +140,7 @@ class UnknownJumpTest(LogTest, TestCase):
 
         self.assertIn(0x8005, reset.instructions)
         self.assertIn(0x8008, reset.instructions)
-        self.assertTrue(unknown.has_jump_table)
+        self.assertTrue(unknown.indirect_jumps)
         self.assertTrue(unknown.has_asserted_state_change)
         self.assertFalse(unknown.has_unknown_return_state)
 
@@ -184,7 +184,7 @@ class SimplifiableReturnState(LogTest, TestCase):
         self.assertEqual(len(double_state_sub.state_changes), 2)
 
         unknown_sub = self.log.subroutines[0x801F]
-        self.assertTrue(unknown_sub.has_jump_table)
+        self.assertTrue(unknown_sub.indirect_jumps)
         self.assertTrue(unknown_sub.has_unknown_return_state)
 
     def test_instruction_state_change_assertion(self):
@@ -195,7 +195,7 @@ class SimplifiableReturnState(LogTest, TestCase):
         self.assertFalse(self.log.dirty)
 
         unknown_sub = self.log.subroutines[0x801F]
-        self.assertTrue(unknown_sub.has_jump_table)
+        self.assertTrue(unknown_sub.indirect_jumps)
         self.assertTrue(unknown_sub.instruction_has_asserted_state_change)
         self.assertFalse(unknown_sub.has_unknown_return_state)
 

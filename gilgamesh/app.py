@@ -202,7 +202,7 @@ class App(Repl):
 
     @command(container=True)
     def do_jumptable(self) -> None:
-        """Add or remove jump table entries."""
+        """Manage jump tables."""
         ...
 
     @command()
@@ -244,6 +244,13 @@ class App(Repl):
                 bank = caller.pc & 0xFF0000
                 target_pc = bank | (self.rom.read_word(bank | offset))
                 self.log.deassert_jump(caller.pc, target_pc)
+
+    @command()
+    @argument("caller_pc", complete_label)
+    def do_jumptable_complete(self, caller_pc: str) -> None:
+        # TODO: verify this is a jump table.
+        caller_pc_int = self._label_to_pc(caller_pc)
+        self.log.complete_jump_tables.add(caller_pc_int)
 
     @command(container=True)
     def do_list(self) -> None:
@@ -691,8 +698,9 @@ class App(Repl):
             comment += ' <black bg="ansired">[!]</black>'
         if sub.has_stack_manipulation:
             comment += " <red>[?]</red>"
-        if sub.has_jump_table:
-            comment += " <red>[*]</red>"
+        if sub.indirect_jumps:
+            color = "red" if sub.has_incomplete_jump_table else "green"
+            comment += f" <{color}>[*]</{color}>"
 
         return "${:06X}  <{}>{}</{}>{}\n".format(
             sub.pc, open_color, sub.label, close_color, comment,

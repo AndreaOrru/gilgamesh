@@ -181,6 +181,10 @@ class Instruction(Invalidable):
         return self.operation in (Op.DEY, Op.INY, Op.LDY, Op.PLY, Op.TAY, Op.TXY,)
 
     @property
+    def is_indirect_jump(self) -> bool:
+        return (self.is_jump or self.is_call) and self.absolute_argument is None
+
+    @property
     def is_jump_table(self) -> bool:
         return self.pc in self.log.jump_assertions
 
