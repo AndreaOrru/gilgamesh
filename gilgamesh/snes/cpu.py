@@ -141,6 +141,7 @@ class CPU:
         else:
             targets = self.log.jump_assertions.get(instruction.pc, {None})
 
+        all_known = True
         for target in targets:
             if target is None:
                 # If we can't reliably derive the address of the subroutine
@@ -167,8 +168,8 @@ class CPU:
             # side, we need to stop the execution.
             known = self._propagate_subroutine_state(instruction.pc, target)
             if not known and not self._unknown_subroutine_state(instruction):
-                return False
-        return True
+                all_known = False
+        return all_known
 
     def jump(self, instruction: Instruction) -> None:
         if instruction.absolute_argument:

@@ -50,9 +50,7 @@ class Disassembly:
 
         return n_lines, "".join(s), tokens
 
-    def _instruction_to_tokens(
-        self, instruction: Instruction, verbose=True
-    ) -> List[Token]:
+    def _instruction_to_tokens(self, instr: Instruction, verbose=True) -> List[Token]:
         """Convert an instruction into a list of token which describes it."""
         tokens = []
 
@@ -64,53 +62,62 @@ class Disassembly:
             tokens.append(Token(T.NEWLINE))
 
         # Stack manipulation.
-        if verbose and instruction.stack_manipulation != StackManipulation.NONE:
-            if instruction.stack_manipulation == StackManipulation.CAUSES_UNKNOWN_STATE:
+        if verbose and instr.stack_manipulation != StackManipulation.NONE:
+            if instr.stack_manipulation == StackManipulation.CAUSES_UNKNOWN_STATE:
                 add_line(T.FATAL_STACK_MANIPULATION_HEADER)
             else:
                 add_line(T.STACK_MANIPULATION_HEADER)
 
         # Label.
-        label = self.log.get_label(instruction.pc, instruction.subroutine_pc)
+        label = self.log.get_label(instr.pc, instr.subroutine_pc)
         if label:
-            if instruction.pc in self.log.jump_table_targets:
+            if instr.pc in self.log.jump_table_targets:
                 add_line(T.JUMP_TABLE_LABEL, label)
             else:
                 add_line(T.LABEL, label)
         # Operation + Operand.
-        tokens.append(Token(T.OPERATION, instruction.name))
-        if instruction.argument_alias:
-            if instruction.argument_alias in self.highlighted_labels:
-                add(T.HIGHLIGHTED_OPERAND_LABEL, instruction.argument_alias)
-            elif instruction.pc in self.log.jump_table_targets:
-                add(T.JUMP_TABLE_OPERAND_LABEL, instruction.argument_alias)
+        tokens.append(Token(T.OPERATION, instr.name))
+        if instr.argument_alias:
+            if instr.argument_alias in self.highlighted_labels:
+                add(T.HIGHLIGHTED_OPERAND_LABEL, instr.argument_alias)
+            elif instr.pc in self.log.jump_table_targets:
+                add(T.JUMP_TABLE_OPERAND_LABEL, instr.argument_alias)
             else:
-                add(T.OPERAND_LABEL, instruction.argument_alias)
+                add(T.OPERAND_LABEL, instr.argument_alias)
         else:
-            add(T.OPERAND, instruction.argument_string)
+            add(T.OPERAND, instr.argument_string)
         # PC + Comment.
-        add(T.PC, "${:06X}".format(instruction.pc))
-        comment = self.log.comments.get(instruction.pc, "")
+        add(T.PC, "${:06X}".format(instr.pc))
+        comment = self.log.comments.get(instr.pc, "")
         add_line(T.COMMENT, comment)
 
         # Don't show extra information on state in non-verbose mode.
         if not verbose:
             return tokens
 
+        # Jump table.
+        if instr.is_jump_table:
+            add_line(T.JUMP_TABLE_HEADER)
+            for target in self.log.jump_assertions[instr.pc]:
+                add_line(
+                    T.JUMP_TABLE_ENTRY, self.log.get_label(target, self.subroutine.pc)
+                )
+            add_line(T.SEPARATOR_LINE)
+
         # Asserted or unknown state.
-        state_change, assertion_type = self._get_unknown_state(instruction)
+        state_change, assertion_type = self._get_unknown_state(instr)
         if assertion_type != "none" or state_change == "unknown":
             if state_change == "unknown":
                 add_line(T.UNKNOWN_STATE_HEADER)
             else:
                 add_line(T.ASSERTED_STATE_HEADER)
-            add_line(T.LAST_KNOWN_STATE, str(instruction.state_change_before))
+            add_line(T.LAST_KNOWN_STATE, str(instr.state_change_before))
             add_line(T.SEPARATOR_LINE)
             add_line(T.ASSERTION_TYPE, assertion_type)
             add_line(T.ASSERTION, state_change)
             add_line(T.SEPARATOR_LINE)
         # Normal return state.
-        elif instruction.is_return:
+        elif instr.is_return:
             add_line(T.KNOWN_STATE_HEADER)
             add_line(T.KNOWN_STATE, state_change)
             add_line(T.SEPARATOR_LINE)
@@ -233,6 +240,8 @@ class Disassembly:
             elif t.typ == T.ASSERTION:
                 color = "red" if t.val == "unknown" else "magenta"
                 s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
+            elif t.typ == T.JUMP_TABLE_ENTRY:
+                s.append(f'  {string(t.typ)} {colorize(t.val, "grey")}')
 
         return n_lines, "".join(s)
 
@@ -267,7 +276,8 @@ class Disassembly:
         with potentially updated content. Apply changes where possible."""
         for orig, new in zip_longest(original_tokens, new_tokens):
             # Handle equivalent tokens.
-            orig.typ = EQUIVALENT_TOKENS.get(orig.typ, orig.typ)
+            if orig:
+                orig.typ = EQUIVALENT_TOKENS.get(orig.typ, orig.typ)
 
             # Count lines.
             if new and new.typ == T.NEWLINE:
@@ -354,7 +364,7 @@ class Disassembly:
 
     @lru_cache(None)
     @classmethod
-    def center(cls, s: str, color: Optional[str] = None, html=False) -> str:
+    def center(cls, s: str, html=False, color: Optional[str] = None) -> str:
         n = cls.SEPARATOR_LINE.count("-")
         left = (n // 2) - (len(s) // 2)
         right = n - (left + len(s))
@@ -376,6 +386,8 @@ class Disassembly:
             return center("[STACK MANIPULATION]", "red")
         elif t == T.ASSERTED_STATE_HEADER:
             return center("[ASSERTED STATE]", "magenta")
+        elif t == T.JUMP_TABLE_HEADER:
+            return center("[JUMP TABLE]", "blue")
         elif t == T.KNOWN_STATE_HEADER:
             return center("[KNOWN STATE]", "green")
         elif t == T.UNKNOWN_STATE_HEADER:
@@ -390,5 +402,8 @@ class Disassembly:
             return colorize("; ASSERTION TYPE:", "grey")
         elif t == T.ASSERTION:
             return colorize("; ASSERTED STATE CHANGE:", "grey")
+
+        elif t == T.JUMP_TABLE_ENTRY:
+            return colorize(";", "grey")
 
         assert False

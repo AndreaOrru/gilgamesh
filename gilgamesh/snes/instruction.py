@@ -181,6 +181,10 @@ class Instruction(Invalidable):
         return self.operation in (Op.DEY, Op.INY, Op.LDY, Op.PLY, Op.TAY, Op.TXY,)
 
     @property
+    def is_jump_table(self) -> bool:
+        return self.pc in self.log.jump_assertions
+
+    @property
     def is_branch(self) -> bool:
         return self.operation in (
             Op.BCC,

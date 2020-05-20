@@ -15,6 +15,8 @@ class TokenType(Enum):
     COMMENT = auto()
     FATAL_STACK_MANIPULATION_HEADER = auto()
     HIGHLIGHTED_OPERAND_LABEL = auto()
+    JUMP_TABLE_ENTRY = auto()
+    JUMP_TABLE_HEADER = auto()
     JUMP_TABLE_LABEL = auto()
     JUMP_TABLE_OPERAND_LABEL = auto()
     KNOWN_STATE = auto()
@@ -34,6 +36,7 @@ class TokenType(Enum):
 HEADER_TOKENS = {
     TokenType.ASSERTED_STATE_HEADER,
     TokenType.FATAL_STACK_MANIPULATION_HEADER,
+    TokenType.JUMP_TABLE_HEADER,
     TokenType.KNOWN_STATE_HEADER,
     TokenType.SEPARATOR_LINE,
     TokenType.STACK_MANIPULATION_HEADER,

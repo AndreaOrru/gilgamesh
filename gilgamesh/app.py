@@ -1,7 +1,7 @@
 import pickle
 from copy import deepcopy
 from os import path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
@@ -207,13 +207,25 @@ class App(Repl):
 
     @command()
     @argument("caller_pc", complete_label)
-    @argument("range_or_target_pc", complete_label)
+    @argument("range_or_target_pc")
     def do_jumptable_add(self, caller_pc: str, range_or_target_pc: str) -> None:
         """Add a jump table entry."""
+        self._do_jumptable_op(self.log.assert_jump, caller_pc, range_or_target_pc)
+
+    @command()
+    @argument("caller_pc", complete_label)
+    @argument("range_or_target_pc")
+    def do_jumptable_delete(self, caller_pc: str, range_or_target_pc: str) -> None:
+        """Remove a jump table entry."""
+        self._do_jumptable_op(self.log.deassert_jump, caller_pc, range_or_target_pc)
+
+    def _do_jumptable_op(
+        self, op: Callable, caller_pc: str, range_or_target_pc: str
+    ) -> None:
         caller_pc_int = self._label_to_pc(caller_pc)
         if range_or_target_pc.startswith("$"):
             target_pc = self._label_to_pc(range_or_target_pc)
-            self.log.assert_jump(caller_pc_int, target_pc)
+            self.log.deassert_jump(caller_pc_int, target_pc)
         else:
             caller = self.log.any_instruction(caller_pc_int)
             assert caller.is_call or caller.is_jump
@@ -225,16 +237,7 @@ class App(Repl):
                 offset = caller.argument + x
                 bank = caller.pc & 0xFF0000
                 target_pc = bank | (self.rom.read_word(bank | offset))
-                self.log.assert_jump(caller_pc_int, target_pc)
-
-    @command()
-    @argument("caller_pc", complete_label)
-    @argument("target_pc", complete_label)
-    def do_jumptable_delete(self, caller_pc: str, target_pc: str) -> None:
-        """Remove a jump table entry."""
-        caller_pc_int = self._label_to_pc(caller_pc)
-        target_pc_int = self._label_to_pc(target_pc)
-        self.log.deassert_jump(caller_pc_int, target_pc_int)
+                op(caller.pc, target_pc)
 
     @command(container=True)
     def do_list(self) -> None:
