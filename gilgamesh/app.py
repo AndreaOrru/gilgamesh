@@ -225,7 +225,7 @@ class App(Repl):
         caller_pc_int = self._label_to_pc(caller_pc)
         if range_or_target_pc.startswith("$"):
             target_pc = self._label_to_pc(range_or_target_pc)
-            self.log.deassert_jump(caller_pc_int, target_pc)
+            op(caller_pc_int, target_pc)
         else:
             caller = self.log.any_instruction(caller_pc_int)
             assert caller.is_call or caller.is_jump
