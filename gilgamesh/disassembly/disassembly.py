@@ -119,7 +119,8 @@ class Disassembly:
                 add_line(T.UNKNOWN_STATE_HEADER)
             else:
                 add_line(T.ASSERTED_STATE_HEADER)
-            add_line(T.LAST_KNOWN_STATE, str(instr.state_change_before))
+            add_line(T.LAST_KNOWN_STATE, str(instr.state))
+            add_line(T.LAST_KNOWN_STATE_CHANGE, str(instr.state_change_before))
             add_line(T.SEPARATOR_LINE)
             add_line(T.ASSERTION_TYPE, assertion_type)
             add_line(T.ASSERTION, state_change)
@@ -127,7 +128,7 @@ class Disassembly:
         # Normal return state.
         elif instr.is_return:
             add_line(T.KNOWN_STATE_HEADER)
-            add_line(T.KNOWN_STATE, state_change)
+            add_line(T.KNOWN_STATE_CHANGE, state_change)
             add_line(T.SEPARATOR_LINE)
 
         return tokens
@@ -161,7 +162,9 @@ class Disassembly:
             # Known return state.
             elif p.maybe_match_line(self.string(T.KNOWN_STATE_HEADER)):
                 p.add_line(T.KNOWN_STATE_HEADER)
-                p.add_line_rest(T.KNOWN_STATE, after=self.string(T.KNOWN_STATE))
+                p.add_line_rest(
+                    T.KNOWN_STATE_CHANGE, after=self.string(T.KNOWN_STATE_CHANGE)
+                )
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
             # Unknown or asserted (previously unknown) state.
@@ -174,6 +177,9 @@ class Disassembly:
                     p.add_line(T.UNKNOWN_STATE_HEADER)
                 # TODO: validate state_expr and assertion_type.
                 p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
+                p.add_line_rest(
+                    T.LAST_KNOWN_STATE_CHANGE, self.string(T.LAST_KNOWN_STATE_CHANGE)
+                )
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
                 p.add_line_rest(T.ASSERTION_TYPE, after=self.string(T.ASSERTION_TYPE))
                 p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
@@ -247,7 +253,11 @@ class Disassembly:
                 s.append(colorize(f" | {t.val}", "grey"))
             elif t.typ in HEADER_TOKENS:
                 s.append(f"  {string(t.typ)}")
-            elif t.typ in (T.KNOWN_STATE, T.LAST_KNOWN_STATE):
+            elif t.typ in (
+                T.LAST_KNOWN_STATE,
+                T.KNOWN_STATE_CHANGE,
+                T.LAST_KNOWN_STATE_CHANGE,
+            ):
                 s.append(f'  {string(t.typ)} {colorize(t.val, "green")}')
             elif t.typ == T.ASSERTION_TYPE:
                 color = "red" if t.val == "none" else "magenta"
@@ -410,10 +420,12 @@ class Disassembly:
         elif t == T.UNKNOWN_STATE_HEADER:
             return center("[UNKNOWN STATE]", "red")
 
-        elif t == T.KNOWN_STATE:
+        elif t == T.KNOWN_STATE_CHANGE:
             return colorize("; Known return state change:", "grey")
-        elif t == T.LAST_KNOWN_STATE:
+        elif t == T.LAST_KNOWN_STATE_CHANGE:
             return colorize("; Last known state change:", "grey")
+        elif t == T.LAST_KNOWN_STATE:
+            return colorize("; Last known state:", "grey")
 
         elif t == T.ASSERTION_TYPE:
             return colorize("; ASSERTION TYPE:", "grey")
