@@ -22,7 +22,7 @@ class Log:
         self.reset()
 
     def reset(self) -> None:
-        self.jump_assertions: DefaultDict[int, Set[int]] = defaultdict(set)
+        self.jump_assertions: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
         self.jump_table_targets: DefaultDict[int, int] = defaultdict(int)
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, Dict[int, StateChange]] = {}
@@ -178,24 +178,24 @@ class Log:
         self.instruction_assertions.pop(instruction_pc, None)
         self.dirty = True
 
-    def assert_jump(self, caller_pc: int, target_pc: int) -> None:
+    def assert_jump(self, caller_pc: int, target_pc: int, x: int) -> None:
         if (
             caller_pc in self.jump_assertions
-            and target_pc in self.jump_assertions[caller_pc]
+            and (x, target_pc) in self.jump_assertions[caller_pc]
         ):
             return
-        self.jump_assertions[caller_pc].add(target_pc)
+        self.jump_assertions[caller_pc].add((x, target_pc))
         self.jump_table_targets[target_pc] += 1
         self.dirty = True
 
-    def deassert_jump(self, caller_pc: int, target_pc: int) -> None:
+    def deassert_jump(self, caller_pc: int, target_pc: int, x: int) -> None:
         if not (
             caller_pc in self.jump_assertions
-            and target_pc in self.jump_assertions[caller_pc]
+            and (x, target_pc) in self.jump_assertions[caller_pc]
         ):
             return
 
-        self.jump_assertions[caller_pc].remove(target_pc)
+        self.jump_assertions[caller_pc].remove((x, target_pc))
         if not self.jump_assertions[caller_pc]:
             del self.jump_assertions[caller_pc]
 

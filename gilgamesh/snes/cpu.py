@@ -137,12 +137,12 @@ class CPU:
 
     def call(self, instruction: Instruction) -> bool:
         if instruction.absolute_argument:
-            targets = [instruction.absolute_argument]
+            targets = [(None, instruction.absolute_argument)]
         else:
-            targets = self.log.jump_assertions.get(instruction.pc, {None})
+            targets = self.log.jump_assertions.get(instruction.pc, [(None, None)])
 
         all_known = True
-        for target in targets:
+        for _, target in targets:
             if target is None:
                 # If we can't reliably derive the address of the subroutine
                 # being called, we're left in an unknown state.
@@ -173,11 +173,11 @@ class CPU:
 
     def jump(self, instruction: Instruction) -> None:
         if instruction.absolute_argument:
-            targets = [instruction.absolute_argument]
+            targets = [(None, instruction.absolute_argument)]
         else:
-            targets = self.log.jump_assertions.get(instruction.pc, [None])
+            targets = self.log.jump_assertions.get(instruction.pc, [(None, None)])
 
-        for target in targets:
+        for _, target in targets:
             if target is None:
                 self._unknown_subroutine_state(instruction)
                 return

@@ -98,9 +98,12 @@ class Disassembly:
         # Jump table.
         if instr.is_jump_table:
             add_line(T.JUMP_TABLE_HEADER)
-            for target in self.log.jump_assertions[instr.pc]:
+            for x, target in sorted(self.log.jump_assertions[instr.pc]):
                 add_line(
-                    T.JUMP_TABLE_ENTRY, self.log.get_label(target, self.subroutine.pc)
+                    T.JUMP_TABLE_ENTRY,
+                    "x={:04X}  =>  {}".format(
+                        x, self.log.get_label(target, self.subroutine.pc)
+                    ),
                 )
             add_line(T.SEPARATOR_LINE)
 
@@ -142,6 +145,13 @@ class Disassembly:
             elif p.maybe_match_line(self.string(T.STACK_MANIPULATION_HEADER)):
                 p.new_instruction()
                 p.add_line(T.STACK_MANIPULATION_HEADER)
+
+            # Jump table.
+            elif p.maybe_match_line(self.string(T.JUMP_TABLE_HEADER)):
+                p.add_line(T.JUMP_TABLE_HEADER)
+                while not p.maybe_match_line(self.SEPARATOR_LINE):
+                    p.add_line(T.JUMP_TABLE_ENTRY)
+                p.add_line(T.SEPARATOR_LINE)
 
             # Known return state.
             elif p.maybe_match_line(self.string(T.KNOWN_STATE_HEADER)):

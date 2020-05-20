@@ -47,6 +47,7 @@ EDITABLE_TOKENS = {
     TokenType.ASSERTION,
     TokenType.ASSERTION_TYPE,
     TokenType.COMMENT,
+    TokenType.JUMP_TABLE_ENTRY,
     TokenType.LABEL,
     TokenType.OPERAND_LABEL,
 }
