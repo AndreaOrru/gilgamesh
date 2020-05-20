@@ -1,11 +1,15 @@
+from typing import Optional, Set
+
 from gilgamesh.disassembly.container import DisassemblyContainer
 from gilgamesh.log import Log
 from gilgamesh.subroutine import Subroutine
 
 
 class SubroutineDisassembly(DisassemblyContainer):
-    def __init__(self, subroutine: Subroutine):
-        super().__init__(subroutine.log, [subroutine])
+    def __init__(
+        self, subroutine: Subroutine, highlighted_labels: Optional[Set[str]] = None
+    ):
+        super().__init__(subroutine.log, [subroutine], highlighted_labels)
 
 
 class ROMDisassembly(DisassemblyContainer):

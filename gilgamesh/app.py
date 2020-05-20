@@ -1,10 +1,12 @@
 import pickle
+from copy import deepcopy
 from os import path
 from typing import Any, Dict, List, Optional
 
 from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.disassembly import ROMDisassembly, SubroutineDisassembly
+from gilgamesh.disassembly.renames import unique_label
 from gilgamesh.errors import GilgameshError
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
@@ -376,8 +378,10 @@ class App(Repl):
     @command()
     @argument("label_or_pc", complete_label)
     def do_query_instruction(self, label_or_pc: str) -> None:
-        """Query various info on an instruction, including the subroutine
-        it belongs to, and all the possible states it was encountered at."""
+        """Query various info on an instruction.
+
+        Includes the subroutine it belongs to, and all the possible
+        states it was encountered at."""
         pc = self._label_to_pc(label_or_pc)
         instr_ids = self.log.instructions.get(pc, None)
         if instr_ids is None:
@@ -516,6 +520,35 @@ class App(Repl):
             "Are you sure you want to overwrite the saved analysis?"
         ):
             save()
+
+    @command()
+    @argument("target_pc")
+    @argument("state_expr")
+    def do_preview(self, target_pc: str, state_expr: str) -> None:
+        """Preview a subroutine disassembly without affecting the current analysis."""
+        # Check whether we already gave this PC a name at some
+        # point, even if it's not part of the analysis anymore.
+        if not target_pc.startswith("$"):
+            raise GilgameshError("Please specify a valid address.")
+        pc_int = self._label_to_pc(target_pc)
+        label = self.log.preserved_labels.get(pc_int, f"jt_{pc_int:06X}")
+
+        # Save a copy of the current state of the analysis.
+        old_labels = set(self.log.subroutines_by_label.keys())
+        saved_log = deepcopy(self.log.save())
+        # Run the analysis again, with one more entry point.
+        self.do_entrypoint(target_pc, label, state_expr)
+        self.log.analyze()
+
+        # Show the disassembly of the target subroutine,
+        # highlighting new undiscovered subroutines in red.
+        subroutine = self.log.subroutines_by_label[label]
+        new_labels = self.log.subroutines_by_label.keys() - old_labels
+        disassembly = SubroutineDisassembly(subroutine, new_labels)
+        print_html(disassembly.get_html())
+
+        # Restore previous log.
+        self.log.load(saved_log)
 
     @command()
     @argument("label", complete_subroutine)

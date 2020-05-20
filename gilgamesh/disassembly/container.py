@@ -1,7 +1,7 @@
 import os
 from subprocess import check_call
 from tempfile import NamedTemporaryFile
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional, Set
 
 from gilgamesh.disassembly.disassembly import Disassembly
 from gilgamesh.disassembly.parser import Token
@@ -14,9 +14,17 @@ from gilgamesh.subroutine import Subroutine
 class DisassemblyContainer(Disassembly):
     HEADER = ";;" + ("=" * 41) + "\n"
 
-    def __init__(self, log: Log, subroutines: Iterable[Subroutine]):
-        super().__init__(next(iter(subroutines)))  # HACK
-        self.disassemblies = [Disassembly(sub) for sub in subroutines]
+    def __init__(
+        self,
+        log: Log,
+        subroutines: Iterable[Subroutine],
+        highlighted_labels: Optional[Set[str]] = None,
+    ):
+        # HACK:
+        super().__init__(next(iter(subroutines)), highlighted_labels)
+        self.disassemblies = [
+            Disassembly(sub, highlighted_labels) for sub in subroutines
+        ]
 
     def edit(self) -> None:
         # Save the subroutines' disassembly in a temporary file.

@@ -19,6 +19,7 @@ class TokenType(Enum):
     NEWLINE = auto()
     OPERAND = auto()
     OPERAND_LABEL = auto()
+    HIGHLIGHTED_OPERAND_LABEL = auto()
     OPERATION = auto()
     PC = auto()
     KNOWN_STATE = auto()
@@ -46,7 +47,8 @@ EDITABLE_TOKENS = {
 }
 
 EQUIVALENT_TOKENS = {
-    TokenType.FATAL_STACK_MANIPULATION_HEADER: {TokenType.STACK_MANIPULATION_HEADER}
+    TokenType.FATAL_STACK_MANIPULATION_HEADER: {TokenType.STACK_MANIPULATION_HEADER},
+    TokenType.HIGHLIGHTED_OPERAND_LABEL: {TokenType.OPERAND_LABEL},
 }
 
 

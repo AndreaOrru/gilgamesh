@@ -1,5 +1,5 @@
 from itertools import zip_longest
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from methodtools import lru_cache  # type: ignore
 
@@ -22,10 +22,13 @@ from gilgamesh.subroutine import Subroutine
 class Disassembly:
     SEPARATOR_LINE = ";" + ("-" * 40)
 
-    def __init__(self, subroutine: Subroutine, base_line_n: int = 1):
+    def __init__(
+        self, subroutine: Subroutine, highlighted_labels: Optional[Set[str]] = None,
+    ):
         self.log = subroutine.log
         self.subroutine = subroutine
-        self.base_line_n = base_line_n
+        self.highlighted_labels = highlighted_labels or set()
+        self.base_line_n = 1
 
     def get_html(self) -> str:
         return self._get_text(html=True)[1]
@@ -74,7 +77,10 @@ class Disassembly:
         # Operation + Operand.
         tokens.append(Token(T.OPERATION, instruction.name))
         if instruction.argument_alias:
-            add(T.OPERAND_LABEL, instruction.argument_alias)
+            if instruction.argument_alias in self.highlighted_labels:
+                add(T.HIGHLIGHTED_OPERAND_LABEL, instruction.argument_alias)
+            else:
+                add(T.OPERAND_LABEL, instruction.argument_alias)
         else:
             add(T.OPERAND, instruction.argument_string)
         # PC + Comment.
@@ -185,7 +191,7 @@ class Disassembly:
         cls, tokens: List[Token], html=False
     ) -> Tuple[int, str]:
         """Generate HTML or plain text from the list of tokens of an instruction."""
-        colorize = lambda s, c: cls.colorize(s, c, html)  # noqa: E731
+        colorize = lambda s, f, b=None: cls.colorize(s, html, f, b)  # noqa: E731
         string = lambda t: cls.string(t, html)  # noqa: E731
 
         s, n_lines = [], 0
@@ -199,6 +205,9 @@ class Disassembly:
                 s.append(colorize(f"  {t.val:4}", "green"))
             elif t.typ == T.OPERAND:
                 s.append(f"{t.val:25}")
+            elif t.typ == T.HIGHLIGHTED_OPERAND_LABEL:
+                v = colorize(t.val, "black", "red")
+                s.append(v + (25 - len(t.val)) * " ")
             elif t.typ == T.OPERAND_LABEL:
                 s.append(colorize(f"{t.val:25}", "red"))
             elif t.typ == T.PC:
@@ -323,9 +332,12 @@ class Disassembly:
         return state_change, assertion_type
 
     @staticmethod
-    def colorize(s: str, color: Optional[str] = None, html=False) -> str:
-        if html and color:
-            return f"<{color}>{s}</{color}>"
+    def colorize(
+        s: str, html=False, fg: Optional[str] = None, bg: Optional[str] = None
+    ) -> str:
+        if html and fg:
+            bg = f"ansi{bg}" if bg and not bg.startswith("ansi") else bg
+            return "<{}{}>{}</{}>".format(fg, f' bg="{bg}"' if bg else "", s, fg)
         return s
 
     @lru_cache(None)
@@ -335,14 +347,14 @@ class Disassembly:
         left = (n // 2) - (len(s) // 2)
         right = n - (left + len(s))
 
-        s = cls.colorize(s, color, html)
+        s = cls.colorize(s, html, color)
         result = ";" + ("-" * left) + s + ("-" * right)
-        return cls.colorize(result, "grey", html)
+        return cls.colorize(result, html, "grey")
 
     @classmethod
     def string(cls, t: T, html=False) -> str:
-        colorize = lambda s, c: cls.colorize(s, c, html)  # noqa: E731
-        center = lambda s, c=None: cls.center(s, c, html)  # noqa: E731
+        colorize = lambda s, c: cls.colorize(s, html, c)  # noqa: E731
+        center = lambda s, c=None: cls.center(s, html, c)  # noqa: E731
 
         if t == T.SEPARATOR_LINE:
             return colorize(cls.SEPARATOR_LINE, "grey")

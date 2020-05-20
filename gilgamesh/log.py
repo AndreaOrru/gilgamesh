@@ -222,6 +222,7 @@ class Log:
     def rename_label(
         self, old: str, new: str, subroutine: Optional[Subroutine] = None, dry=False
     ) -> None:
+        # TODO: make sub_xxxxxx and loc_xxxxxx reserved.
         if old.startswith("."):
             if subroutine is None:
                 raise GilgameshError("No selected subroutine.")
