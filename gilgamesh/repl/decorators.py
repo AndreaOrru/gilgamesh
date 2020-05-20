@@ -21,10 +21,9 @@ def command(container=False):
                         return self._method_help(method)
                 # Found a candidate subcommand.
                 else:
-                    try:
-                        return method.subcmds[subcmd](self, *args)
-                    except KeyError:
+                    if subcmd not in method.subcmds:
                         return self._method_help(method, "Unknown subcommand.")
+                    return method.subcmds[subcmd](self, *args)
             # Try to call the command.
             try:
                 return method(self, *args)

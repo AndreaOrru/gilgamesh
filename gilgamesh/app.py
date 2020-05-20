@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional
 from prompt_toolkit import HTML  # type: ignore
 
 from gilgamesh.disassembly import ROMDisassembly, SubroutineDisassembly
-from gilgamesh.disassembly.renames import unique_label
 from gilgamesh.errors import GilgameshError
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
@@ -112,7 +111,6 @@ class App(Repl):
           - "m=0,x=1"      -> The subroutine changes the state of m to 0 and x to 1.
           - "m=1,x=0"      -> The subroutine changes the state of m to 1 and x to 0.
           - "m=1,x=1"      -> The subroutine changes the state of m to 1 and x to 1."""
-        raise TypeError("lol")
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
         # TODO: check that pc is an instruction inside the subroutine.
