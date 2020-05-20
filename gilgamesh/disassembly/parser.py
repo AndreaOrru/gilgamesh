@@ -19,6 +19,7 @@ class TokenType(Enum):
     JUMP_TABLE_HEADER = auto()
     JUMP_TABLE_LABEL = auto()
     JUMP_TABLE_OPERAND_LABEL = auto()
+    JUMP_TABLE_UNKNOWN_ENTRY = auto()
     KNOWN_STATE = auto()
     KNOWN_STATE_HEADER = auto()
     LABEL = auto()
@@ -57,6 +58,7 @@ EQUIVALENT_TOKENS = {
     TokenType.HIGHLIGHTED_OPERAND_LABEL: TokenType.OPERAND_LABEL,
     TokenType.JUMP_TABLE_LABEL: TokenType.LABEL,
     TokenType.JUMP_TABLE_OPERAND_LABEL: TokenType.OPERAND_LABEL,
+    TokenType.JUMP_TABLE_UNKNOWN_ENTRY: TokenType.JUMP_TABLE_ENTRY,
 }
 
 

@@ -1,7 +1,7 @@
 import pickle
 from copy import deepcopy
 from os import path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from prompt_toolkit import HTML  # type: ignore
 
@@ -216,7 +216,7 @@ class App(Repl):
         assert caller.argument_size == 2
         assert caller.argument is not None
 
-        first, last = [int(n, 16) for n in range_expr.split("..")]
+        first, last = self._parse_range(range_expr)
         for x in range(first, last + 1, 2):
             offset = caller.argument + x
             bank = caller.pc & 0xFF0000
@@ -238,7 +238,7 @@ class App(Repl):
             assert caller.argument_size == 2
             assert caller.argument is not None
 
-            first, last = [int(n, 16) for n in range_or_target_pc.split("..")]
+            first, last = self._parse_range(range_or_target_pc)
             for x in range(first, last + 1, 2):
                 offset = caller.argument + x
                 bank = caller.pc & 0xFF0000
@@ -629,6 +629,12 @@ class App(Repl):
         if label_pc is None:
             raise GilgameshError("Unknown label.")
         return label_pc
+
+    def _parse_range(self, range_expr: str) -> Tuple[int, int]:
+        parts = tuple(int(n, 16) for n in range_expr.split(".."))
+        first = parts[0]
+        last = parts[1] if len(parts) == 2 else first
+        return first, last
 
     @staticmethod
     def _print_instruction(instruction: Instruction) -> str:
