@@ -1,3 +1,4 @@
+from collections import namedtuple
 from copy import copy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,9 @@ from gilgamesh.snes.instruction import Instruction
 class StackEntry:
     instruction: Optional[Instruction] = None
     data: Any = None
+
+
+StackTraceEntry = namedtuple("StackTraceEntry", ("p", "pc"))
 
 
 class Stack:

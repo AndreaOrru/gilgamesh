@@ -5,7 +5,7 @@ from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipula
 from gilgamesh.snes.opcodes import AddressMode, Op
 from gilgamesh.snes.registers import Registers
 from gilgamesh.snes.state import State, StateChange
-from gilgamesh.stack import Stack
+from gilgamesh.stack import Stack, StackTraceEntry
 from gilgamesh.subroutine import Subroutine
 
 
@@ -28,8 +28,9 @@ class CPU:
 
         # The subroutine currently being executed.
         self.subroutine_pc = subroutine
-        # The stack of calls that brought us to the current subroutine.
-        self.stack_trace: List[int] = []
+        # The stack of calls that brought us to the current
+        # subroutine, with associated calling states.
+        self.stack_trace: List[StackTraceEntry] = []
 
     @property
     def instruction_id(self) -> InstructionID:
@@ -146,7 +147,7 @@ class CPU:
         cpu = self.copy(new_subroutine=True)
         call_size = 2 if instruction.operation == Op.JSR else 3
         cpu.stack.push(instruction, size=call_size)
-        cpu.stack_trace.append(self.subroutine_pc)
+        cpu.stack_trace.append(StackTraceEntry(self.state.p, self.subroutine_pc))
         cpu.subroutine_pc = target
         cpu.pc = target
 
