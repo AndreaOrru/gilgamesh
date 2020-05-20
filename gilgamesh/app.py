@@ -459,7 +459,7 @@ class App(Repl):
         else:
             for stack_trace in sub.stack_traces:
                 ss = []
-                for p, caller_pc in stack_trace:
+                for caller_pc in stack_trace:
                     caller = self.log.subroutines[caller_pc]
                     ss.append("  " + self._print_subroutine(caller))
                 s.append("".join(ss))

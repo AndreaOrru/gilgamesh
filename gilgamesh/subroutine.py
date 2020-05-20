@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from cached_property import cached_property  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
@@ -6,7 +6,6 @@ from sortedcontainers import SortedDict  # type: ignore
 from gilgamesh.snes.instruction import Instruction
 from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.state import State, StateChange
-from gilgamesh.stack import StackTraceEntry
 from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
 
@@ -22,7 +21,7 @@ class Subroutine(Invalidable):
         # Calling the subroutine results in the following state changes.
         self.state_changes: Dict[int, StateChange] = {}
         # The stack of calls that brought us to the current subroutine.
-        self.stack_traces: Set[Tuple[StackTraceEntry, ...]] = set()
+        self.stack_traces: Set[Tuple[int, ...]] = set()
 
         # Whether an instruction inside the subroutine performs stack manipulation.
         self.has_stack_manipulation = False

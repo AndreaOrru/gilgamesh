@@ -10,7 +10,6 @@ from gilgamesh.snes.cpu import CPU
 from gilgamesh.snes.instruction import Instruction, InstructionID
 from gilgamesh.snes.rom import ROM
 from gilgamesh.snes.state import State, StateChange
-from gilgamesh.stack import StackTraceEntry
 from gilgamesh.subroutine import Subroutine
 from gilgamesh.utils.invalidable import bulk_invalidate
 
@@ -120,7 +119,7 @@ class Log:
         subroutine.add_instruction(instruction)
 
     def add_subroutine(
-        self, pc: int, label: str = "", stack_trace: List[StackTraceEntry] = None
+        self, pc: int, label: str = "", stack_trace: List[int] = None
     ) -> None:
         # Do not log subroutines in RAM.
         if self.rom.is_ram(pc):
