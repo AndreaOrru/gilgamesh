@@ -207,12 +207,28 @@ class App(Repl):
 
     @command()
     @argument("caller_pc", complete_label)
-    @argument("target_pc", complete_label)
-    def do_jumptable_add(self, caller_pc: str, target_pc: str) -> None:
+    @argument("range_or_target_pc", complete_label)
+    def do_jumptable_add(self, caller_pc: str, range_or_target_pc: str) -> None:
         """Add a jump table entry."""
         caller_pc_int = self._label_to_pc(caller_pc)
-        target_pc_int = self._label_to_pc(target_pc)
-        self.log.assert_jump(caller_pc_int, target_pc_int)
+        if range_or_target_pc.startswith("$"):
+            target_pc = self._label_to_pc(range_or_target_pc)
+            self.log.assert_jump(caller_pc_int, target_pc)
+        else:
+            caller = self.log.any_instruction(caller_pc_int)
+            step = caller.argument_size
+            assert caller.argument is not None
+            assert caller.is_call or caller.is_jump
+
+            first, last = [int(n, 16) for n in range_or_target_pc.split("..")]
+            for x in range(first, last + 1, step):
+                offset = caller.argument + x
+                if step == 2:
+                    bank = caller.pc & 0xFF0000
+                    target_pc = bank | (self.rom.read_word(bank | offset))
+                else:
+                    target_pc = self.rom.read_address(offset)
+                self.log.assert_jump(caller_pc_int, target_pc)
 
     @command()
     @argument("caller_pc", complete_label)
