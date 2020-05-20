@@ -188,22 +188,23 @@ class Log:
         self.jump_table_targets[target_pc] += 1
         self.dirty = True
 
-    def deassert_jump(self, caller_pc: int, target_pc: int, x: int) -> None:
-        if not (
-            caller_pc in self.jump_assertions
-            and (x, target_pc) in self.jump_assertions[caller_pc]
-        ):
+    def deassert_jump(self, caller_pc: int, target_pc: int) -> None:
+        if caller_pc not in self.jump_assertions:
             return
 
-        self.jump_assertions[caller_pc].remove((x, target_pc))
+        orig_set = self.jump_assertions[caller_pc]
+        new_set = {(x, t) for x, t in orig_set if t != target_pc}
+        diff = len(orig_set) - len(new_set)
+
+        self.jump_assertions[caller_pc] = new_set
         if not self.jump_assertions[caller_pc]:
             del self.jump_assertions[caller_pc]
 
-        self.jump_table_targets[target_pc] -= 1
+        self.jump_table_targets[target_pc] -= diff
         if self.jump_table_targets[target_pc] == 0:
             del self.jump_table_targets[target_pc]
 
-        self.dirty = True
+        self.dirty = bool(diff)
 
     def assert_subroutine_state_change(
         self, subroutine: Subroutine, instruction_pc: int, state_change: StateChange

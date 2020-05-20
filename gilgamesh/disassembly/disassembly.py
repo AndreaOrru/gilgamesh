@@ -101,7 +101,7 @@ class Disassembly:
             for x, target in sorted(self.log.jump_assertions[instr.pc]):
                 add_line(
                     T.JUMP_TABLE_ENTRY,
-                    "x={:04X}  =>  {}".format(
+                    "x={:04X}  ->  {}".format(
                         x, self.log.get_label(target, self.subroutine.pc)
                     ),
                 )
