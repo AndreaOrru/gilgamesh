@@ -14,16 +14,18 @@ class TokenType(Enum):
     ASSERTION_TYPE = auto()
     COMMENT = auto()
     FATAL_STACK_MANIPULATION_HEADER = auto()
+    HIGHLIGHTED_OPERAND_LABEL = auto()
+    JUMP_TABLE_LABEL = auto()
+    JUMP_TABLE_OPERAND_LABEL = auto()
+    KNOWN_STATE = auto()
+    KNOWN_STATE_HEADER = auto()
     LABEL = auto()
     LAST_KNOWN_STATE = auto()
     NEWLINE = auto()
     OPERAND = auto()
     OPERAND_LABEL = auto()
-    HIGHLIGHTED_OPERAND_LABEL = auto()
     OPERATION = auto()
     PC = auto()
-    KNOWN_STATE = auto()
-    KNOWN_STATE_HEADER = auto()
     SEPARATOR_LINE = auto()
     STACK_MANIPULATION_HEADER = auto()
     UNKNOWN_STATE_HEADER = auto()
@@ -47,8 +49,10 @@ EDITABLE_TOKENS = {
 }
 
 EQUIVALENT_TOKENS = {
-    TokenType.FATAL_STACK_MANIPULATION_HEADER: {TokenType.STACK_MANIPULATION_HEADER},
-    TokenType.HIGHLIGHTED_OPERAND_LABEL: {TokenType.OPERAND_LABEL},
+    TokenType.FATAL_STACK_MANIPULATION_HEADER: TokenType.STACK_MANIPULATION_HEADER,
+    TokenType.HIGHLIGHTED_OPERAND_LABEL: TokenType.OPERAND_LABEL,
+    TokenType.JUMP_TABLE_LABEL: TokenType.LABEL,
+    TokenType.JUMP_TABLE_OPERAND_LABEL: TokenType.OPERAND_LABEL,
 }
 
 

@@ -40,6 +40,10 @@ class Subroutine(Invalidable):
         return self.pc in self.log.entry_points
 
     @property
+    def is_jump_table_target(self) -> bool:
+        return self.pc in self.log.jump_table_targets
+
+    @property
     def has_asserted_state_change(self) -> bool:
         return any(s.asserted for s in self.state_changes.values())
 

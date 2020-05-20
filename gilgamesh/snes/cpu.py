@@ -104,7 +104,8 @@ class CPU:
         elif instruction.is_call:
             return self.call(instruction)
         elif instruction.is_jump:
-            return self.jump(instruction)
+            self.jump(instruction)
+            return False
         elif instruction.is_branch:
             self.branch(instruction)
         elif instruction.is_sep_rep:
@@ -135,44 +136,55 @@ class CPU:
         self.pc = target
 
     def call(self, instruction: Instruction) -> bool:
-        target = instruction.absolute_argument
-        if target is None:
-            # If we can't reliably derive the address of the subroutine
-            # being called, we're left in an unknown state.
-            return self._unknown_subroutine_state(instruction)
+        if instruction.absolute_argument:
+            targets = [instruction.absolute_argument]
+        else:
+            targets = self.log.jump_assertions.get(instruction.pc, {None})
 
-        # Run a parallel instance of the CPU to execute
-        # the subroutine that is being called.
-        cpu = self.copy(new_subroutine=True)
-        call_size = 2 if instruction.operation == Op.JSR else 3
-        cpu.stack.push(instruction, size=call_size)
-        cpu.stack_trace.append(self.subroutine_pc)
-        cpu.subroutine_pc = target
-        cpu.pc = target
+        for target in targets:
+            if target is None:
+                # If we can't reliably derive the address of the subroutine
+                # being called, we're left in an unknown state.
+                return self._unknown_subroutine_state(instruction)
 
-        # Emulate the called subroutine.
-        self.log.add_reference(instruction, target)
-        self.log.add_subroutine(target, stack_trace=cpu.stack_trace)
-        cpu.run()
+            # Run a parallel instance of the CPU to execute
+            # the subroutine that is being called.
+            cpu = self.copy(new_subroutine=True)
+            call_size = 2 if instruction.operation == Op.JSR else 3
+            cpu.stack.push(instruction, size=call_size)
+            cpu.stack_trace.append(self.subroutine_pc)
+            cpu.subroutine_pc = target
+            cpu.pc = target
 
-        # If we univocally know what the return state of the
-        # called subroutine is, we can propagate it to the
-        # current CPU state. Otherwise, to be on the safe
-        # side, we need to stop the execution.
-        known = self._propagate_subroutine_state(instruction.pc, target)
-        if not known:
-            return self._unknown_subroutine_state(instruction)
+            # Emulate the called subroutine.
+            self.log.add_reference(instruction, target)
+            self.log.add_subroutine(target, stack_trace=cpu.stack_trace)
+            cpu.run()
+
+            # If we univocally know what the return state of the
+            # called subroutine is, we can propagate it to the
+            # current CPU state. Otherwise, to be on the safe
+            # side, we need to stop the execution.
+            known = self._propagate_subroutine_state(instruction.pc, target)
+            if not known and not self._unknown_subroutine_state(instruction):
+                return False
         return True
 
-    def jump(self, instruction: Instruction) -> bool:
-        target = instruction.absolute_argument
-        if target is None:
-            self._unknown_subroutine_state(instruction)
-            return False
+    def jump(self, instruction: Instruction) -> None:
+        if instruction.absolute_argument:
+            targets = [instruction.absolute_argument]
+        else:
+            targets = self.log.jump_assertions.get(instruction.pc, [None])
 
-        self.log.add_reference(instruction, target)
-        self.pc = target
-        return True
+        for target in targets:
+            if target is None:
+                self._unknown_subroutine_state(instruction)
+                return
+
+            self.log.add_reference(instruction, target)
+            cpu = self.copy()
+            cpu.pc = target
+            cpu.run()
 
     def ret(self, instruction: Instruction) -> None:
         # Check whether this return is operating on a manipulated stack.

@@ -166,7 +166,7 @@ class App(Repl):
 
     @command()
     def do_edit(self) -> None:
-        """Interactively edit the subroutine using an external editor."""
+        """Interactively edit the subroutine(s) using an external editor."""
         if not self.subroutine:
             raise GilgameshError("No selected subroutine.")
         disassembly = SubroutineDisassembly(self.subroutine)
@@ -199,7 +199,29 @@ class App(Repl):
         pc_int = self._label_to_pc(pc)
         state = State.from_expr(state_expr)
         self.log.add_entry_point(pc_int, name, state)
-        # TODO: add reference instruction (i.e. a jump table).
+
+    @command(container=True)
+    def do_jumptable(self) -> None:
+        """Add or remove jump table entries."""
+        ...
+
+    @command()
+    @argument("caller_pc", complete_label)
+    @argument("target_pc", complete_label)
+    def do_jumptable_add(self, caller_pc: str, target_pc: str) -> None:
+        """Add a jump table entry."""
+        caller_pc_int = self._label_to_pc(caller_pc)
+        target_pc_int = self._label_to_pc(target_pc)
+        self.log.assert_jump(caller_pc_int, target_pc_int)
+
+    @command()
+    @argument("caller_pc", complete_label)
+    @argument("target_pc", complete_label)
+    def do_jumptable_delete(self, caller_pc: str, target_pc: str) -> None:
+        """Remove a jump table entry."""
+        caller_pc_int = self._label_to_pc(caller_pc)
+        target_pc_int = self._label_to_pc(target_pc)
+        self.log.deassert_jump(caller_pc_int, target_pc_int)
 
     @command(container=True)
     def do_list(self) -> None:
@@ -529,7 +551,7 @@ class App(Repl):
         if not target_pc.startswith("$"):
             raise GilgameshError("Please specify a valid address.")
         pc_int = self._label_to_pc(target_pc)
-        label = self.log.preserved_labels.get(pc_int, f"jt_{pc_int:06X}")
+        label = self.log.preserved_labels.get(pc_int, f"sub_{pc_int:06X}")
 
         # Save a copy of the current state of the analysis.
         old_labels = set(self.log.subroutines_by_label.keys())
@@ -627,6 +649,8 @@ class App(Repl):
             open_color = close_color = "red"
         elif sub.has_asserted_state_change or sub.instruction_has_asserted_state_change:
             open_color = close_color = "magenta"
+        elif sub.is_jump_table_target:
+            open_color = close_color = "blue"
         else:
             open_color = close_color = "green"
 

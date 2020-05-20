@@ -73,12 +73,17 @@ class Disassembly:
         # Label.
         label = self.log.get_label(instruction.pc, instruction.subroutine_pc)
         if label:
-            add_line(T.LABEL, label)
+            if instruction.pc in self.log.jump_table_targets:
+                add_line(T.JUMP_TABLE_LABEL, label)
+            else:
+                add_line(T.LABEL, label)
         # Operation + Operand.
         tokens.append(Token(T.OPERATION, instruction.name))
         if instruction.argument_alias:
             if instruction.argument_alias in self.highlighted_labels:
                 add(T.HIGHLIGHTED_OPERAND_LABEL, instruction.argument_alias)
+            elif instruction.pc in self.log.jump_table_targets:
+                add(T.JUMP_TABLE_OPERAND_LABEL, instruction.argument_alias)
             else:
                 add(T.OPERAND_LABEL, instruction.argument_alias)
         else:
@@ -201,15 +206,19 @@ class Disassembly:
                 n_lines += 1
             elif t.typ == T.LABEL:
                 s.append(colorize(f"{t.val}:", "red"))
+            elif t.typ == T.JUMP_TABLE_LABEL:
+                s.append(colorize(f"{t.val}:", "blue"))
             elif t.typ == T.OPERATION:
                 s.append(colorize(f"  {t.val:4}", "green"))
             elif t.typ == T.OPERAND:
                 s.append(f"{t.val:25}")
+            elif t.typ == T.OPERAND_LABEL:
+                s.append(colorize(f"{t.val:25}", "red"))
+            elif t.typ == T.JUMP_TABLE_OPERAND_LABEL:
+                s.append(colorize(f"{t.val:25}", "blue"))
             elif t.typ == T.HIGHLIGHTED_OPERAND_LABEL:
                 v = colorize(t.val, "black", "red")
                 s.append(v + (25 - len(t.val)) * " ")
-            elif t.typ == T.OPERAND_LABEL:
-                s.append(colorize(f"{t.val:25}", "red"))
             elif t.typ == T.PC:
                 s.append(colorize(f" ; {t.val}", "grey"))
             elif t.typ == T.COMMENT:
@@ -257,13 +266,16 @@ class Disassembly:
         """Compare a collection of tokens describing an instruction, with a new one
         with potentially updated content. Apply changes where possible."""
         for orig, new in zip_longest(original_tokens, new_tokens):
+            # Handle equivalent tokens.
+            orig.typ = EQUIVALENT_TOKENS.get(orig.typ, orig.typ)
+
             # Count lines.
             if new and new.typ == T.NEWLINE:
                 line_n += 1
             # Error cases.
             elif (orig is None) or (new is None):
                 raise ParserError("Added or deleted token.", line_n)
-            elif orig.typ != new.typ and new.typ not in EQUIVALENT_TOKENS[orig.typ]:
+            elif orig.typ != new.typ:
                 raise ParserError("Changed the type of a token.", line_n)
             elif orig.typ not in EDITABLE_TOKENS and orig.val != new.val:
                 raise ParserError(

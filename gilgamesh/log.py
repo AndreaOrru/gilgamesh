@@ -22,6 +22,8 @@ class Log:
         self.reset()
 
     def reset(self) -> None:
+        self.jump_assertions: DefaultDict[int, Set[int]] = defaultdict(set)
+        self.jump_table_targets: DefaultDict[int, int] = defaultdict(int)
         self.instruction_assertions: Dict[int, StateChange] = {}
         self.subroutine_assertions: Dict[int, Dict[int, StateChange]] = {}
         self.preserved_labels: Dict[int, str] = {}
@@ -76,6 +78,8 @@ class Log:
         return {
             "entry_points": self.entry_points,
             "instruction_assertions": self.instruction_assertions,
+            "jump_assertions": self.jump_assertions,
+            "jump_table_targets": self.jump_table_targets,
             "subroutine_assertions": self.subroutine_assertions,
             "preserved_labels": self.preserved_labels,
             "comments": self.comments,
@@ -84,6 +88,8 @@ class Log:
     def load(self, data: Dict[str, Any]) -> None:
         self.entry_points = data["entry_points"]
         self.instruction_assertions = data["instruction_assertions"]
+        self.jump_assertions = data["jump_assertions"]
+        self.jump_table_targets = data["jump_table_targets"]
         self.subroutine_assertions = data["subroutine_assertions"]
         self.preserved_labels = data["preserved_labels"]
         self.comments = data["comments"]
@@ -172,6 +178,33 @@ class Log:
         self.instruction_assertions.pop(instruction_pc, None)
         self.dirty = True
 
+    def assert_jump(self, caller_pc: int, target_pc: int) -> None:
+        if (
+            caller_pc in self.jump_assertions
+            and target_pc in self.jump_assertions[caller_pc]
+        ):
+            return
+        self.jump_assertions[caller_pc].add(target_pc)
+        self.jump_table_targets[target_pc] += 1
+        self.dirty = True
+
+    def deassert_jump(self, caller_pc: int, target_pc: int) -> None:
+        if not (
+            caller_pc in self.jump_assertions
+            and target_pc in self.jump_assertions[caller_pc]
+        ):
+            return
+
+        self.jump_assertions[caller_pc].remove(target_pc)
+        if not self.jump_assertions[caller_pc]:
+            del self.jump_assertions[caller_pc]
+
+        self.jump_table_targets[target_pc] -= 1
+        if self.jump_table_targets[target_pc] == 0:
+            del self.jump_table_targets[target_pc]
+
+        self.dirty = True
+
     def assert_subroutine_state_change(
         self, subroutine: Subroutine, instruction_pc: int, state_change: StateChange
     ) -> None:
@@ -222,7 +255,7 @@ class Log:
     def rename_label(
         self, old: str, new: str, subroutine: Optional[Subroutine] = None, dry=False
     ) -> None:
-        # TODO: make sub_xxxxxx and loc_xxxxxx reserved.
+        # TODO: make sub_xxxxxx and loc_xxxxxx, reserved.
         if old.startswith("."):
             if subroutine is None:
                 raise GilgameshError("No selected subroutine.")
