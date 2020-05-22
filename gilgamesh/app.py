@@ -35,6 +35,9 @@ class App(Repl):
     def subroutine(self) -> Optional[Subroutine]:
         if self.subroutine_pc is None:
             return None
+        if self.subroutine_pc not in self.log.subroutines:
+            self.subroutine_pc = None
+            return None
         return self.log.subroutines[self.subroutine_pc]
 
     @subroutine.setter
