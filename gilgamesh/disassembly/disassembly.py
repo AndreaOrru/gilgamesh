@@ -97,13 +97,18 @@ class Disassembly:
 
         # Jump table.
         if instr.is_jump_table:
+            default_typ = (
+                T.JUMP_TABLE_COMPLETE_ENTRY
+                if instr.pc in self.log.complete_jump_tables
+                else T.JUMP_TABLE_ENTRY
+            )
             add_line(T.JUMP_TABLE_HEADER)
             for x, target in sorted(self.log.jump_assertions[instr.pc]):
                 target_sub = self.log.subroutines.get(target, None)
                 if target_sub is not None and target_sub.has_unknown_return_state:
                     typ = T.JUMP_TABLE_UNKNOWN_ENTRY
                 else:
-                    typ = T.JUMP_TABLE_ENTRY
+                    typ = default_typ
                 add_line(
                     typ,
                     "x={:04X}  ->  {}".format(
@@ -267,6 +272,8 @@ class Disassembly:
                 s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
             elif t.typ == T.JUMP_TABLE_ENTRY:
                 s.append(f'  {string(t.typ)} {colorize(t.val, "grey")}')
+            elif t.typ == T.JUMP_TABLE_COMPLETE_ENTRY:
+                s.append(f'  {string(t.typ)} {colorize(t.val, "blue")}')
             elif t.typ == T.JUMP_TABLE_UNKNOWN_ENTRY:
                 s.append(f'  {string(t.typ)} {colorize(t.val, "red")}')
 
@@ -432,7 +439,11 @@ class Disassembly:
         elif t == T.ASSERTION:
             return colorize("; ASSERTED STATE CHANGE:", "grey")
 
-        elif t in (T.JUMP_TABLE_ENTRY, T.JUMP_TABLE_UNKNOWN_ENTRY):
+        elif t in (
+            T.JUMP_TABLE_ENTRY,
+            T.JUMP_TABLE_COMPLETE_ENTRY,
+            T.JUMP_TABLE_UNKNOWN_ENTRY,
+        ):
             return colorize(";", "grey")
 
         assert False
