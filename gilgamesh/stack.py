@@ -14,12 +14,20 @@ class StackEntry:
 class Stack:
     def __init__(self):
         self.memory: Dict[int, StackEntry] = {}
+        self.stack_change_instruction: Optional[Instruction] = None
         self.pointer = 0
 
     def copy(self) -> "Stack":
         stack = copy(self)
         stack.memory = copy(self.memory)
         return stack
+
+    def set_pointer(
+        self, instruction: Instruction, pointer: Optional[int] = None
+    ) -> None:
+        self.stack_change_instruction = instruction
+        if pointer is not None:
+            self.pointer = pointer
 
     def push(self, instruction: Instruction, data: Any = None, size=1) -> None:
         if size > 1:
@@ -33,7 +41,7 @@ class Stack:
         try:
             return self.memory[self.pointer]
         except KeyError:
-            return StackEntry()
+            return StackEntry(self.stack_change_instruction)
 
     def pop(self, size: int) -> List[StackEntry]:
         return [self.pop_one() for _ in range(size)]

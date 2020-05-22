@@ -255,8 +255,8 @@ class CPU:
     def change_stack(self, i: Instruction) -> None:
         if i.operation == Op.TCS:
             a = self.registers.a.get_whole()
+            self.stack.set_pointer(i, a)
             if a is not None:
-                self.stack.pointer = a
                 return
         # We keep the disassembly going if the stack manipulation
         # doesn't otherwise influence the state of the processor.
