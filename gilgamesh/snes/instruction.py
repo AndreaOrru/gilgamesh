@@ -4,6 +4,7 @@ from typing import Dict, Optional
 
 from cached_property import cached_property  # type: ignore
 
+from gilgamesh.snes.hw_registers import hw_registers
 from gilgamesh.snes.opcodes import AddressMode, Op, argument_size_table, opcode_table
 from gilgamesh.snes.state import State, StateChange
 from gilgamesh.utils.invalidable import Invalidable
@@ -329,7 +330,9 @@ class Instruction(Invalidable):
 
     @property
     def argument_alias(self) -> Optional[str]:
-        if self.is_control:
+        if self.absolute_argument in hw_registers.inverse:
+            return hw_registers.inverse[self.absolute_argument]
+        elif self.is_control:
             target = self.absolute_argument
             if target is not None:
                 return self.log.get_label(target, self.subroutine_pc)

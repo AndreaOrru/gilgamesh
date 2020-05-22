@@ -13,6 +13,7 @@ from gilgamesh.disassembly.parser import (
 from gilgamesh.disassembly.parser import TokenType as T
 from gilgamesh.disassembly.renames import apply_local_renames
 from gilgamesh.errors import ParserError
+from gilgamesh.snes.hw_registers import hw_registers
 from gilgamesh.snes.instruction import Instruction, StackManipulation
 from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.state import StateChange
@@ -78,7 +79,9 @@ class Disassembly:
         # Operation + Operand.
         tokens.append(Token(T.OPERATION, instr.name))
         if instr.argument_alias:
-            if instr.argument_alias in self.highlighted_labels:
+            if instr.argument_alias in hw_registers:
+                add(T.HW_REGISTER, instr.argument_alias)
+            elif instr.argument_alias in self.highlighted_labels:
                 add(T.HIGHLIGHTED_OPERAND_LABEL, instr.argument_alias)
             elif instr.pc in self.log.jump_table_targets:
                 add(T.JUMP_TABLE_OPERAND_LABEL, instr.argument_alias)
@@ -201,7 +204,9 @@ class Disassembly:
                     p.add(T.OPERAND, "")
                 else:
                     word = p.words[i]
-                    if ("a" == word) or ("$" in word) or ("," in word):
+                    if word in hw_registers:
+                        p.add(T.HW_REGISTER, word)
+                    elif ("a" == word) or ("$" in word) or ("," in word):
                         p.add(T.OPERAND, word)
                     elif word.isidentifier() or (
                         word[0] == "." and word[1:].isidentifier()
@@ -245,6 +250,8 @@ class Disassembly:
                 s.append(colorize(f"  {t.val:4}", "green"))
             elif t.typ == T.OPERAND:
                 s.append(f"{t.val:25}")
+            elif t.typ == T.HW_REGISTER:
+                s.append(colorize(f"{t.val:25}", "yellow"))
             elif t.typ == T.OPERAND_LABEL:
                 s.append(colorize(f"{t.val:25}", "red"))
             elif t.typ == T.JUMP_TABLE_OPERAND_LABEL:

@@ -7,6 +7,7 @@ from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.errors import GilgameshError
 from gilgamesh.snes.cpu import CPU
+from gilgamesh.snes.hw_registers import hw_registers
 from gilgamesh.snes.instruction import Instruction, InstructionID
 from gilgamesh.snes.rom import ROM
 from gilgamesh.snes.state import State, StateChange
@@ -287,7 +288,7 @@ class Log:
             raise GilgameshError("The provided label is already in use.")
         if not new.isidentifier():
             raise GilgameshError("The provided label is not a valid identifier.")
-        if new.startswith("sub_") or new.startswith("loc_"):
+        if new.startswith("sub_") or new.startswith("loc_") or new in hw_registers:
             raise GilgameshError("The provided label is reserved.")
 
         if not dry:
@@ -304,7 +305,7 @@ class Log:
             raise GilgameshError("The provided label is already in use.")
         if not new.isidentifier():
             raise GilgameshError("The provided label is not a valid identifier.")
-        if new.startswith("sub_") or new.startswith("loc_"):
+        if new.startswith("sub_") or new.startswith("loc_") or new in hw_registers:
             raise GilgameshError("The provided label is reserved.")
 
         if not dry:
