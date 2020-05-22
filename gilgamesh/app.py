@@ -642,7 +642,7 @@ class App(Repl):
     def _label_to_pc(self, label_or_pc: str) -> int:
         if label_or_pc.startswith("$"):
             try:
-                pc = int(label_or_pc[1:], 16)
+                pc = sum(int(x, 16) for x in label_or_pc[1:].split("+"))
             except ValueError:
                 raise GilgameshError("Provided value is not a label or an address.")
             try:
