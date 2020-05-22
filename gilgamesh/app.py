@@ -1,7 +1,7 @@
 import pickle
 from copy import deepcopy
 from os import path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from prompt_toolkit import HTML  # type: ignore
 
@@ -213,18 +213,7 @@ class App(Repl):
     @argument("range_expr")
     def do_jumptable_add(self, caller_pc: str, range_expr: str) -> None:
         """Add a jump table entry."""
-        caller_pc_int = self._label_to_pc(caller_pc)
-        caller = self.log.any_instruction(caller_pc_int)
-        assert caller.is_call or caller.is_jump
-        assert caller.argument_size == 2
-        assert caller.argument is not None
-
-        first, last = self._parse_range(range_expr)
-        for x in range(first, last + 1, 2):
-            offset = caller.argument + x
-            bank = caller.pc & 0xFF0000
-            target_pc = bank | (self.rom.read_word(bank | offset))
-            self.log.assert_jump(caller.pc, target_pc, x)
+        self._do_jumptable_op(self.log.assert_jump, caller_pc, range_expr)
 
     @command()
     @argument("caller_pc", complete_label)
@@ -236,24 +225,44 @@ class App(Repl):
             target_pc = self._label_to_pc(range_or_target_pc)
             self.log.deassert_jump(caller_pc_int, target_pc)
         else:
-            caller = self.log.any_instruction(caller_pc_int)
-            assert caller.is_call or caller.is_jump
-            assert caller.argument_size == 2
-            assert caller.argument is not None
+            self._do_jumptable_op(self.log.deassert_jump, caller_pc, range_or_target_pc)
 
-            first, last = self._parse_range(range_or_target_pc)
-            for x in range(first, last + 1, 2):
-                offset = caller.argument + x
-                bank = caller.pc & 0xFF0000
-                target_pc = bank | (self.rom.read_word(bank | offset))
-                self.log.deassert_jump(caller.pc, target_pc)
+    @command()
+    @argument("caller_pc", complete_label)
+    @argument("range_expr")
+    def do_jumptable_preview(self, caller_pc: str, range_expr: str) -> None:
+        def gather_targets(caller_pc: int, target_pc: int, x: int) -> None:
+            target_pcs.append(target_pc)
+
+        target_pcs: List[int] = []
+        self._do_jumptable_op(gather_targets, caller_pc, range_expr)
+
+        caller_pc_int = self._label_to_pc(caller_pc)
+        caller = self.log.any_instruction(caller_pc_int)
+        disassemblies = self._print_preview_many(target_pcs, str(caller.state))
+        separator = "\n\n\n<grey>{}</grey>".format(ROMDisassembly.HEADER)
+        print_html(separator.join(disassemblies))
 
     @command()
     @argument("caller_pc", complete_label)
     def do_jumptable_complete(self, caller_pc: str) -> None:
-        # TODO: verify this is a jump table.
+        """Flag a jumptable as completely explored."""
         caller_pc_int = self._label_to_pc(caller_pc)
         self.log.complete_jump_tables.add(caller_pc_int)
+
+    def _do_jumptable_op(self, op: Callable, caller_pc: str, range_expr: str):
+        caller_pc_int = self._label_to_pc(caller_pc)
+        caller = self.log.any_instruction(caller_pc_int)
+        assert caller.is_call or caller.is_jump
+        assert caller.argument_size == 2
+        assert caller.argument is not None
+
+        first, last = self._parse_range(range_expr)
+        for x in range(first, last + 1, 2):
+            offset = caller.argument + x
+            bank = caller.pc & 0xFF0000
+            target_pc = bank | (self.rom.read_word(bank | offset))
+            op(caller.pc, target_pc, x)
 
     @command(container=True)
     def do_list(self) -> None:
@@ -395,8 +404,9 @@ class App(Repl):
             raise GilgameshError("Can only build groups up to 16 bytes.")
 
         s = []
+        header = build_header(step_int)
         s += ["<grey>" + (" " * 8) + "│ "]
-        s += [header := build_header(step_int)]
+        s += [header]
         s += ["\n" + ("─" * 8) + "┼" + ("─" * len(header)) + "</grey>\n"]
 
         colors, color_idx = ["lightgrey", "cyan"], 0
@@ -563,7 +573,7 @@ class App(Repl):
                 "current_subroutine": self.subroutine_pc,
             }
             with open(self.rom.glm_path, "wb") as f:
-                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(data, f, pickle.DEFAULT_PROTOCOL)
             print_html(f'<green>"{self.rom.glm_name}" saved successfully.</green>\n')
 
         if not path.exists(self.rom.glm_path):
@@ -578,29 +588,35 @@ class App(Repl):
     @argument("state_expr")
     def do_preview(self, target_pc: str, state_expr: str) -> None:
         """Preview a subroutine disassembly without affecting the current analysis."""
-        # Check whether we already gave this PC a name at some
-        # point, even if it's not part of the analysis anymore.
         if not target_pc.startswith("$"):
             raise GilgameshError("Please specify a valid address.")
         pc_int = self._label_to_pc(target_pc)
-        label = self.log.preserved_labels.get(pc_int, f"sub_{pc_int:06X}")
+        print_html(self._print_preview_many([pc_int], state_expr)[0])
 
+    def _print_preview_many(self, target_pcs: List[int], state_expr: str) -> List[str]:
+        disassemblies = []
         # Save a copy of the current state of the analysis.
         old_labels = set(self.log.subroutines_by_label.keys())
         saved_log = deepcopy(self.log.save())
-        # Run the analysis again, with one more entry point.
-        self.do_entrypoint(target_pc, label, state_expr)
-        self.log.analyze()
 
-        # Show the disassembly of the target subroutine,
-        # highlighting new undiscovered subroutines in red.
-        subroutine = self.log.subroutines_by_label[label]
+        # Add the target pcs as entry point.
+        for pc in target_pcs:
+            label = self.log.preserved_labels.get(pc, f"sub_{pc:06X}")
+            self.do_entrypoint(f"${pc:06X}", label, state_expr)
+        # Execute the analysis again.
+        self.log.analyze()
         new_labels = self.log.subroutines_by_label.keys() - old_labels
-        disassembly = SubroutineDisassembly(subroutine, new_labels)
-        print_html(disassembly.get_html())
+
+        # Get the disassembly of the target subroutines,
+        # highlighting new undiscovered subroutines in red.
+        for pc in target_pcs:
+            subroutine = self.log.subroutines[pc]
+            disassembly = SubroutineDisassembly(subroutine, new_labels)
+            disassemblies.append(disassembly.get_html())
 
         # Restore previous log.
         self.log.load(saved_log)
+        return disassemblies
 
     @command()
     @argument("label", complete_subroutine)

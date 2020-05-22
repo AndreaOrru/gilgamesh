@@ -190,7 +190,7 @@ class Log:
         self.jump_table_targets[target_pc] += 1
         self.dirty = True
 
-    def deassert_jump(self, caller_pc: int, target_pc: int) -> None:
+    def deassert_jump(self, caller_pc: int, target_pc: int, *args) -> None:
         if caller_pc not in self.jump_assertions:
             return
 

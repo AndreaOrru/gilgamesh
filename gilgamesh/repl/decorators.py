@@ -28,9 +28,10 @@ def command(container=False):
             try:
                 return method(self, *args)
             except TypeError as e:
-                if msg := get_unknown_syntax_message(method, e):
-                    return self._method_help(method, msg)
-                raise
+                msg = get_unknown_syntax_message(method, e)
+                if not msg:
+                    raise
+                return self._method_help(method, msg)
 
         # Flag this method as a command.
         wrapper.cmd = True
