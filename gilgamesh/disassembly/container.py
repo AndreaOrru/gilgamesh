@@ -18,12 +18,12 @@ class DisassemblyContainer(Disassembly):
         self,
         log: Log,
         subroutines: Iterable[Subroutine],
-        highlighted_labels: Optional[Set[str]] = None,
+        preview_excluded_labels: Optional[Set[str]] = None,
     ):
         # HACK:
-        super().__init__(next(iter(subroutines)), highlighted_labels)
+        super().__init__(next(iter(subroutines)), preview_excluded_labels)
         self.disassemblies = [
-            Disassembly(sub, highlighted_labels) for sub in subroutines
+            Disassembly(sub, preview_excluded_labels) for sub in subroutines
         ]
 
     def edit(self) -> None:

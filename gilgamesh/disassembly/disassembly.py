@@ -24,11 +24,13 @@ class Disassembly:
     SEPARATOR_LINE = ";" + ("-" * 40)
 
     def __init__(
-        self, subroutine: Subroutine, highlighted_labels: Optional[Set[str]] = None,
+        self,
+        subroutine: Subroutine,
+        preview_excluded_labels: Optional[Set[str]] = None,
     ):
         self.log = subroutine.log
         self.subroutine = subroutine
-        self.highlighted_labels = highlighted_labels or set()
+        self.preview_excluded_labels = preview_excluded_labels or set()
         self.base_line_n = 1
 
     def get_html(self) -> str:
@@ -81,7 +83,7 @@ class Disassembly:
         if instr.argument_alias:
             if instr.argument_alias in hw_registers:
                 add(T.HW_REGISTER, instr.argument_alias)
-            elif instr.argument_alias in self.highlighted_labels:
+            elif instr.argument_alias in self.preview_excluded_labels:
                 add(T.HIGHLIGHTED_OPERAND_LABEL, instr.argument_alias)
             elif instr.pc in self.log.jump_table_targets:
                 add(T.JUMP_TABLE_OPERAND_LABEL, instr.argument_alias)
@@ -389,6 +391,9 @@ class Disassembly:
         elif i.has_asserted_state_change:
             assertion_type = "instruction"
             state_change = str(i.state_change_after)
+        elif i.is_return and self.preview_excluded_labels:
+            assertion_type = "none"
+            state_change = str(i.state_change_before)
         else:
             assertion_type = "none"
             state_change = str(i.state_change_after)

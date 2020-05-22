@@ -7,9 +7,9 @@ from gilgamesh.subroutine import Subroutine
 
 class SubroutineDisassembly(DisassemblyContainer):
     def __init__(
-        self, subroutine: Subroutine, highlighted_labels: Optional[Set[str]] = None
+        self, subroutine: Subroutine, preview_excluded_labels: Optional[Set[str]] = None
     ):
-        super().__init__(subroutine.log, [subroutine], highlighted_labels)
+        super().__init__(subroutine.log, [subroutine], preview_excluded_labels)
 
 
 class ROMDisassembly(DisassemblyContainer):
