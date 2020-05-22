@@ -258,7 +258,6 @@ class Log:
     def rename_label(
         self, old: str, new: str, subroutine: Optional[Subroutine] = None, dry=False
     ) -> None:
-        # TODO: make sub_xxxxxx and loc_xxxxxx, reserved.
         if old.startswith("."):
             if subroutine is None:
                 raise GilgameshError("No selected subroutine.")
@@ -284,10 +283,12 @@ class Log:
         elif not dry:
             del local_labels[old]
 
-        if not new.isidentifier():
-            raise GilgameshError("The provided label is not a valid identifier.")
         if new in local_labels:
             raise GilgameshError("The provided label is already in use.")
+        if not new.isidentifier():
+            raise GilgameshError("The provided label is not a valid identifier.")
+        if new.startswith("sub_") or new.startswith("loc_"):
+            raise GilgameshError("The provided label is reserved.")
 
         if not dry:
             local_labels[new] = pc
@@ -299,10 +300,12 @@ class Log:
         elif not dry:
             del self.subroutines_by_label[old]
 
-        if not new.isidentifier():
-            raise GilgameshError("The provided label is not a valid identifier.")
         if new in self.subroutines_by_label:
             raise GilgameshError("The provided label is already in use.")
+        if not new.isidentifier():
+            raise GilgameshError("The provided label is not a valid identifier.")
+        if new.startswith("sub_") or new.startswith("loc_"):
+            raise GilgameshError("The provided label is reserved.")
 
         if not dry:
             subroutine.label = new
