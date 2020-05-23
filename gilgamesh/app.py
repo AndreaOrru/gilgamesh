@@ -243,6 +243,8 @@ class App(Repl):
     @argument("caller_pc", complete_label)
     @argument("range_expr")
     def do_jumptable_preview(self, caller_pc: str, range_expr: str) -> None:
+        """Preview the branches of a jumptable without affecting the analysis."""
+
         def gather_targets(caller_pc: int, target_pc: int, x: int) -> None:
             target_pcs.append(target_pc)
 
