@@ -137,7 +137,7 @@ class Disassembly:
             add_line(T.ASSERTION, state_change)
             add_line(T.SEPARATOR_LINE)
         # Normal return state.
-        elif instr.is_return:
+        elif instr.is_return and not instr.is_jump_table:
             add_line(T.KNOWN_STATE_HEADER)
             add_line(T.KNOWN_STATE_CHANGE, state_change)
             add_line(T.SEPARATOR_LINE)

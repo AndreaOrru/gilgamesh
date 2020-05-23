@@ -1,5 +1,5 @@
 from copy import copy
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipulation
 from gilgamesh.snes.opcodes import AddressMode, Op
@@ -171,47 +171,53 @@ class CPU:
                 all_known = False
         return all_known
 
-    def jump(self, instruction: Instruction) -> None:
-        if instruction.absolute_argument:
-            targets = [(None, instruction.absolute_argument)]
+    def jump(self, i: Instruction) -> None:
+        if i.absolute_argument:
+            targets: List[Tuple[Optional[int], int]] = [(None, i.absolute_argument)]
         else:
-            targets = self.log.jump_assertions.get(instruction.pc, [(None, None)])
+            targets = self.log.jump_assertions.get(i.pc, [(None, None)])
+        self._jump(i, targets)
 
+    def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> None:
         for _, target in targets:
             if target is None:
-                self._unknown_subroutine_state(instruction)
+                self._unknown_subroutine_state(i)
                 return
 
-            self.log.add_reference(instruction, target)
+            self.log.add_reference(i, target)
             cpu = self.copy()
             cpu.pc = target
             cpu.run()
 
-    def ret(self, instruction: Instruction) -> None:
-        # Check whether this return is operating on a manipulated stack.
-        if instruction.operation != Op.RTI:
-            ret_size = 2 if instruction.operation == Op.RTS else 3
-            call_op = Op.JSR if instruction.operation == Op.RTS else Op.JSL
+    def ret(self, i: Instruction) -> None:
+        if i.operation != Op.RTI:
+            ret_size = 2 if i.operation == Op.RTS else 3
             stack_entries = self.stack.pop(ret_size)
-            # Non-call instructions which operated on the region of the
-            # stack containing the return address from the subroutine.
-            stack_manipulators = [
-                s.instruction
-                for s in stack_entries
-                if not s.instruction or s.instruction.operation != call_op
-            ]
-            if stack_manipulators:
-                self._unknown_subroutine_state(
-                    instruction,
-                    stack_manipulation=True,
-                    stack_manipulator=stack_manipulators[-1],
-                )
-                return
+
+            # This return is used as an anomalous jump table.
+            if i.is_jump_table:
+                return self._jump(i, self.log.jump_assertions[i.pc])
+
+            # Check whether this return is operating on a manipulated stack.
+            else:
+                call_op = Op.JSR if i.operation == Op.RTS else Op.JSL
+                # Non-call instructions which operated on the region of the
+                # stack containing the return address from the subroutine.
+                stack_manipulators = [
+                    s.instruction
+                    for s in stack_entries
+                    if not s.instruction or s.instruction.operation != call_op
+                ]
+                if stack_manipulators:
+                    self._unknown_subroutine_state(
+                        i,
+                        stack_manipulation=True,
+                        stack_manipulator=stack_manipulators[-1],
+                    )
+                    return
 
         # Standard return.
-        self.log.add_subroutine_state(
-            self.subroutine.pc, instruction.pc, self.state_change
-        )
+        self.log.add_subroutine_state(self.subroutine.pc, i.pc, self.state_change)
 
     def sep_rep(self, instruction: Instruction) -> None:
         arg = instruction.absolute_argument
