@@ -61,9 +61,9 @@ impl ROM {
     }
 
     /// Read an address (24 bits) from the ROM.
-    pub fn read_address(&self, address: usize) -> u32 {
-        let lo = self.read_word(address) as u32;
-        let hi = self.read_byte(address + 2) as u32;
+    pub fn read_address(&self, address: usize) -> usize {
+        let lo = self.read_word(address) as usize;
+        let hi = self.read_byte(address + 2) as usize;
         (hi << 16) | lo
     }
 
