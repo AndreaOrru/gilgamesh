@@ -1,0 +1,10 @@
+[package]
+name = "gilgamesh"
+version = "0.0.1"
+authors = ["Andrea Orru <andrea@orru.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = ">=3.0.0-beta.1, <4.0"
