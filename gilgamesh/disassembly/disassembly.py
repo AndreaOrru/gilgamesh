@@ -93,7 +93,7 @@ class Disassembly:
             add(T.OPERAND, instr.argument_string)
         # PC + Comment.
         add(T.PC, "${:06X}".format(instr.pc))
-        comment = self.log.comments.get(instr.pc, "")
+        comment = self.log.comments.get(instr.pc, self._get_default_comment(instr))
         add_line(T.COMMENT, comment)
 
         # Don't show extra information on state in non-verbose mode.
@@ -398,6 +398,18 @@ class Disassembly:
             assertion_type = "none"
             state_change = str(i.state_change_after)
         return state_change, assertion_type
+
+    def _get_default_comment(self, i: Instruction) -> str:
+        if i.operation in (Op.SEP, Op.REP):
+            assert i.argument is not None
+            if i.argument & 0x30 == 0x30:
+                s = "A: {}-bits, X: {}-bits"
+            elif i.argument & 0x20 == 0x20:
+                s = "A: {}-bits"
+            elif i.argument & 0x10 == 0x10:
+                s = "X: {}-bits"
+            return s.format(*([8 if i.operation == Op.SEP else 16] * 2))
+        return ""
 
     @staticmethod
     def colorize(

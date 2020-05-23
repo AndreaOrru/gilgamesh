@@ -10,6 +10,7 @@ from gilgamesh.errors import GilgameshError
 from gilgamesh.log import Log
 from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.snes.instruction import Instruction
+from gilgamesh.snes.opcodes import Op, descriptions
 from gilgamesh.snes.rom import ROM
 from gilgamesh.snes.state import State, StateChange
 from gilgamesh.subroutine import Subroutine
@@ -54,6 +55,9 @@ class App(Repl):
         return HTML(
             "<{}>[{}]{}</{}> ".format(color, self.subroutine.label, prompt, color)
         )
+
+    def complete_opcode(self) -> List[str]:
+        return [op.lower() for op in Op.__members__]
 
     def complete_subroutine(self) -> List[str]:
         return sorted(self.log.subroutines_by_label.keys())
@@ -158,6 +162,14 @@ class App(Repl):
             raise GilgameshError("No selected subroutine.")
         instr_pc = self._label_to_pc(label_or_pc)
         self.log.deassert_subroutine_state_change(self.subroutine_pc, instr_pc)
+
+    @command()
+    @argument("opcode", complete_opcode)
+    def do_describe(self, opcode: str):
+        """Describe an opcode."""
+        op = Op.__members__[opcode.upper()]
+        description = descriptions[op] + "\n"
+        print_html(description)
 
     @command()
     def do_disassembly(self) -> None:
