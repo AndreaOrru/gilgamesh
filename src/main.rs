@@ -1,7 +1,7 @@
 mod rom;
+use rom::ROM;
 
 use clap::clap_app;
-use rom::ROM;
 use std::io;
 
 /// Get the ball rolling.
@@ -27,8 +27,7 @@ fn main() -> io::Result<()> {
 
     // Load the ROM.
     let rom_path = matches.value_of("ROM").unwrap();
-    let mut rom = ROM::new(rom_path.into());
-    rom.load()?;
+    let rom = ROM::from(rom_path.into())?;
 
     println!("{}", rom.title());
     Ok(())

@@ -25,24 +25,27 @@ mod header {
 
 /// Structure representing a SNES ROM.
 pub struct ROM {
-    path: String,
     data: Vec<u8>,
     rom_type: ROMType,
 }
 
 impl ROM {
-    /// Instantiate a new ROM.
-    pub fn new(path: String) -> ROM {
+    pub fn new() -> ROM {
         ROM {
-            path,
             data: Vec::new(),
             rom_type: ROMType::Unknown,
         }
     }
 
+    pub fn from(path: String) -> io::Result<ROM> {
+        let mut rom = ROM::new();
+        rom.load(path)?;
+        Ok(rom)
+    }
+
     /// Load ROM data from file.
-    pub fn load(&mut self) -> io::Result<()> {
-        let mut file = File::open(&self.path)?;
+    fn load(&mut self, path: String) -> io::Result<()> {
+        let mut file = File::open(path)?;
         file.read_to_end(&mut self.data)?;
         self.rom_type = self.discover_type();
         Ok(())
@@ -140,7 +143,7 @@ mod tests {
     use super::*;
 
     fn setup_lorom() -> ROM {
-        let mut rom = ROM::new(String::new());
+        let mut rom = ROM::new();
         let title = header::TITLE - 0x8000;
         rom.data.resize(0x10000, 0);
 
@@ -154,7 +157,7 @@ mod tests {
     }
 
     fn setup_hirom() -> ROM {
-        let mut rom = ROM::new(String::new());
+        let mut rom = ROM::new();
         rom.data.resize(0x10000, 0);
 
         rom.data[header::TITLE + 0] = 0x54; // T
