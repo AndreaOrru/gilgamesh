@@ -1,5 +1,5 @@
 from copy import copy
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipulation
 from gilgamesh.snes.opcodes import AddressMode, Op
@@ -96,16 +96,12 @@ class CPU:
         self._derive_state_inference(instruction)
 
         if instruction.is_return:
-            self.ret(instruction)
-            return False  # Terminate the execution of this subroutine.
+            return self.ret(instruction)
         elif instruction.is_interrupt:
             self._unknown_subroutine_state(instruction)
             return False
-        elif instruction.is_call:
-            return self.call(instruction)
-        elif instruction.is_jump:
-            self.jump(instruction)
-            return False
+        elif instruction.is_call or instruction.is_jump:
+            return self.call_or_jump(instruction)
         elif instruction.is_branch:
             self.branch(instruction)
         elif instruction.is_sep_rep:
@@ -135,30 +131,33 @@ class CPU:
         self.log.add_reference(instruction, target)
         self.pc = target
 
-    def call(self, instruction: Instruction) -> bool:
-        if instruction.absolute_argument:
-            targets = [(None, instruction.absolute_argument)]
+    def call_or_jump(self, i: Instruction) -> bool:
+        if i.absolute_argument:
+            targets: List[Tuple[Optional[int], int]] = [(None, i.absolute_argument)]
         else:
-            targets = self.log.jump_assertions.get(instruction.pc, [(None, None)])
+            targets = self.log.jump_assertions.get(i.pc, [(None, None)])
 
+        return self._call(i, targets) if i.is_call else self._jump(i, targets)
+
+    def _call(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> bool:
         all_known = True
         for _, target in targets:
             if target is None:
                 # If we can't reliably derive the address of the subroutine
                 # being called, we're left in an unknown state.
-                return self._unknown_subroutine_state(instruction)
+                return self._unknown_subroutine_state(i)
 
             # Run a parallel instance of the CPU to execute
             # the subroutine that is being called.
             cpu = self.copy(new_subroutine=True)
-            call_size = 2 if instruction.operation == Op.JSR else 3
-            cpu.stack.push(instruction, size=call_size)
+            call_size = 2 if i.operation in (Op.JSR, Op.RTS) else 3
+            cpu.stack.push(i, i.pc, call_size)
             cpu.stack_trace.append(self.subroutine_pc)
             cpu.subroutine_pc = target
             cpu.pc = target
 
             # Emulate the called subroutine.
-            self.log.add_reference(instruction, target)
+            self.log.add_reference(i, target)
             self.log.add_subroutine(target, stack_trace=cpu.stack_trace)
             cpu.run()
 
@@ -166,47 +165,53 @@ class CPU:
             # called subroutine is, we can propagate it to the
             # current CPU state. Otherwise, to be on the safe
             # side, we need to stop the execution.
-            known = self._propagate_subroutine_state(instruction.pc, target)
-            if not known and not self._unknown_subroutine_state(instruction):
+            known = self._propagate_subroutine_state(i.pc, target)
+            if not known and not self._unknown_subroutine_state(i):
                 all_known = False
         return all_known
 
-    def jump(self, i: Instruction) -> None:
-        if i.absolute_argument:
-            targets: List[Tuple[Optional[int], int]] = [(None, i.absolute_argument)]
-        else:
-            targets = self.log.jump_assertions.get(i.pc, [(None, None)])
-        self._jump(i, targets)
-
-    def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> None:
+    def _jump(
+        self, i: Instruction, targets: List[Tuple[Optional[int], int]]
+    ) -> Literal[False]:
         for _, target in targets:
             if target is None:
                 self._unknown_subroutine_state(i)
-                return
+                return False
 
             self.log.add_reference(i, target)
             cpu = self.copy()
             cpu.pc = target
             cpu.run()
+        return False
 
-    def ret(self, i: Instruction) -> None:
+    def ret(self, i: Instruction) -> bool:
         if i.operation != Op.RTI:
             ret_size = 2 if i.operation == Op.RTS else 3
             stack_entries = self.stack.pop(ret_size)
 
             # This return is used as an anomalous jump table.
             if i.is_jump_table:
-                return self._jump(i, self.log.jump_assertions[i.pc])
+                # If the stack is constructed in such a way that
+                # we would return to the next instruction, it is
+                # effectively a subroutine call.
+                if self.stack.match(i.pc, ret_size):
+                    self.stack.pop(ret_size)
+                    return self._call(i, self.log.jump_assertions[i.pc])
+                # Otherwise, it's a simple jump.
+                else:
+                    return self._jump(i, self.log.jump_assertions[i.pc])
 
             # Check whether this return is operating on a manipulated stack.
             else:
-                call_op = Op.JSR if i.operation == Op.RTS else Op.JSL
+                call_op = (
+                    (Op.JSR, Op.RTS) if i.operation == Op.RTS else (Op.JSL, Op.RTL)
+                )
                 # Non-call instructions which operated on the region of the
                 # stack containing the return address from the subroutine.
                 stack_manipulators = [
                     s.instruction
                     for s in stack_entries
-                    if not s.instruction or s.instruction.operation != call_op
+                    if not s.instruction or s.instruction.operation not in call_op
                 ]
                 if stack_manipulators:
                     self._unknown_subroutine_state(
@@ -214,10 +219,11 @@ class CPU:
                         stack_manipulation=True,
                         stack_manipulator=stack_manipulators[-1],
                     )
-                    return
+                    return False
 
         # Standard return.
         self.log.add_subroutine_state(self.subroutine.pc, i.pc, self.state_change)
+        return False
 
     def sep_rep(self, instruction: Instruction) -> None:
         arg = instruction.absolute_argument
@@ -272,7 +278,7 @@ class CPU:
         if instruction.operation == Op.PHP:
             self.stack.push(instruction, (copy(self.state), copy(self.state_change)))
         elif instruction.operation == Op.PHA:
-            self.stack.push(instruction, size=self.state.a_size)
+            self.stack.push(instruction, self.registers.a.get(), self.state.a_size)
         elif instruction.operation in (Op.PHX, Op.PHY):
             self.stack.push(instruction, size=self.state.x_size)
         elif instruction.operation in (Op.PHB, Op.PHK):
