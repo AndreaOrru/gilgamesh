@@ -14,6 +14,8 @@ enum ROMType {
 mod header {
     /// ROM's title.
     pub const TITLE: usize = 0xFFC0;
+    /// ROM's title max length.
+    pub const TITLE_LEN: usize = 21;
 }
 
 /// Structure representing a SNES ROM.
@@ -39,6 +41,17 @@ impl ROM {
         file.read_to_end(&mut self.data)?;
         self.rom_type = self.discover_type();
         Ok(())
+    }
+
+    pub fn title(&self) -> String {
+        let mut title = String::new();
+        for i in 0..header::TITLE_LEN {
+            match self.read_byte(header::TITLE + i) {
+                0x00 => break,
+                c => title.push(char::from(c)),
+            }
+        }
+        title
     }
 
     /// Read a byte from the ROM.
@@ -92,7 +105,7 @@ impl ROM {
         };
 
         let mut score = 0;
-        for i in 0..21 {
+        for i in 0..header::TITLE_LEN {
             let c = self.data[title + i];
             if c == 0x00 {
                 score += 1;
@@ -158,5 +171,11 @@ mod tests {
         let lorom = setup_lorom();
         assert_eq!(lorom.read_address(header::TITLE + 0), 0x534554);
         assert_eq!(lorom.read_address(header::TITLE + 1), 0x545345);
+    }
+
+    #[test]
+    fn test_title() {
+        let lorom = setup_lorom();
+        assert_eq!(lorom.title(), "TEST");
     }
 }

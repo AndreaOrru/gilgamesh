@@ -30,5 +30,6 @@ fn main() -> io::Result<()> {
     let mut rom = ROM::new(rom_path.into());
     rom.load()?;
 
+    println!("{}", rom.title());
     Ok(())
 }
