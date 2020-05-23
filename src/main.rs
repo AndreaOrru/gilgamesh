@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
             (version: "0.0.1")
             (author: "Andrea Orru <andrea@orru.io>")
             (about: "The definitive reverse engineering toolkit for SNES.")
-            (@arg ROM: +required {file_exists} "The ROM file to analyze")
+            (@arg ROM: +required {file_exists} "ROM file to analyze")
     )
     .get_matches();
 
