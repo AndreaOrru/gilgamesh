@@ -1,6 +1,11 @@
-use clap::clap_app;
+mod rom;
 
-fn main() {
+use clap::clap_app;
+use rom::ROM;
+use std::io;
+
+/// Get the ball rolling.
+fn main() -> io::Result<()> {
     // Validation function to test the existence of a file.
     let file_exists = |path: &str| {
         if std::fs::metadata(path).is_ok() {
@@ -20,7 +25,10 @@ fn main() {
     )
     .get_matches();
 
-    // Get the ROM's path.
+    // Load the ROM.
     let rom_path = matches.value_of("ROM").unwrap();
-    println!("{}", rom_path);
+    let mut rom = ROM::new(rom_path.into());
+    rom.load()?;
+
+    Ok(())
 }
