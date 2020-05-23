@@ -124,7 +124,7 @@ mod tests {
     use super::*;
 
     fn setup_lorom() -> ROM {
-        let mut rom = ROM::new("".into());
+        let mut rom = ROM::new(String::new());
         let title = header::TITLE - 0x8000;
         rom.data.resize(0x10000, 0);
 
@@ -137,10 +137,24 @@ mod tests {
         rom
     }
 
+    fn setup_hirom() -> ROM {
+        let mut rom = ROM::new(String::new());
+        rom.data.resize(0x10000, 0);
+
+        rom.data[header::TITLE + 0] = 0x54; // T
+        rom.data[header::TITLE + 1] = 0x45; // E
+        rom.data[header::TITLE + 2] = 0x53; // S
+        rom.data[header::TITLE + 3] = 0x54; // T
+
+        rom.rom_type = rom.discover_type();
+        rom
+    }
+
     #[test]
     fn test_discover_type() {
-        let lorom = setup_lorom();
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
         assert_eq!(lorom.rom_type, ROMType::LoROM);
+        assert_eq!(hirom.rom_type, ROMType::HiROM);
     }
 
     #[test]
@@ -148,34 +162,47 @@ mod tests {
         let lorom = setup_lorom();
         assert_eq!(lorom.translate(0x008000), 0x000000);
         assert_eq!(lorom.translate(0x808000), 0x000000);
+
+        let hirom = setup_hirom();
+        assert_eq!(hirom.translate(0xC00000), 0x000000);
+        assert_eq!(hirom.translate(0xC08000), 0x008000);
+        assert_eq!(hirom.translate(0x400000), 0x000000);
     }
 
     #[test]
     fn test_read_byte() {
-        let lorom = setup_lorom();
-        assert_eq!(lorom.read_byte(header::TITLE + 0), 0x54);
-        assert_eq!(lorom.read_byte(header::TITLE + 1), 0x45);
-        assert_eq!(lorom.read_byte(header::TITLE + 2), 0x53);
-        assert_eq!(lorom.read_byte(header::TITLE + 3), 0x54);
+        let roms = [setup_lorom(), setup_hirom()];
+        for rom in roms.iter() {
+            assert_eq!(rom.read_byte(header::TITLE + 0), 0x54);
+            assert_eq!(rom.read_byte(header::TITLE + 1), 0x45);
+            assert_eq!(rom.read_byte(header::TITLE + 2), 0x53);
+            assert_eq!(rom.read_byte(header::TITLE + 3), 0x54);
+        }
     }
 
     #[test]
     fn test_read_word() {
-        let lorom = setup_lorom();
-        assert_eq!(lorom.read_word(header::TITLE + 0), 0x4554);
-        assert_eq!(lorom.read_word(header::TITLE + 2), 0x5453);
+        let roms = [setup_lorom(), setup_hirom()];
+        for rom in roms.iter() {
+            assert_eq!(rom.read_word(header::TITLE + 0), 0x4554);
+            assert_eq!(rom.read_word(header::TITLE + 2), 0x5453);
+        }
     }
 
     #[test]
     fn test_read_address() {
-        let lorom = setup_lorom();
-        assert_eq!(lorom.read_address(header::TITLE + 0), 0x534554);
-        assert_eq!(lorom.read_address(header::TITLE + 1), 0x545345);
+        let roms = [setup_lorom(), setup_hirom()];
+        for rom in roms.iter() {
+            assert_eq!(rom.read_address(header::TITLE + 0), 0x534554);
+            assert_eq!(rom.read_address(header::TITLE + 1), 0x545345);
+        }
     }
 
     #[test]
     fn test_title() {
-        let lorom = setup_lorom();
-        assert_eq!(lorom.title(), "TEST");
+        let roms = [setup_lorom(), setup_hirom()];
+        for rom in roms.iter() {
+            assert_eq!(rom.title(), "TEST");
+        }
     }
 }
