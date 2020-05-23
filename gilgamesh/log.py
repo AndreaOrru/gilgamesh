@@ -1,4 +1,5 @@
 import gc
+import sys
 from collections import defaultdict, namedtuple
 from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple
 
@@ -23,7 +24,9 @@ class Log:
         self.reset()
 
     def reset(self) -> None:
-        self.jump_assertions: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
+        self.jump_assertions: DefaultDict[
+            int, Set[Tuple[Optional[int], int]]
+        ] = defaultdict(set)
         self.jump_table_targets: DefaultDict[int, int] = defaultdict(int)
         self.complete_jump_tables: Set[int] = set()
         self.instruction_assertions: Dict[int, StateChange] = {}
@@ -181,7 +184,9 @@ class Log:
         self.instruction_assertions.pop(instruction_pc, None)
         self.dirty = True
 
-    def assert_jump(self, caller_pc: int, target_pc: int, x: int) -> None:
+    def assert_jump(
+        self, caller_pc: int, target_pc: int, x: Optional[int] = None
+    ) -> None:
         if (
             caller_pc in self.jump_assertions
             and (x, target_pc) in self.jump_assertions[caller_pc]
@@ -328,6 +333,12 @@ class Log:
         elif addr - 3 in self.instructions and get_size(addr - 3) >= 4:
             return addr - 3
         return None
+
+    def sorted_jump_table(self, caller_pc: int) -> List[Tuple[Optional[int], int]]:
+        def sort(entry: Tuple[Optional[int], int]) -> Tuple[int, int]:
+            return (sys.maxsize if entry[0] is None else entry[0], entry[1])
+
+        return sorted(self.jump_assertions[caller_pc], key=sort)
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():

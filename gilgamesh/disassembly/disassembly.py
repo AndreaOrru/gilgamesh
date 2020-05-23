@@ -108,7 +108,7 @@ class Disassembly:
                 else T.JUMP_TABLE_ENTRY
             )
             add_line(T.JUMP_TABLE_HEADER)
-            for x, target in sorted(self.log.jump_assertions[instr.pc]):
+            for x, target in self.log.sorted_jump_table(instr.pc):
                 target_sub = self.log.subroutines.get(target, None)
                 if target_sub is not None and target_sub.has_unknown_return_state:
                     typ = T.JUMP_TABLE_UNKNOWN_ENTRY
@@ -116,8 +116,9 @@ class Disassembly:
                     typ = default_typ
                 add_line(
                     typ,
-                    "x={:04X}  ->  {}".format(
-                        x, self.log.get_label(target, self.subroutine.pc)
+                    "x={}  ->  {}".format(
+                        "????" if x is None else f"{x:04X}",
+                        self.log.get_label(target, self.subroutine.pc),
                     ),
                 )
             add_line(T.SEPARATOR_LINE)
