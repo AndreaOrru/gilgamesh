@@ -12,10 +12,15 @@ enum ROMType {
 
 /// ROM's header.
 mod header {
-    /// ROM's title.
-    pub const TITLE: usize = 0xFFC0;
     /// ROM's title max length.
     pub const TITLE_LEN: usize = 21;
+
+    /// ROM's title.
+    pub const TITLE: usize = 0xFFC0;
+    /// NMI vector.
+    pub const NMI: usize = 0xFFEA;
+    /// RESET vector.
+    pub const RESET: usize = 0xFFFC;
 }
 
 /// Structure representing a SNES ROM.
@@ -43,17 +48,6 @@ impl ROM {
         Ok(())
     }
 
-    pub fn title(&self) -> String {
-        let mut title = String::new();
-        for i in 0..header::TITLE_LEN {
-            match self.read_byte(header::TITLE + i) {
-                0x00 => break,
-                c => title.push(char::from(c)),
-            }
-        }
-        title
-    }
-
     /// Read a byte from the ROM.
     pub fn read_byte(&self, address: usize) -> u8 {
         self.data[self.translate(address)]
@@ -71,6 +65,28 @@ impl ROM {
         let lo = self.read_word(address) as u32;
         let hi = self.read_byte(address + 2) as u32;
         (hi << 16) | lo
+    }
+
+    /// Return the ROM's title.
+    pub fn title(&self) -> String {
+        let mut title = String::new();
+        for i in 0..header::TITLE_LEN {
+            match self.read_byte(header::TITLE + i) {
+                0x00 => break,
+                c => title.push(char::from(c)),
+            }
+        }
+        title
+    }
+
+    /// Return the reset vector (ROM's entry point).
+    pub fn reset_vector(&self) -> usize {
+        self.read_word(header::RESET) as usize
+    }
+
+    /// Return the NMI vector (VBLANK handler).
+    pub fn nmi_vector(&self) -> usize {
+        self.read_word(header::NMI) as usize
     }
 
     /// Translate an address from SNES to PC.
