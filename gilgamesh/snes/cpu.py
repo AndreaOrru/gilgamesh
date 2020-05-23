@@ -191,11 +191,19 @@ class CPU:
 
             # This return is used as an anomalous jump table.
             if i.is_jump_table:
+                for s in stack_entries:
+                    if s.instruction:
+                        s.instruction.stack_manipulation = StackManipulation.HARMLESS
+
                 # If the stack is constructed in such a way that
                 # we would return to the next instruction, it is
                 # effectively a subroutine call.
                 if self.stack.match(i.pc, ret_size):
-                    self.stack.pop(ret_size)
+                    for s in self.stack.pop(ret_size):
+                        if s.instruction:
+                            s.instruction.stack_manipulation = (
+                                StackManipulation.HARMLESS
+                            )
                     return self._call(i, self.log.jump_assertions[i.pc])
                 # Otherwise, it's a simple jump.
                 else:
