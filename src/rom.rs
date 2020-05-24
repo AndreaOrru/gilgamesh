@@ -11,6 +11,7 @@ enum ROMType {
 }
 
 /// ROM's header.
+#[allow(dead_code)]
 mod header {
     /// ROM's title max length.
     pub const TITLE_LEN: usize = 21;
@@ -30,6 +31,8 @@ pub struct ROM {
 }
 
 impl ROM {
+    /// Instantiate a new empty ROM object.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> ROM {
         ROM {
             data: Vec::new(),
@@ -37,6 +40,7 @@ impl ROM {
         }
     }
 
+    /// Instantiate a ROM from a file.
     pub fn from(path: String) -> io::Result<ROM> {
         let mut rom = ROM::new();
         rom.load(path)?;
@@ -93,7 +97,7 @@ impl ROM {
     }
 
     /// Translate an address from SNES to PC.
-    fn translate(&self, address: usize) -> usize {
+    pub fn translate(&self, address: usize) -> usize {
         match self.rom_type {
             ROMType::LoROM => ((address & 0x7F0000) >> 1) | (address & 0x7FFF),
             ROMType::HiROM => address & 0x3FFFFF,

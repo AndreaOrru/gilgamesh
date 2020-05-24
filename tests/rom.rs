@@ -1,22 +1,10 @@
-extern crate gilgamesh;
+#[macro_use]
+mod common;
 
+extern crate gilgamesh;
 use gilgamesh::rom::ROM;
 
-mod common;
-use common::assemble;
-use std::sync::Once;
-
-static INIT: Once = Once::new();
-static mut LOROM: String = String::new();
-
-pub fn setup_lorom() -> ROM {
-    unsafe {
-        INIT.call_once(|| {
-            LOROM = assemble("lorom.asm");
-        });
-        ROM::from(LOROM.to_owned()).unwrap()
-    }
-}
+test_rom!(setup_lorom, "lorom.asm");
 
 #[test]
 fn test_title() {

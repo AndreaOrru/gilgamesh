@@ -60,6 +60,8 @@ name = "gilgamesh"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "lazy_static",
+ "paste",
 ]
 
 [[package]]
@@ -108,6 +110,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06de47b848347d8c4c94219ad8ecd35eb90231704b067e67e6ae2e36ee023510"
 
 [[package]]
+name = "paste"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "678f27e19361472a23717f11d229a7522ef64605baf0715c896a94b8b6b13a06"
+dependencies = [
+ "paste-impl",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "paste-impl"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "149089128a45d8e377677b08873b4bad2a56618f80e4f28a83862ba250994a30"
+dependencies = [
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "proc-macro-error"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -132,6 +156,12 @@ dependencies = [
  "syn-mid",
  "version_check",
 ]
+
+[[package]]
+name = "proc-macro-hack"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d659fe7c6d27f25e9d80a1a094c223f5246f6a6596453e09d7229bf42750b63"
 
 [[package]]
 name = "proc-macro2"
