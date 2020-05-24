@@ -733,6 +733,8 @@ class App(Repl):
         if sub.indirect_jumps:
             color = "red" if sub.has_incomplete_jump_table else "green"
             comment += f" <{color}>[*]</{color}>"
+        if sub.is_recursive:
+            comment += " <yellow>[∞]</yellow>"
 
         return "${:06X}  <{}>{}</{}>{}\n".format(
             sub.pc, open_color, sub.label, close_color, comment,

@@ -25,6 +25,7 @@ class Subroutine(Invalidable):
 
         # Whether an instruction inside the subroutine performs stack manipulation.
         self.has_stack_manipulation = False
+        self.is_recursive = False
 
     @property
     def local_labels(self) -> Dict[str, int]:
@@ -80,7 +81,9 @@ class Subroutine(Invalidable):
         self.state_changes[instruction_pc] = state_change
 
     def simplify_return_states(self, state: State) -> Tuple[Set[StateChange], bool]:
-        assert len(self.state_changes) > 0
+        if len(self.state_changes) == 0:
+            self.is_recursive = True
+            return ({StateChange(unknown=True)}, True)
 
         # Simplify the state changes based on the caller state.
         unknown = False

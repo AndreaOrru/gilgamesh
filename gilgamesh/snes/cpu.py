@@ -1,5 +1,5 @@
 from copy import copy
-from typing import List, Literal, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipulation
 from gilgamesh.snes.opcodes import AddressMode, Op
@@ -170,9 +170,7 @@ class CPU:
                 all_known = False
         return all_known
 
-    def _jump(
-        self, i: Instruction, targets: List[Tuple[Optional[int], int]]
-    ) -> Literal[False]:
+    def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> bool:
         for _, target in targets:
             if target is None:
                 self._unknown_subroutine_state(i)
