@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipulation
 from gilgamesh.snes.opcodes import AddressMode, Op
 from gilgamesh.snes.registers import Registers
-from gilgamesh.snes.state import State, StateChange
+from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.stack import Stack
 from gilgamesh.subroutine import Subroutine
 
@@ -98,7 +98,9 @@ class CPU:
         if instruction.is_return:
             return self.ret(instruction)
         elif instruction.is_interrupt:
-            self._unknown_subroutine_state(instruction)
+            self._unknown_subroutine_state(
+                instruction, unknown_reason=UnknownReason.SUSPECT_INSTRUCTION
+            )
             return False
         elif instruction.is_call or instruction.is_jump:
             return self.call_or_jump(instruction)
@@ -145,7 +147,9 @@ class CPU:
             if target is None:
                 # If we can't reliably derive the address of the subroutine
                 # being called, we're left in an unknown state.
-                return self._unknown_subroutine_state(i)
+                return self._unknown_subroutine_state(
+                    i, unknown_reason=UnknownReason.INDIRECT_JUMP
+                )
 
             # Run a parallel instance of the CPU to execute
             # the subroutine that is being called.
@@ -165,15 +169,19 @@ class CPU:
             # called subroutine is, we can propagate it to the
             # current CPU state. Otherwise, to be on the safe
             # side, we need to stop the execution.
-            known = self._propagate_subroutine_state(i.pc, target)
-            if not known and not self._unknown_subroutine_state(i):
+            known, unknown_reason = self._propagate_subroutine_state(i.pc, target)
+            if not known and not self._unknown_subroutine_state(
+                i, unknown_reason=unknown_reason
+            ):
                 all_known = False
         return all_known
 
     def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> bool:
         for _, target in targets:
             if target is None:
-                self._unknown_subroutine_state(i)
+                self._unknown_subroutine_state(
+                    i, unknown_reason=UnknownReason.INDIRECT_JUMP
+                )
                 return False
 
             self.log.add_reference(i, target)
@@ -222,7 +230,7 @@ class CPU:
                 if stack_manipulators:
                     self._unknown_subroutine_state(
                         i,
-                        stack_manipulation=True,
+                        unknown_reason=UnknownReason.STACK_MANIPULATION,
                         stack_manipulator=stack_manipulators[-1],
                     )
                     return False
@@ -303,7 +311,9 @@ class CPU:
             # which state the PLP instruction is restoring.
             else:
                 return self._unknown_subroutine_state(
-                    i, stack_manipulation=True, stack_manipulator=entry.instruction
+                    i,
+                    unknown_reason=UnknownReason.STACK_MANIPULATION,
+                    stack_manipulator=entry.instruction,
                 )
 
         elif i.operation in (Op.PLX, Op.PLY):
@@ -332,26 +342,45 @@ class CPU:
         ):
             self.state_inference.x = self.state.x
 
-    def _propagate_subroutine_state(self, call_pc: int, subroutine_pc: int) -> bool:
+    def _propagate_subroutine_state(
+        self, call_pc: int, subroutine_pc: int
+    ) -> Tuple[bool, UnknownReason]:
+        known = True
+        unknown_reason = UnknownReason.KNOWN
+
         # If the user defined a state assertion for the current instruction.
         if call_pc in self.log.instruction_assertions:
-            return True  # Execution can proceed.
+            return (known, unknown_reason)  # Execution can proceed.
 
         # If the subroutine can return in more than one distinct state, or its
         # state is unknown, we can't reliably propagate the state to the caller.
         subroutine = self.log.subroutines[subroutine_pc]
-        return_states, unknown = subroutine.simplify_return_states(self.state)
-        if len(return_states) > 1 or unknown:
-            return False
+        return_states = subroutine.simplify_return_states(self.state)
+
+        # Multiple known return states.
+        if len([s for s in return_states if not s.unknown]) > 1:
+            known = False
+            unknown_reason = UnknownReason.MULTIPLE_RETURN_STATES
+            self.log.add_subroutine_state(
+                self.subroutine_pc, call_pc, StateChange(unknown_reason=unknown_reason)
+            )
+        # Unknown state with some reason.
+        elif any(s.unknown for s in return_states):
+            known = False
+            unknown_state = [s for s in return_states if s.unknown][0]
+            unknown_reason = unknown_state.unknown_reason
+            self.log.add_subroutine_state(self.subroutine_pc, call_pc, unknown_state)
 
         # Unique return state, apply it.
-        self._apply_state_change(return_states.pop())
-        return True
+        if known:
+            self._apply_state_change(return_states.pop())
+
+        return (known, unknown_reason)
 
     def _unknown_subroutine_state(
         self,
         instruction: Instruction,
-        stack_manipulation=False,
+        unknown_reason: Optional[UnknownReason] = None,
         stack_manipulator: Optional[Instruction] = None,
     ) -> bool:
         # Check if the user defined a state assertion for the current instruction.
@@ -359,17 +388,17 @@ class CPU:
             return True  # Execution can proceed.
 
         # No custom assertion, we need to stop here.
-        self.state_change = StateChange(unknown=True)
+        unknown_reason = unknown_reason or UnknownReason.UNKNOWN
+        self.state_change = StateChange(unknown_reason=unknown_reason)
         self.log.add_subroutine_state(
             self.subroutine_pc, instruction.pc, copy(self.state_change)
         )
 
         # If the unknown state is due to stack manipulation:
-        if stack_manipulation:
+        if unknown_reason == UnknownReason.STACK_MANIPULATION:
             # If we know which instruction performed the
             # manipulation, we flag it.
             if stack_manipulator:
-                self.subroutine.has_stack_manipulation = True
                 stack_manipulator.stack_manipulation = (
                     StackManipulation.CAUSES_UNKNOWN_STATE
                 )

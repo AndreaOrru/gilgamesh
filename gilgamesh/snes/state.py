@@ -1,5 +1,6 @@
 import re
 from copy import copy
+from enum import Enum, auto
 from typing import Optional
 
 from gilgamesh.errors import GilgameshError
@@ -87,14 +88,33 @@ class State:
         self.p &= p
 
 
+class UnknownReason(Enum):
+    KNOWN = auto()
+    UNKNOWN = auto()
+    RECURSION = auto()
+    INDIRECT_JUMP = auto()
+    STACK_MANIPULATION = auto()
+    SUSPECT_INSTRUCTION = auto()
+    MULTIPLE_RETURN_STATES = auto()
+
+
 class StateChange:
     """Change in processor state caused by the execution of a subroutine."""
 
-    def __init__(self, m: Optional[int] = None, x: Optional[int] = None, unknown=False):
+    def __init__(
+        self,
+        m: Optional[int] = None,
+        x: Optional[int] = None,
+        unknown_reason: Optional[UnknownReason] = None,
+    ):
         self.m = m
         self.x = x
-        self.unknown = unknown
+        self.unknown_reason = unknown_reason or UnknownReason.KNOWN
         self.asserted = False
+
+    @property
+    def unknown(self):
+        return self.unknown_reason != UnknownReason.KNOWN
 
     @classmethod
     def from_expr(cls, expr: str) -> "StateChange":
@@ -102,12 +122,12 @@ class StateChange:
         if expr == "none":
             return cls()
         elif expr == "unknown":
-            return cls(unknown=True)
+            raise NotImplementedError
 
         expressions = expr.split(",")
         if 1 <= len(expressions) <= 2:
             return cls(
-                **{
+                **{  # type: ignore
                     str(register): int(value)
                     for register, value in (e.split("=") for e in expressions)
                 }
@@ -132,14 +152,18 @@ class StateChange:
         return f"<StateChange: {self}>"
 
     def __eq__(self, other) -> bool:
-        return (self.unknown and other.unknown) or (
+        return (self.unknown_reason == other.unknown_reason) or (
             (self.m == other.m) and (self.x == other.x)
         )
 
     def __hash__(self) -> int:
         if self.unknown:
-            return hash((None, None, self.unknown))
-        return hash((self.m, self.x, self.unknown))
+            return hash((None, None, self.unknown_reason))
+        return hash((self.m, self.x, self.unknown_reason))
+
+    @property
+    def unknown_reason_str(self) -> str:
+        return self.unknown_reason.name.lower().replace("_", " ")
 
     def set(self, p_change: int) -> None:
         change = State(p_change)

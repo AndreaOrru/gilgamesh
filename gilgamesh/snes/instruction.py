@@ -6,7 +6,7 @@ from cached_property import cached_property  # type: ignore
 
 from gilgamesh.snes.hw_registers import hw_registers
 from gilgamesh.snes.opcodes import AddressMode, Op, argument_size_table, opcode_table
-from gilgamesh.snes.state import State, StateChange
+from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.utils.invalidable import Invalidable
 from gilgamesh.utils.signed_types import s8, s16
 
@@ -46,7 +46,7 @@ class Instruction(Invalidable):
         self._argument = argument
 
         self.state_change_before = state_change_before
-        self.state_change_after = StateChange(unknown=True)
+        self.state_change_after = StateChange(unknown_reason=UnknownReason.UNKNOWN)
         self.stack_manipulation = StackManipulation.NONE
 
     def __repr__(self) -> str:

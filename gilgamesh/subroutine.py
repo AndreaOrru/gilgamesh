@@ -4,8 +4,7 @@ from cached_property import cached_property  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.snes.instruction import Instruction
-from gilgamesh.snes.opcodes import Op
-from gilgamesh.snes.state import State, StateChange
+from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
 
@@ -23,8 +22,7 @@ class Subroutine(Invalidable):
         # The stack of calls that brought us to the current subroutine.
         self.stack_traces: Set[Tuple[int, ...]] = set()
 
-        # Whether an instruction inside the subroutine performs stack manipulation.
-        self.has_stack_manipulation = False
+        # Whether a subroutine calls itself down the line.
         self.is_recursive = False
 
     @property
@@ -57,12 +55,22 @@ class Subroutine(Invalidable):
         return any(i.has_asserted_state_change for i in self.instructions.values())
 
     @cached_property
-    def has_suspect_instructions(self) -> bool:
-        return any(i.operation == Op.BRK for i in self.instructions.values())
-
-    @cached_property
     def indirect_jumps(self) -> List[int]:
         return [i.pc for i in self.instructions.values() if i.is_indirect_jump]
+
+    @property
+    def has_suspect_instructions(self) -> bool:
+        return any(
+            s.unknown_reason == UnknownReason.SUSPECT_INSTRUCTION
+            for s in self.state_changes.values()
+        )
+
+    @property
+    def has_stack_manipulation(self) -> bool:
+        return any(
+            s.unknown_reason == UnknownReason.STACK_MANIPULATION
+            for s in self.state_changes.values()
+        )
 
     @property
     def has_incomplete_jump_table(self) -> bool:
@@ -84,18 +92,13 @@ class Subroutine(Invalidable):
     ) -> None:
         self.state_changes[instruction_pc] = state_change
 
-    def simplify_return_states(self, state: State) -> Tuple[Set[StateChange], bool]:
+    def simplify_return_states(self, state: State) -> List[StateChange]:
         if len(self.state_changes) == 0:
             self.is_recursive = True
-            return ({StateChange(unknown=True)}, True)
+            return [StateChange(unknown_reason=UnknownReason.RECURSION)]
 
         # Simplify the state changes based on the caller state.
-        unknown = False
         changes = set()
-
         for change in self.state_changes.values():
             changes.add(change.simplify(state))
-            if change.unknown:
-                unknown = True
-
-        return changes, unknown
+        return list(changes)

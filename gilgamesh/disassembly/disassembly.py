@@ -132,6 +132,10 @@ class Disassembly:
                 add_line(T.ASSERTED_STATE_HEADER)
             add_line(T.LAST_KNOWN_STATE, str(instr.state))
             add_line(T.LAST_KNOWN_STATE_CHANGE, str(instr.state_change_before))
+            if state_change == "unknown":
+                add_line(
+                    T.UNKNOWN_REASON, str(instr.state_change_after.unknown_reason_str)
+                )
             add_line(T.SEPARATOR_LINE)
             add_line(T.ASSERTION_TYPE, assertion_type)
             add_line(T.ASSERTION, state_change)
@@ -179,14 +183,21 @@ class Disassembly:
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
             # Unknown or asserted (previously unknown) state.
-            elif p.maybe_match_line(
-                self.string(T.UNKNOWN_STATE_HEADER)
-            ) or p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
-                if p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
-                    p.add_line(T.ASSERTED_STATE_HEADER)
-                else:
-                    p.add_line(T.UNKNOWN_STATE_HEADER)
+            elif p.maybe_match_line(self.string(T.UNKNOWN_STATE_HEADER)):
+                p.add_line(T.UNKNOWN_STATE_HEADER)
                 # TODO: validate state_expr and assertion_type.
+                p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
+                p.add_line_rest(
+                    T.LAST_KNOWN_STATE_CHANGE, self.string(T.LAST_KNOWN_STATE_CHANGE)
+                )
+                p.add_line_rest(T.UNKNOWN_REASON, self.string(T.UNKNOWN_REASON))
+                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
+                p.add_line_rest(T.ASSERTION_TYPE, after=self.string(T.ASSERTION_TYPE))
+                p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
+                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
+
+            elif p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
+                p.add_line(T.ASSERTED_STATE_HEADER)
                 p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
                 p.add_line_rest(
                     T.LAST_KNOWN_STATE_CHANGE, self.string(T.LAST_KNOWN_STATE_CHANGE)
@@ -274,6 +285,8 @@ class Disassembly:
                 T.LAST_KNOWN_STATE_CHANGE,
             ):
                 s.append(f'  {string(t.typ)} {colorize(t.val, "green")}')
+            elif t.typ == T.UNKNOWN_REASON:
+                s.append(f'  {string(t.typ)} {colorize(t.val, "red")}')
             elif t.typ == T.ASSERTION_TYPE:
                 color = "red" if t.val == "none" else "magenta"
                 s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
@@ -458,6 +471,8 @@ class Disassembly:
             return colorize("; Last known state change:", "grey")
         elif t == T.LAST_KNOWN_STATE:
             return colorize("; Last known state:", "grey")
+        elif t == T.UNKNOWN_REASON:
+            return colorize("; Reason:", "grey")
 
         elif t == T.ASSERTION_TYPE:
             return colorize("; ASSERTION TYPE:", "grey")

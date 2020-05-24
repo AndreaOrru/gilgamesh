@@ -34,6 +34,7 @@ class TokenType(Enum):
     PC = auto()
     SEPARATOR_LINE = auto()
     STACK_MANIPULATION_HEADER = auto()
+    UNKNOWN_REASON = auto()
     UNKNOWN_STATE_HEADER = auto()
 
 
