@@ -1,10 +1,12 @@
+use getset::CopyGetters;
+
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
 /// ROM classification.
-#[derive(Debug, PartialEq)]
-enum ROMType {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ROMType {
     Unknown,
     LoROM,
     HiROM,
@@ -18,6 +20,12 @@ mod header {
 
     /// ROM's title.
     pub const TITLE: usize = 0xFFC0;
+    /// Markup byte.
+    pub const MARKUP: usize = 0xFFD5;
+    /// ROM's type byte.
+    pub const TYPE: usize = 0xFFD6;
+    /// ROM's type byte.
+    pub const SIZE: usize = 0xFFD7;
     /// NMI vector.
     pub const NMI: usize = 0xFFEA;
     /// RESET vector.
@@ -25,8 +33,11 @@ mod header {
 }
 
 /// Structure representing a SNES ROM.
+#[derive(CopyGetters)]
 pub struct ROM {
     data: Vec<u8>,
+
+    #[getset(get_copy = "pub")]
     rom_type: ROMType,
 }
 
@@ -48,7 +59,7 @@ impl ROM {
     }
 
     /// Load ROM data from file.
-    fn load(&mut self, path: String) -> io::Result<()> {
+    pub fn load(&mut self, path: String) -> io::Result<()> {
         let mut file = File::open(path)?;
         file.read_to_end(&mut self.data)?;
         self.rom_type = self.discover_type();
@@ -72,6 +83,16 @@ impl ROM {
         let lo = self.read_word(address) as usize;
         let hi = self.read_byte(address + 2) as usize;
         (hi << 16) | lo
+    }
+
+    /// Size of the ROM, as indicated by the header.
+    pub fn size(&self) -> usize {
+        0x400 << self.read_byte(header::SIZE)
+    }
+
+    /// Size of the ROM, as measured by the size of the file.
+    pub fn actual_size(&self) -> usize {
+        self.data.len()
     }
 
     /// Return the ROM's title.
@@ -171,6 +192,13 @@ mod tests {
 
         rom.rom_type = rom.discover_type();
         rom
+    }
+
+    #[test]
+    fn test_actual_size() {
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
+        assert_eq!(lorom.actual_size(), 0x10000);
+        assert_eq!(hirom.actual_size(), 0x10000);
     }
 
     #[test]

@@ -42,15 +42,11 @@ lazy_static! {
 #[allow(unused_macros)]
 macro_rules! test_rom {
     ($setup_fn:ident, $filename:literal) => {
-        use common::assemble;
-        use common::ASSEMBLED_ROMS;
-        use std::sync::Arc;
-
         paste::item! {
-            fn $setup_fn() -> Arc<ROM> {
-                let mut roms = ASSEMBLED_ROMS.lock().unwrap();
+            fn $setup_fn() -> std::sync::Arc<ROM> {
+                let mut roms = common::ASSEMBLED_ROMS.lock().unwrap();
                 (*roms.entry($filename).or_insert(
-                    Arc::new(ROM::from(assemble($filename)).unwrap())
+                    std::sync::Arc::new(ROM::from(common::assemble($filename)).unwrap())
                 )).clone()
             }
         }

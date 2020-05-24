@@ -12,5 +12,6 @@ test = false
 
 [dependencies]
 clap = ">=3.0.0-beta.1, <4.0"
+getset = ">=0.1.1, <0.2"
 lazy_static = ">=1.4.0, <2.0"
 paste = ">=0.1.12, <0.2"
