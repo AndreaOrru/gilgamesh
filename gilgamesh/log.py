@@ -66,8 +66,7 @@ class Log:
 
     def analyze(self, preserve_labels=True) -> None:
         # Clear the current results.
-        if self.instructions:
-            self._clear(preserve_labels)
+        self._clear(preserve_labels)
 
         # Start emulation from all entry points.
         for subroutine_pc, (name, p) in self.entry_points.items():

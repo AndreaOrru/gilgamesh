@@ -353,9 +353,12 @@ class App(Repl):
         Entry points are shown with a colored background.
 
         Subroutines can be flagged with various symbols:
-          [*] -> Jump table
+          [!] -> Suspect instructions
           [?] -> Stack manipulation
-          [!] -> Suspect instructions"""
+          [*] -> Jump table
+          [∞] -> Recursion
+          [+] -> Multiple return states
+"""
         s = []
         for subroutine in self.log.subroutines.values():
             s.append(self._print_subroutine(subroutine))
@@ -366,9 +369,11 @@ class App(Repl):
         """List subroutines with unknown return states.
 
         Subroutines can be flagged with various symbols:
-          [*] -> Jump table
+          [!] -> Suspect instructions
           [?] -> Stack manipulation
-          [!] -> Suspect instructions"""
+          [*] -> Jump table
+          [∞] -> Recursion
+          [+] -> Multiple return states"""
         s = []
         for subroutine in self.log.subroutines.values():
             if subroutine.has_unknown_return_state:
@@ -735,6 +740,8 @@ class App(Repl):
             comment += f" <{color}>[*]</{color}>"
         if sub.is_recursive:
             comment += " <yellow>[∞]</yellow>"
+        if sub.has_multiple_known_state_changes:
+            comment += " <yellow>[+]</yellow>"
 
         return "${:06X}  <{}>{}</{}>{}\n".format(
             sub.pc, open_color, sub.label, close_color, comment,

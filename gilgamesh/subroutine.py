@@ -68,6 +68,10 @@ class Subroutine(Invalidable):
     def has_incomplete_jump_table(self) -> bool:
         return any(i not in self.log.complete_jump_tables for i in self.indirect_jumps)
 
+    @property
+    def has_multiple_known_state_changes(self) -> bool:
+        return len([s for s in self.state_changes.values() if not s.unknown]) > 1
+
     def invalidate(self) -> None:
         bulk_invalidate(self.instructions.values())
         super().invalidate()
