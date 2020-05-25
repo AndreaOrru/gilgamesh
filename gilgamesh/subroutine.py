@@ -4,6 +4,7 @@ from cached_property import cached_property  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
 
 from gilgamesh.snes.instruction import Instruction
+from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
 
@@ -22,6 +23,8 @@ class Subroutine(Invalidable):
         # The stack of calls that brought us to the current subroutine.
         self.stack_traces: Set[Tuple[int, ...]] = set()
 
+        # Whether an instruction inside the subroutine performs stack manipulation.
+        self.has_stack_manipulation = False
         # Whether a subroutine calls itself down the line.
         self.is_recursive = False
 
@@ -58,19 +61,9 @@ class Subroutine(Invalidable):
     def indirect_jumps(self) -> List[int]:
         return [i.pc for i in self.instructions.values() if i.is_indirect_jump]
 
-    @property
+    @cached_property
     def has_suspect_instructions(self) -> bool:
-        return any(
-            s.unknown_reason == UnknownReason.SUSPECT_INSTRUCTION
-            for s in self.state_changes.values()
-        )
-
-    @property
-    def has_stack_manipulation(self) -> bool:
-        return any(
-            s.unknown_reason == UnknownReason.STACK_MANIPULATION
-            for s in self.state_changes.values()
-        )
+        return any(i.operation == Op.BRK for i in self.instructions.values())
 
     @property
     def has_incomplete_jump_table(self) -> bool:

@@ -373,6 +373,7 @@ class CPU:
 
         # Unique return state, apply it.
         if known:
+            assert len(return_states) == 1
             self._apply_state_change(return_states.pop())
 
         return (known, unknown_reason)
@@ -399,6 +400,7 @@ class CPU:
             # If we know which instruction performed the
             # manipulation, we flag it.
             if stack_manipulator:
+                self.subroutine.has_stack_manipulation = True
                 stack_manipulator.stack_manipulation = (
                     StackManipulation.CAUSES_UNKNOWN_STATE
                 )
