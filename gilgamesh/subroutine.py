@@ -1,4 +1,4 @@
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from cached_property import cached_property  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
@@ -65,6 +65,15 @@ class Subroutine(Invalidable):
     def has_suspect_instructions(self) -> bool:
         return any(i.operation == Op.BRK for i in self.instructions.values())
 
+    @cached_property
+    def does_save_state_in_incipit(self) -> bool:
+        for i in self.instructions.values():
+            if i.operation == Op.PHP:
+                return True
+            elif i.is_sep_rep or i.is_control:
+                return False
+        return False
+
     @property
     def has_incomplete_jump_table(self) -> bool:
         return any(i not in self.log.complete_jump_tables for i in self.indirect_jumps)
@@ -72,6 +81,24 @@ class Subroutine(Invalidable):
     @property
     def has_multiple_known_state_changes(self) -> bool:
         return len([s for s in self.state_changes.values() if not s.unknown]) > 1
+
+    @property
+    def unified_state_change(self) -> Optional[StateChange]:
+        if sum(1 for s in self.state_changes.values() if s.unknown) > 1:
+            return None
+        unified = StateChange()
+        for s in self.state_changes.values():
+            if s.unknown:
+                continue
+            if s.m is not None:
+                if (unified.m is not None) and (s.m != unified.m):
+                    return None
+                unified.m = s.m
+            if s.x is not None:
+                if (unified.x is not None) and (s.x != unified.x):
+                    return None
+                unified.x = s.x
+        return unified
 
     def invalidate(self) -> None:
         bulk_invalidate(self.instructions.values())

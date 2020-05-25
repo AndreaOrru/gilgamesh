@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from methodtools import lru_cache  # type: ignore
 
 from gilgamesh.disassembly.parser import (
+    EDITABLE_TOKEN_TYPES,
     EDITABLE_TOKENS,
     EQUIVALENT_TOKENS,
     HEADER_TOKENS,
@@ -126,6 +127,7 @@ class Disassembly:
         # Asserted or unknown state.
         state_change, assertion_type = self._get_unknown_state(instr)
         if assertion_type != "none" or state_change == "unknown":
+            suggestion = self.log.suggest_assertion(instr)
             if state_change == "unknown":
                 add_line(T.UNKNOWN_STATE_HEADER)
             else:
@@ -137,8 +139,12 @@ class Disassembly:
                     T.UNKNOWN_REASON, str(instr.state_change_after.unknown_reason_str)
                 )
             add_line(T.SEPARATOR_LINE)
-            add_line(T.ASSERTION_TYPE, assertion_type)
-            add_line(T.ASSERTION, state_change)
+            if suggestion:
+                add_line(T.SUGGESTED_ASSERTION_TYPE, suggestion[0])
+                add_line(T.SUGGESTED_ASSERTION, str(suggestion[1]))
+            else:
+                add_line(T.ASSERTION_TYPE, assertion_type)
+                add_line(T.ASSERTION, state_change)
             add_line(T.SEPARATOR_LINE)
         # Normal return state.
         elif instr.is_return and not instr.is_jump_table:
@@ -182,7 +188,7 @@ class Disassembly:
                 )
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
-            # Unknown or asserted (previously unknown) state.
+            # Unknown state.
             elif p.maybe_match_line(self.string(T.UNKNOWN_STATE_HEADER)):
                 p.add_line(T.UNKNOWN_STATE_HEADER)
                 # TODO: validate state_expr and assertion_type.
@@ -190,12 +196,19 @@ class Disassembly:
                 p.add_line_rest(
                     T.LAST_KNOWN_STATE_CHANGE, self.string(T.LAST_KNOWN_STATE_CHANGE)
                 )
-                p.add_line_rest(T.UNKNOWN_REASON, self.string(T.UNKNOWN_REASON))
-                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
-                p.add_line_rest(T.ASSERTION_TYPE, after=self.string(T.ASSERTION_TYPE))
-                p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
+                p.add_line_rest(T.UNKNOWN_REASON, self.string(T.UNKNOWN_REASON), -1)
                 p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
 
+                if p.words[-1] == "?":
+                    p.add_line(T.SUGGESTED_ASSERTION_TYPE, p.words[3])
+                    p.add_line(T.SUGGESTED_ASSERTION, p.words[4])
+                else:
+                    p.add_line_rest(T.ASSERTION_TYPE, self.string(T.ASSERTION_TYPE))
+                    p.add_line_rest(T.ASSERTION, after=self.string(T.ASSERTION))
+
+                p.match_line(T.SEPARATOR_LINE, self.SEPARATOR_LINE)
+
+            # Asserted state.
             elif p.maybe_match_line(self.string(T.ASSERTED_STATE_HEADER)):
                 p.add_line(T.ASSERTED_STATE_HEADER)
                 p.add_line_rest(T.LAST_KNOWN_STATE, self.string(T.LAST_KNOWN_STATE))
@@ -293,6 +306,14 @@ class Disassembly:
             elif t.typ == T.ASSERTION:
                 color = "red" if t.val == "unknown" else "magenta"
                 s.append(f"  {string(t.typ)} {colorize(t.val, color)}")
+            elif t.typ in (T.SUGGESTED_ASSERTION_TYPE, T.SUGGESTED_ASSERTION):
+                s.append(
+                    "  {} {} {}".format(
+                        string(t.typ),
+                        colorize(t.val, "grey"),
+                        colorize("?", "magenta"),
+                    )
+                )
             elif t.typ == T.JUMP_TABLE_ENTRY:
                 s.append(f'  {string(t.typ)} {colorize(t.val, "grey")}')
             elif t.typ == T.JUMP_TABLE_COMPLETE_ENTRY:
@@ -342,7 +363,7 @@ class Disassembly:
             # Error cases.
             elif (orig is None) or (new is None):
                 raise ParserError("Added or deleted token.", line_n)
-            elif orig.typ != new.typ:
+            elif orig.typ not in EDITABLE_TOKEN_TYPES and orig.typ != new.typ:
                 raise ParserError("Changed the type of a token.", line_n)
             elif orig.typ not in EDITABLE_TOKENS and orig.val != new.val:
                 raise ParserError(
@@ -354,33 +375,36 @@ class Disassembly:
                 pc = int(orig.val[1:], 16)
 
             # Assertion type.
-            elif orig.typ == T.ASSERTION_TYPE:
-                orig_assert_type = orig.val
-                new_assert_type = new.val
-                assertion_type_changed = orig_assert_type != new_assert_type
-            # Assertion.
-            elif orig.typ == T.ASSERTION:
-                assertion_changed = orig.val != new.val
-                anything_changed = assertion_type_changed or assertion_changed
-                state_change = StateChange.from_expr(new.val)
-                if anything_changed and state_change.unknown:
-                    raise ParserError("Invalid assertion state.", line_n)
-                if assertion_type_changed:
-                    if "instruction".startswith(orig_assert_type):
-                        self.log.deassert_instruction_state_change(pc)
-                    elif "subroutine".startswith(orig_assert_type):
-                        self.log.deassert_subroutine_state_change(
-                            self.subroutine.pc, pc
-                        )
-                if anything_changed:
-                    if new_assert_type == "":
-                        continue
-                    elif "instruction".startswith(new_assert_type):
-                        self.log.assert_instruction_state_change(pc, state_change)
-                    elif "subroutine".startswith(new_assert_type):
-                        self.log.assert_subroutine_state_change(
-                            self.subroutine, pc, state_change
-                        )
+            elif new.typ not in (T.SUGGESTED_ASSERTION, T.SUGGESTED_ASSERTION_TYPE):
+                if orig.typ in (T.ASSERTION_TYPE, T.SUGGESTED_ASSERTION_TYPE):
+                    orig_assert_type = (
+                        "none" if orig.typ == T.SUGGESTED_ASSERTION_TYPE else orig.val
+                    )
+                    new_assert_type = new.val
+                    assertion_type_changed = orig_assert_type != new_assert_type
+                # Assertion.
+                elif orig.typ in (T.ASSERTION, T.SUGGESTED_ASSERTION):
+                    assertion_changed = orig.val != new.val
+                    anything_changed = assertion_type_changed or assertion_changed
+                    state_change = StateChange.from_expr(new.val)
+                    if anything_changed and state_change.unknown:
+                        raise ParserError("Invalid assertion state.", line_n)
+                    if assertion_type_changed:
+                        if "instruction".startswith(orig_assert_type):
+                            self.log.deassert_instruction_state_change(pc)
+                        elif "subroutine".startswith(orig_assert_type):
+                            self.log.deassert_subroutine_state_change(
+                                self.subroutine.pc, pc
+                            )
+                    if anything_changed:
+                        if new_assert_type == "":
+                            continue
+                        elif "instruction".startswith(new_assert_type):
+                            self.log.assert_instruction_state_change(pc, state_change)
+                        elif "subroutine".startswith(new_assert_type):
+                            self.log.assert_subroutine_state_change(
+                                self.subroutine, pc, state_change
+                            )
 
             # Comments.
             elif orig.typ == T.COMMENT and orig.val != new.val:
@@ -477,6 +501,11 @@ class Disassembly:
         elif t == T.ASSERTION_TYPE:
             return colorize("; ASSERTION TYPE:", "grey")
         elif t == T.ASSERTION:
+            return colorize("; ASSERTED STATE CHANGE:", "grey")
+
+        elif t == T.SUGGESTED_ASSERTION_TYPE:
+            return colorize("; ASSERTION TYPE:", "grey")
+        elif t == T.SUGGESTED_ASSERTION:
             return colorize("; ASSERTED STATE CHANGE:", "grey")
 
         elif t in (

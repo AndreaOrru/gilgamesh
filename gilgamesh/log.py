@@ -11,7 +11,7 @@ from gilgamesh.snes.cpu import CPU
 from gilgamesh.snes.hw_registers import hw_registers
 from gilgamesh.snes.instruction import Instruction, InstructionID
 from gilgamesh.snes.rom import ROM
-from gilgamesh.snes.state import State, StateChange
+from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.subroutine import Subroutine
 from gilgamesh.utils.invalidable import bulk_invalidate
 
@@ -334,6 +334,31 @@ class Log:
             return (sys.maxsize if entry[0] is None else entry[0], entry[1])
 
         return sorted(self.jump_assertions[caller_pc], key=sort)
+
+    def suggest_assertion(self, i: Instruction) -> Optional[Tuple[str, StateChange]]:
+        if not i.state_change_after.unknown:
+            return None
+        if i.has_asserted_state_change or i.asserted_subroutine_state_change:
+            return None
+        reason = i.state_change_after.unknown_reason
+
+        if i.is_call and reason == UnknownReason.INDIRECT_JUMP:
+            return ("instruction", StateChange())
+
+        elif i.is_jump and reason == UnknownReason.INDIRECT_JUMP:
+            if i.subroutine.does_save_state_in_incipit:
+                return ("subroutine", StateChange())
+            else:
+                return ("subroutine", i.state_change_before)
+
+        elif i.is_return and reason == UnknownReason.STACK_MANIPULATION:
+            unified = i.subroutine.unified_state_change
+            if unified is not None:
+                return ("subroutine", unified)
+            elif i.subroutine.does_save_state_in_incipit:
+                return ("subroutine", StateChange())
+
+        return None
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():

@@ -34,6 +34,8 @@ class TokenType(Enum):
     PC = auto()
     SEPARATOR_LINE = auto()
     STACK_MANIPULATION_HEADER = auto()
+    SUGGESTED_ASSERTION = auto()
+    SUGGESTED_ASSERTION_TYPE = auto()
     UNKNOWN_REASON = auto()
     UNKNOWN_STATE_HEADER = auto()
 
@@ -48,7 +50,13 @@ HEADER_TOKENS = {
     TokenType.UNKNOWN_STATE_HEADER,
 }
 
+EDITABLE_TOKEN_TYPES = {
+    TokenType.SUGGESTED_ASSERTION: TokenType.ASSERTION,
+    TokenType.SUGGESTED_ASSERTION_TYPE: TokenType.ASSERTION_TYPE,
+}
+
 EDITABLE_TOKENS = {
+    *EDITABLE_TOKEN_TYPES.keys(),
     TokenType.ASSERTION,
     TokenType.ASSERTION_TYPE,
     TokenType.COMMENT,
@@ -60,10 +68,10 @@ EDITABLE_TOKENS = {
 EQUIVALENT_TOKENS = {
     TokenType.FATAL_STACK_MANIPULATION_HEADER: TokenType.STACK_MANIPULATION_HEADER,
     TokenType.HIGHLIGHTED_OPERAND_LABEL: TokenType.OPERAND_LABEL,
-    TokenType.JUMP_TABLE_LABEL: TokenType.LABEL,
     TokenType.JUMP_TABLE_COMPLETE_ENTRY: TokenType.JUMP_TABLE_ENTRY,
-    TokenType.JUMP_TABLE_UNKNOWN_ENTRY: TokenType.JUMP_TABLE_ENTRY,
+    TokenType.JUMP_TABLE_LABEL: TokenType.LABEL,
     TokenType.JUMP_TABLE_OPERAND_LABEL: TokenType.OPERAND_LABEL,
+    TokenType.JUMP_TABLE_UNKNOWN_ENTRY: TokenType.JUMP_TABLE_ENTRY,
     TokenType.JUMP_TABLE_UNKNOWN_ENTRY: TokenType.JUMP_TABLE_ENTRY,
 }
 
@@ -116,12 +124,16 @@ class Parser:
             raise ParserError("Unable to parse line.", self.line_n)
         self.add_line(token_typ)
 
-    def add_line_rest(self, token_typ: TokenType, after: str) -> None:
+    def add_line_rest(self, token_typ: TokenType, after: str, words_limit=1) -> None:
         parts = after.split()
         if not self.words[: len(parts)] == parts:
             raise ParserError("Unable to parse line.", self.line_n)
 
-        rest = " ".join(self.words[len(parts) :])
+        after_parts = self.words[len(parts) :]
+        if words_limit > 0 and len(after_parts) > words_limit:
+            raise ParserError("Unable to parse line.", self.line_n)
+
+        rest = " ".join(after_parts)
         self.add_line(token_typ, rest)
 
     def new_instruction(self) -> None:
