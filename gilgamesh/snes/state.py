@@ -122,7 +122,7 @@ class StateChange:
         if expr == "none":
             return cls()
         elif expr == "unknown":
-            raise NotImplementedError
+            return cls(unknown_reason=UnknownReason.UNKNOWN)
 
         expressions = expr.split(",")
         if 1 <= len(expressions) <= 2:
