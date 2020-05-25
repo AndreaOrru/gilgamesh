@@ -285,9 +285,6 @@ class Log:
         pc = local_labels.get(old, None)
         if pc is None:
             raise GilgameshError(f'Unknown local label: "{old}".')
-        elif not dry:
-            del local_labels[old]
-
         if new in local_labels:
             raise GilgameshError("The provided label is already in use.")
         if not new.isidentifier():
@@ -296,15 +293,13 @@ class Log:
             raise GilgameshError("The provided label is reserved.")
 
         if not dry:
+            del local_labels[old]
             local_labels[new] = pc
 
     def _rename_subroutine(self, old: str, new: str, dry=False) -> None:
         subroutine = self.subroutines_by_label.get(old, None)
         if subroutine is None:
             raise GilgameshError(f'Unknown subroutine label: "{old}".')
-        elif not dry:
-            del self.subroutines_by_label[old]
-
         if new in self.subroutines_by_label:
             raise GilgameshError("The provided label is already in use.")
         if not new.isidentifier():
@@ -313,6 +308,7 @@ class Log:
             raise GilgameshError("The provided label is reserved.")
 
         if not dry:
+            del self.subroutines_by_label[old]
             subroutine.label = new
             self.subroutines_by_label[new] = subroutine
 
