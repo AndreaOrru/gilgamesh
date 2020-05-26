@@ -353,10 +353,4 @@ class Instruction(Invalidable):
             self.subroutine.has_asserted_state_change and
             self.log.subroutine_assertions[self.subroutine_pc].get(self.pc)
         )
-        # TODO: maybe not useful.
-        instr_assertion = self.stopped_execution or self.is_return
-        # fmt: on
-
-        if sub_assertion and instr_assertion:
-            return sub_assertion
-        return None
+        return sub_assertion
