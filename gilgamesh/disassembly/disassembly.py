@@ -65,13 +65,6 @@ class Disassembly:
             add(*args)
             tokens.append(Token(T.NEWLINE))
 
-        # Stack manipulation.
-        if verbose and instr.stack_manipulation != StackManipulation.NONE:
-            if instr.stack_manipulation == StackManipulation.CAUSES_UNKNOWN_STATE:
-                add_line(T.FATAL_STACK_MANIPULATION_HEADER)
-            else:
-                add_line(T.STACK_MANIPULATION_HEADER)
-
         # Label.
         label = self.log.get_label(instr.pc, instr.subroutine_pc)
         if label:
@@ -79,6 +72,14 @@ class Disassembly:
                 add_line(T.JUMP_TABLE_LABEL, label)
             else:
                 add_line(T.LABEL, label)
+
+        # Stack manipulation.
+        if verbose and instr.stack_manipulation != StackManipulation.NONE:
+            if instr.stack_manipulation == StackManipulation.CAUSES_UNKNOWN_STATE:
+                add_line(T.FATAL_STACK_MANIPULATION_HEADER)
+            else:
+                add_line(T.STACK_MANIPULATION_HEADER)
+
         # Operation + Operand.
         tokens.append(Token(T.OPERATION, instr.name))
         if instr.argument_alias:
@@ -170,7 +171,7 @@ class Disassembly:
 
             # Stack manipulation.
             elif p.maybe_match_line(self.string(T.STACK_MANIPULATION_HEADER)):
-                p.new_instruction()
+                p.maybe_new_instruction()
                 p.add_line(T.STACK_MANIPULATION_HEADER)
 
             # Jump table.
