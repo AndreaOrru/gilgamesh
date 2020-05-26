@@ -10,6 +10,7 @@ from gilgamesh.errors import GilgameshError
 from gilgamesh.snes.cpu import CPU
 from gilgamesh.snes.hw_registers import hw_registers
 from gilgamesh.snes.instruction import Instruction, InstructionID
+from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.rom import ROM
 from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.subroutine import Subroutine
@@ -335,7 +336,17 @@ class Log:
 
         return sorted(self.jump_assertions[caller_pc], key=sort)
 
-    def suggest_assertion(self, i: Instruction) -> Optional[Tuple[str, StateChange]]:
+    def suggest_assertion(
+        self, i: Instruction, unsafe=False
+    ) -> Optional[Tuple[str, StateChange]]:
+        def unified_state_suggestion():
+            unified = i.subroutine.unified_state_change
+            if unified is not None:
+                return ("subroutine", unified)
+            elif i.subroutine.does_save_state_in_incipit:
+                return ("subroutine", StateChange())
+            return None
+
         if not i.state_change_after.unknown:
             return None
         if i.has_asserted_state_change or i.asserted_subroutine_state_change:
@@ -352,11 +363,13 @@ class Log:
                 return ("subroutine", i.state_change_before)
 
         elif i.is_return and reason == UnknownReason.STACK_MANIPULATION:
-            unified = i.subroutine.unified_state_change
-            if unified is not None:
-                return ("subroutine", unified)
-            elif i.subroutine.does_save_state_in_incipit:
-                return ("subroutine", StateChange())
+            return unified_state_suggestion()
+
+        elif unsafe:
+            if i.subroutine.is_recursive and reason == UnknownReason.RECURSION:
+                return unified_state_suggestion()
+            elif i.operation == Op.PLP and reason == UnknownReason.STACK_MANIPULATION:
+                return ("instruction", StateChange())
 
         return None
 

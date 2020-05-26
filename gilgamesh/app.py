@@ -12,7 +12,7 @@ from gilgamesh.repl import Repl, argument, command, print_error, print_html
 from gilgamesh.snes.instruction import Instruction
 from gilgamesh.snes.opcodes import Op, descriptions
 from gilgamesh.snes.rom import ROM
-from gilgamesh.snes.state import State, StateChange
+from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.subroutine import Subroutine
 
 HISTORY_FILE = "~/.local/share/gilgamesh/history.log"
@@ -74,6 +74,60 @@ class App(Repl):
         """Run the analysis on the ROM."""
         n_suspect = self.log.n_suspect_subroutines
         self.log.analyze()
+
+        new_suspect = self.log.n_suspect_subroutines - n_suspect
+        if new_suspect > 0:
+            print_html(
+                f"<yellow>Discovered {new_suspect} new suspect subroutine(s).</yellow>\n"  # noqa
+            )
+
+    @command()
+    def do_analyze_autoassert(self) -> None:
+        """Analyze and apply suggested assertions as far as possible."""
+        self._do_analyze_autoassert()
+
+    @command()
+    def do_analyze_autoassert_unsafe(self) -> None:
+        """Analyze and apply suggested (potentially unsafe) assertions."""
+        self._do_analyze_autoassert(unsafe=True)
+
+    def _do_analyze_autoassert(self, unsafe=False) -> None:
+        def change_sort(t: Tuple[int, StateChange]) -> int:
+            return {
+                UnknownReason.STACK_MANIPULATION: 1,
+                UnknownReason.RECURSION: 2,
+            }.get(t[1].unknown_reason, 0)
+
+        n_suspect = self.log.n_suspect_subroutines
+
+        while True:
+            self.log.analyze()
+            unknown_subs = (
+                s
+                for s in self.log.subroutines.values()
+                if s.is_responsible_for_unknown_state
+            )
+            made_suggestion = False
+            for sub in unknown_subs:
+                changes = sorted(
+                    ((i, c) for i, c in sub.state_changes.items() if c.unknown),
+                    key=change_sort,
+                )
+                for instr_pc, change in changes:
+                    instr = sub.instructions[instr_pc]
+                    suggestion = self.log.suggest_assertion(instr, unsafe)
+                    if suggestion and suggestion[0] == "instruction":
+                        self.log.assert_instruction_state_change(
+                            instr_pc, suggestion[1]
+                        )
+                        made_suggestion = True
+                    elif suggestion and suggestion[0] == "subroutine":
+                        self.log.assert_subroutine_state_change(
+                            sub, instr_pc, suggestion[1]
+                        )
+                        made_suggestion = True
+            if not made_suggestion:
+                break
 
         new_suspect = self.log.n_suspect_subroutines - n_suspect
         if new_suspect > 0:

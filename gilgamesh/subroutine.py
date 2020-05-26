@@ -53,6 +53,15 @@ class Subroutine(Invalidable):
     def has_unknown_return_state(self) -> bool:
         return any(s.unknown for s in self.state_changes.values())
 
+    @property
+    def is_responsible_for_unknown_state(self) -> bool:
+        return self.has_unknown_return_state and (
+            self.has_suspect_instructions
+            or self.has_stack_manipulation
+            or self.indirect_jumps
+            or self.is_recursive
+        )
+
     @cached_property
     def instruction_has_asserted_state_change(self) -> bool:
         return any(i.has_asserted_state_change for i in self.instructions.values())
