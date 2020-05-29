@@ -139,10 +139,17 @@ class CPU:
         else:
             targets = self.log.jump_assertions.get(i.pc, [(None, None)])
 
-        return self._call(i, targets) if i.is_call else self._jump(i, targets)
+        if i.is_call:
+            return self._call(i, targets)
+        else:
+            self._jump(i, targets)
+            return False
 
     def _call(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> bool:
-        all_known = True
+        # Keep track of the state before the call.
+        saved_state, saved_state_change = copy(self.state), copy(self.state_change)
+        possible_states = set()
+
         for _, target in targets:
             if target is None:
                 # If we can't reliably derive the address of the subroutine
@@ -170,25 +177,35 @@ class CPU:
             # current CPU state. Otherwise, to be on the safe
             # side, we need to stop the execution.
             known, unknown_reason = self._propagate_subroutine_state(i.pc, target)
-            if not known and not self._unknown_subroutine_state(
+            if known or self._unknown_subroutine_state(
                 i, unknown_reason=unknown_reason
             ):
-                all_known = False
-        return all_known
+                possible_states.add((self.state, self.state_change))
 
-    def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> bool:
+            # Restore the state before this target was executed.
+            self.state, self.saved_state_change = (
+                copy(saved_state),
+                copy(saved_state_change),
+            )
+
+        for state, state_change in possible_states:
+            cpu = self.copy()
+            cpu.state, cpu.state_change = state, state_change
+            cpu.run()
+        return False
+
+    def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> None:
         for _, target in targets:
             if target is None:
                 self._unknown_subroutine_state(
                     i, unknown_reason=UnknownReason.INDIRECT_JUMP
                 )
-                return False
+                return
 
             self.log.add_reference(i, target)
             cpu = self.copy()
             cpu.pc = target
             cpu.run()
-        return False
 
     def ret(self, i: Instruction) -> bool:
         if i.operation != Op.RTI:
@@ -213,7 +230,8 @@ class CPU:
                     return self._call(i, self.log.jump_assertions[i.pc])
                 # Otherwise, it's a simple jump.
                 else:
-                    return self._jump(i, self.log.jump_assertions[i.pc])
+                    self._jump(i, self.log.jump_assertions[i.pc])
+                    return False
 
             # Check whether this return is operating on a manipulated stack.
             else:
