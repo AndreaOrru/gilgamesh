@@ -277,14 +277,18 @@ class App(Repl):
     @command()
     @argument("caller_pc", complete_label)
     @argument("range_or_target_pc")
-    def do_jumptable_add(self, caller_pc: str, range_or_target_pc: str) -> None:
+    def do_jumptable_add(
+        self, caller_pc: str, range_or_target_pc: Optional[str] = None
+    ) -> None:
         """Add a jump table entry."""
         self._do_jumptable_op(self.log.assert_jump, caller_pc, range_or_target_pc)
 
     @command()
     @argument("caller_pc", complete_label)
     @argument("range_or_target_pc")
-    def do_jumptable_delete(self, caller_pc: str, range_or_target_pc: str) -> None:
+    def do_jumptable_delete(
+        self, caller_pc: str, range_or_target_pc: Optional[str] = None
+    ) -> None:
         """Remove a jump table entry."""
         self._do_jumptable_op(self.log.deassert_jump, caller_pc, range_or_target_pc)
 
@@ -313,9 +317,11 @@ class App(Repl):
         caller_pc_int = self._label_to_pc(caller_pc)
         self.log.complete_jump_tables.add(caller_pc_int)
 
-    def _do_jumptable_op(self, op: Callable, caller_pc: str, range_or_target_pc: str):
+    def _do_jumptable_op(
+        self, op: Callable, caller_pc: str, range_or_target_pc: Optional[str] = None
+    ):
         caller_pc_int = self._label_to_pc(caller_pc)
-        if range_or_target_pc.startswith("$"):
+        if range_or_target_pc and range_or_target_pc.startswith("$"):
             target_pc = self._label_to_pc(range_or_target_pc)
             op(caller_pc_int, target_pc)
         else:
@@ -323,6 +329,9 @@ class App(Repl):
             assert caller.is_call or caller.is_jump
             assert caller.argument_size == 2
             assert caller.argument is not None
+
+            if not range_or_target_pc:
+                return op(caller.pc)
 
             first, last = self._parse_range(range_or_target_pc)
             for x in range(first, last + 1, 2):

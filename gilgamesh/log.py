@@ -185,34 +185,45 @@ class Log:
         self.dirty = True
 
     def assert_jump(
-        self, caller_pc: int, target_pc: int, x: Optional[int] = None
+        self, caller_pc: int, target_pc: Optional[int] = None, x: Optional[int] = None
     ) -> None:
-        if (
-            caller_pc in self.jump_assertions
-            and (x, target_pc) in self.jump_assertions[caller_pc]
-        ):
-            return
-        self.jump_assertions[caller_pc].add((x, target_pc))
-        self.jump_table_targets[target_pc] += 1
-        self.dirty = True
+        if target_pc is None and caller_pc not in self.jump_assertions:
+            self.jump_assertions[caller_pc] = set()
+            self.dirty = True
 
-    def deassert_jump(self, caller_pc: int, target_pc: int, *args) -> None:
+        elif (
+            target_pc is not None
+            and caller_pc in self.jump_assertions
+            and (x, target_pc) not in self.jump_assertions[caller_pc]
+        ):
+            self.jump_assertions[caller_pc].add((x, target_pc))
+            self.jump_table_targets[target_pc] += 1
+            self.dirty = True
+
+    def deassert_jump(
+        self, caller_pc: int, target_pc: Optional[int] = None, *args
+    ) -> None:
         if caller_pc not in self.jump_assertions:
             return
 
-        orig_set = self.jump_assertions[caller_pc]
-        new_set = {(x, t) for x, t in orig_set if t != target_pc}
-        diff = len(orig_set) - len(new_set)
+        if target_pc is None:
+            if not self.jump_assertions[caller_pc]:
+                del self.jump_assertions[caller_pc]
+                return
+        else:
+            orig_set = self.jump_assertions[caller_pc]
+            new_set = {(x, t) for x, t in orig_set if t != target_pc}
+            diff = len(orig_set) - len(new_set)
 
-        self.jump_assertions[caller_pc] = new_set
-        if not self.jump_assertions[caller_pc]:
-            del self.jump_assertions[caller_pc]
+            self.jump_assertions[caller_pc] = new_set
+            if not self.jump_assertions[caller_pc]:
+                del self.jump_assertions[caller_pc]
 
-        self.jump_table_targets[target_pc] -= diff
-        if self.jump_table_targets[target_pc] == 0:
-            del self.jump_table_targets[target_pc]
+            self.jump_table_targets[target_pc] -= diff
+            if self.jump_table_targets[target_pc] == 0:
+                del self.jump_table_targets[target_pc]
 
-        self.dirty = bool(diff)
+            self.dirty = bool(diff)
 
     def assert_subroutine_state_change(
         self, subroutine: Subroutine, instruction_pc: int, state_change: StateChange

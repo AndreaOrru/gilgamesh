@@ -188,6 +188,9 @@ class CPU:
                 copy(saved_state_change),
             )
 
+        if i.has_asserted_state_change:
+            return True
+
         for state, state_change in possible_states:
             cpu = self.copy()
             cpu.state, cpu.state_change = state, state_change
