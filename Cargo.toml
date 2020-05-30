@@ -12,6 +12,9 @@ test = false
 
 [dependencies]
 clap = ">=3.0.0-beta.1, <4.0"
+colored = ">=1.9, <2.0"
 getset = ">=0.1.1, <0.2"
 lazy_static = ">=1.4.0, <2.0"
+maplit = ">=1.0.2, <2.0"
 paste = ">=0.1.12, <0.2"
+rustyline = ">=6.1.2, <7.0"

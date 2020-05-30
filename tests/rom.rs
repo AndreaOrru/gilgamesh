@@ -1,7 +1,5 @@
-#[macro_use]
 mod common;
 
-extern crate gilgamesh;
 use gilgamesh::rom::{ROMType, ROM};
 
 test_rom!(setup_lorom, "lorom.asm");

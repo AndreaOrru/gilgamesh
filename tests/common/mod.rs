@@ -39,16 +39,15 @@ lazy_static! {
 }
 
 /// Generate a function that returns the required assembled ROM.
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! test_rom {
     ($setup_fn:ident, $filename:literal) => {
-        paste::item! {
-            fn $setup_fn() -> std::sync::Arc<ROM> {
-                let mut roms = common::ASSEMBLED_ROMS.lock().unwrap();
-                (*roms.entry($filename).or_insert(
-                    std::sync::Arc::new(ROM::from(common::assemble($filename)).unwrap())
-                )).clone()
-            }
+        fn $setup_fn() -> std::sync::Arc<ROM> {
+            let mut roms = common::ASSEMBLED_ROMS.lock().unwrap();
+            (*roms.entry($filename).or_insert(std::sync::Arc::new(
+                ROM::from(common::assemble($filename)).unwrap(),
+            )))
+            .clone()
         }
     };
 }

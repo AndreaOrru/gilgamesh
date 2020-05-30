@@ -1,4 +1,8 @@
+mod app;
+mod command;
 mod rom;
+
+use app::App;
 use rom::ROM;
 
 use clap::clap_app;
@@ -29,6 +33,9 @@ fn main() -> io::Result<()> {
     let rom_path = matches.value_of("ROM").unwrap();
     let rom = ROM::from(rom_path.into())?;
 
-    println!("{}", rom.title());
+    // Run the command prompt.
+    let mut app = App::new(rom);
+    app.run();
+
     Ok(())
 }
