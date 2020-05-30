@@ -198,6 +198,7 @@ class Log:
         ):
             self.jump_assertions[caller_pc].add((x, target_pc))
             self.jump_table_targets[target_pc] += 1
+            self.deassert_instruction_state_change(caller_pc)
             self.dirty = True
 
     def deassert_jump(
