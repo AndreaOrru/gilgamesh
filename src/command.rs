@@ -1,4 +1,4 @@
-type CommandMethod<App> = fn(&App, &[&str]) -> bool;
+type CommandMethod<App> = fn(&mut App, &[&str]) -> bool;
 type HelpMethod<App> = fn(&App) -> String;
 
 pub struct Command<App> {
@@ -39,10 +39,10 @@ macro_rules! command {
     };
 
     ($self:ident, $name:ident, $(($arg:ident : $type:ident)),*, $help:literal, $body: expr) => {
-        fn $name(&$self, _args: &[&str]) -> bool {
+        fn $name(&mut $self, _args: &[&str]) -> bool {
             let mut _i = 0;
             $(
-                let $arg = argument!(_args, _i, $type);
+                let $arg = $crate::argument!(_args, _i, $type);
                 _i += 1;
             )*
             $body

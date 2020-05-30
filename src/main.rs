@@ -34,7 +34,7 @@ fn main() -> io::Result<()> {
     let rom = ROM::from(rom_path.into())?;
 
     // Run the command prompt.
-    let mut app = App::new(rom);
+    let mut app = App::new(rom, io::stdout());
     app.run();
 
     Ok(())
