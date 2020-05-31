@@ -23,6 +23,12 @@ class StackManipulation(Enum):
     CAUSES_UNKNOWN_STATE = auto()
 
 
+class RetIndirectType(Enum):
+    NONE = auto()
+    CALL = auto()
+    JUMP = auto()
+
+
 class Instruction(Invalidable):
     def __init__(
         self,
@@ -48,6 +54,7 @@ class Instruction(Invalidable):
         self.state_change_before = state_change_before
         self.state_change_after = StateChange(unknown_reason=UnknownReason.UNKNOWN)
         self.stack_manipulation = StackManipulation.NONE
+        self.ret_indirect_type = RetIndirectType.NONE
 
     def __repr__(self) -> str:
         return "<{}{}>".format(

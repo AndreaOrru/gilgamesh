@@ -1,11 +1,16 @@
 from copy import copy
 from typing import List, Optional, Tuple
 
-from gilgamesh.snes.instruction import Instruction, InstructionID, StackManipulation
+from gilgamesh.snes.instruction import (
+    Instruction,
+    InstructionID,
+    RetIndirectType,
+    StackManipulation,
+)
 from gilgamesh.snes.opcodes import AddressMode, Op
 from gilgamesh.snes.registers import Registers
 from gilgamesh.snes.state import State, StateChange, UnknownReason
-from gilgamesh.stack import Stack
+from gilgamesh.stack import Stack, StackEntry
 from gilgamesh.subroutine import Subroutine
 
 
@@ -102,8 +107,11 @@ class CPU:
                 instruction, unknown_reason=UnknownReason.SUSPECT_INSTRUCTION
             )
             return False
-        elif instruction.is_call or instruction.is_jump:
-            return self.call_or_jump(instruction)
+        elif instruction.is_jump:
+            self.jump(instruction)
+            return False
+        elif instruction.is_call:
+            return self.call(instruction)
         elif instruction.is_branch:
             self.branch(instruction)
         elif instruction.is_sep_rep:
@@ -133,20 +141,18 @@ class CPU:
         self.log.add_reference(instruction, target)
         self.pc = target
 
-    def call_or_jump(self, i: Instruction) -> bool:
-        if i.absolute_argument:
-            targets: List[Tuple[Optional[int], int]] = [(None, i.absolute_argument)]
+    def _calculate_targets(self, i: Instruction, targets):
+        if not targets:
+            if i.absolute_argument:
+                return [(None, i.absolute_argument)]
+            else:
+                return self.log.jump_assertions.get(i.pc, None) or [(None, None)]
         else:
-            targets = self.log.jump_assertions.get(i.pc, [(None, None)])
+            return targets or [(None, None)]
 
-        if i.is_call:
-            return self._call(i, targets)
-        else:
-            self._jump(i, targets)
-            return False
-
-    def _call(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> bool:
+    def call(self, i: Instruction, targets=None) -> bool:
         # Keep track of the state before the call.
+        targets = self._calculate_targets(i, targets)
         saved_state, saved_state_change = copy(self.state), copy(self.state_change)
         possible_states = set()
 
@@ -197,7 +203,8 @@ class CPU:
             cpu.run()
         return False
 
-    def _jump(self, i: Instruction, targets: List[Tuple[Optional[int], int]]) -> None:
+    def jump(self, i: Instruction, targets=None) -> None:
+        targets = self._calculate_targets(i, targets)
         for _, target in targets:
             if target is None:
                 self._unknown_subroutine_state(
@@ -211,54 +218,67 @@ class CPU:
             cpu.run()
 
     def ret(self, i: Instruction) -> bool:
-        if i.operation != Op.RTI:
-            ret_size = 2 if i.operation == Op.RTS else 3
-            stack_entries = self.stack.pop(ret_size)
+        def standard_return():
+            self.log.add_subroutine_state(self.subroutine.pc, i.pc, self.state_change)
+            return False
 
-            # This return is used as an anomalous jump table.
-            if i.is_jump_table:
-                for s in stack_entries:
-                    if s.instruction:
-                        s.instruction.stack_manipulation = StackManipulation.HARMLESS
+        if i.operation == Op.RTI:
+            return standard_return()
 
-                # If the stack is constructed in such a way that
-                # we would return to the next instruction, it is
-                # effectively a subroutine call.
-                if self.stack.match(i.pc, ret_size):
-                    for s in self.stack.pop(ret_size):
-                        if s.instruction:
-                            s.instruction.stack_manipulation = (
-                                StackManipulation.HARMLESS
-                            )
-                    return self._call(i, self.log.jump_assertions[i.pc])
-                # Otherwise, it's a simple jump.
-                else:
-                    self._jump(i, self.log.jump_assertions[i.pc])
-                    return False
+        ret_size = 2 if i.operation == Op.RTS else 3
+        stack_entries = self.stack.pop(ret_size)
 
-            # Check whether this return is operating on a manipulated stack.
-            else:
-                call_op = (
-                    (Op.JSR, Op.RTS) if i.operation == Op.RTS else (Op.JSL, Op.RTL)
-                )
-                # Non-call instructions which operated on the region of the
-                # stack containing the return address from the subroutine.
-                stack_manipulators = [
-                    s.instruction
-                    for s in stack_entries
-                    if not s.instruction or s.instruction.operation not in call_op
-                ]
-                if stack_manipulators:
-                    self._unknown_subroutine_state(
-                        i,
-                        unknown_reason=UnknownReason.STACK_MANIPULATION,
-                        stack_manipulator=stack_manipulators[-1],
-                    )
-                    return False
+        # Check for stack manipulations.
+        stack_manipulator = self._check_stack_manipulation(i, stack_entries)
+        if not stack_manipulator:
+            return standard_return()
 
-        # Standard return.
-        self.log.add_subroutine_state(self.subroutine.pc, i.pc, self.state_change)
-        return False
+        # If the stack is constructed in such a way that
+        # we would return to the next instruction, it is
+        # effectively a subroutine call.
+        if self.stack.match(i.pc, ret_size):
+            i.ret_indirect_type = RetIndirectType.CALL
+            self.log.assert_jump(i.pc, set_dirty=False)
+            for s in self.stack.pop(ret_size):
+                if s.instruction:
+                    s.instruction.stack_manipulation = StackManipulation.HARMLESS
+            return self.call(i, self.log.jump_assertions[i.pc])
+
+        # Otherwise, if we know this is a jump table, then it's a simple jump.
+        elif i.is_jump_table:
+            i.ret_indirect_type = RetIndirectType.JUMP
+            for s in stack_entries:
+                if s.instruction:
+                    s.instruction.stack_manipulation = StackManipulation.HARMLESS
+            self.jump(i, self.log.jump_assertions[i.pc])
+            return False
+
+        # We don't know for certain that this is a jump table, signal
+        # an unknown state.
+        else:
+            self._unknown_subroutine_state(
+                i,
+                unknown_reason=UnknownReason.STACK_MANIPULATION,
+                stack_manipulator=stack_manipulator,
+            )
+            return False
+
+    @staticmethod
+    def _check_stack_manipulation(
+        i: Instruction, stack_entries: List[StackEntry]
+    ) -> Optional[Instruction]:
+        # Check whether this return is operating on a manipulated stack.
+        call_op = (Op.JSR, Op.RTS) if i.operation == Op.RTS else (Op.JSL, Op.RTL)
+        # Non-call instructions which operated on the region of the
+        # stack containing the return address from the subroutine.
+        stack_manipulators = [
+            s.instruction
+            for s in stack_entries
+            if not s.instruction or s.instruction.operation not in call_op
+        ]
+        if stack_manipulators:
+            return stack_manipulators[-1]
+        return None
 
     def sep_rep(self, instruction: Instruction) -> None:
         arg = instruction.absolute_argument

@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from cached_property import cached_property  # type: ignore
 from sortedcontainers import SortedDict  # type: ignore
 
-from gilgamesh.snes.instruction import Instruction
+from gilgamesh.snes.instruction import Instruction, RetIndirectType
 from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.state import State, StateChange, UnknownReason
 from gilgamesh.utils.invalidable import Invalidable, bulk_invalidate
@@ -68,7 +68,11 @@ class Subroutine(Invalidable):
 
     @cached_property
     def indirect_jumps(self) -> List[int]:
-        return [i.pc for i in self.instructions.values() if i.is_indirect_jump]
+        return [
+            i.pc
+            for i in self.instructions.values()
+            if i.is_indirect_jump or i.ret_indirect_type != RetIndirectType.NONE
+        ]
 
     @cached_property
     def has_suspect_instructions(self) -> bool:

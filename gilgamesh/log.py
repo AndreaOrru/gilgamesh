@@ -9,7 +9,7 @@ from sortedcontainers import SortedDict  # type: ignore
 from gilgamesh.errors import GilgameshError
 from gilgamesh.snes.cpu import CPU
 from gilgamesh.snes.hw_registers import hw_registers
-from gilgamesh.snes.instruction import Instruction, InstructionID
+from gilgamesh.snes.instruction import Instruction, InstructionID, RetIndirectType
 from gilgamesh.snes.opcodes import Op
 from gilgamesh.snes.rom import ROM
 from gilgamesh.snes.state import State, StateChange, UnknownReason
@@ -180,16 +180,24 @@ class Log:
         self.instruction_assertions[instruction_pc] = state_change
         self.dirty = True
 
-    def deassert_instruction_state_change(self, instruction_pc: int) -> None:
+    def deassert_instruction_state_change(
+        self, instruction_pc: int, set_dirty=True
+    ) -> None:
         self.instruction_assertions.pop(instruction_pc, None)
-        self.dirty = True
+        if set_dirty:
+            self.dirty = True
 
     def assert_jump(
-        self, caller_pc: int, target_pc: Optional[int] = None, x: Optional[int] = None
+        self,
+        caller_pc: int,
+        target_pc: Optional[int] = None,
+        x: Optional[int] = None,
+        set_dirty=True,
     ) -> None:
         if target_pc is None and caller_pc not in self.jump_assertions:
             self.jump_assertions[caller_pc] = set()
-            self.dirty = True
+            if set_dirty:
+                self.dirty = True
 
         elif (
             target_pc is not None
@@ -198,8 +206,9 @@ class Log:
         ):
             self.jump_assertions[caller_pc].add((x, target_pc))
             self.jump_table_targets[target_pc] += 1
-            self.deassert_instruction_state_change(caller_pc)
-            self.dirty = True
+            self.deassert_instruction_state_change(caller_pc, set_dirty=set_dirty)
+            if set_dirty:
+                self.dirty = True
 
     def deassert_jump(
         self, caller_pc: int, target_pc: Optional[int] = None, *args
@@ -376,6 +385,14 @@ class Log:
 
         elif i.is_return and reason == UnknownReason.STACK_MANIPULATION:
             return unified_state_suggestion()
+
+        elif i.is_return and reason == UnknownReason.INDIRECT_JUMP:
+            if i.ret_indirect_type == RetIndirectType.CALL:
+                return [("jumptable", None), ("instruction", StateChange())]
+            elif i.ret_indirect_type == RetIndirectType.JUMP:
+                return [("jumptable", None), ("subroutine", i.state_change_before)]
+            else:
+                assert False
 
         elif unsafe:
             if i.subroutine.is_recursive and reason == UnknownReason.RECURSION:
