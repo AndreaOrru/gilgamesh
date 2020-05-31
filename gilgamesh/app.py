@@ -115,17 +115,25 @@ class App(Repl):
                 )
                 for instr_pc, change in changes:
                     instr = sub.instructions[instr_pc]
-                    suggestion = self.log.suggest_assertion(instr, unsafe)
-                    if suggestion and suggestion[0] == "instruction":
-                        self.log.assert_instruction_state_change(
-                            instr_pc, suggestion[1]
-                        )
-                        made_suggestion = True
-                    elif suggestion and suggestion[0] == "subroutine":
-                        self.log.assert_subroutine_state_change(
-                            sub, instr_pc, suggestion[1]
-                        )
-                        made_suggestion = True
+                    suggestions = self.log.suggest_assertions(instr, unsafe)
+                    for suggestion in suggestions:
+                        if suggestion[0] == "jumptable":
+                            self.log.assert_jump(instr_pc)
+                            made_suggestion = True
+                        elif (
+                            suggestion[0] == "instruction" and suggestion[1] is not None
+                        ):
+                            self.log.assert_instruction_state_change(
+                                instr_pc, suggestion[1]
+                            )
+                            made_suggestion = True
+                        elif (
+                            suggestion[0] == "subroutine" and suggestion[1] is not None
+                        ):
+                            self.log.assert_subroutine_state_change(
+                                sub, instr_pc, suggestion[1]
+                            )
+                            made_suggestion = True
             if not made_suggestion:
                 break
 
@@ -326,19 +334,20 @@ class App(Repl):
             op(caller_pc_int, target_pc)
         else:
             caller = self.log.any_instruction(caller_pc_int)
-            assert caller.is_call or caller.is_jump
-            assert caller.argument_size == 2
-            assert caller.argument is not None
-
+            assert caller.is_call or caller.is_jump or caller.is_return
             if not range_or_target_pc:
                 return op(caller.pc)
 
-            first, last = self._parse_range(range_or_target_pc)
-            for x in range(first, last + 1, 2):
-                offset = caller.argument + x
-                bank = caller.pc & 0xFF0000
-                target_pc = bank | (self.rom.read_word(bank | offset))
-                op(caller.pc, target_pc, x)
+            if not caller.is_return:
+                assert caller.argument_size == 2
+                assert caller.argument is not None
+
+                first, last = self._parse_range(range_or_target_pc)
+                for x in range(first, last + 1, 2):
+                    offset = caller.argument + x
+                    bank = caller.pc & 0xFF0000
+                    target_pc = bank | (self.rom.read_word(bank | offset))
+                    op(caller.pc, target_pc, x)
 
     @command(container=True)
     def do_list(self) -> None:
@@ -406,6 +415,26 @@ class App(Repl):
 
                 last_sub = subroutine
 
+        print_html("".join(s))
+
+    @command()
+    def do_list_jumptables(self) -> None:
+        if not self.log.jump_assertions:
+            return
+
+        s = []
+        for pc, targets in self.log.jump_assertions.items():
+            subroutines = self.log.instruction_subroutines(pc)
+            instruction = self.log.any_instruction(pc)
+            disassembly = self._print_instruction(instruction)
+
+            s.append("  <magenta>${:06X}</magenta>  {}\n".format(pc, disassembly))
+            if subroutines:
+                s.append(
+                    "    <grey>{}</grey>\n".format(
+                        ", ".join(s.label for s in subroutines)
+                    )
+                )
         print_html("".join(s))
 
     @command()

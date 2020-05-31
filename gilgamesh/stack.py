@@ -49,7 +49,11 @@ class Stack:
         return [self.memory[self.pointer + i] for i in range(1, size + 1)]
 
     def match(self, value: int, size: int) -> bool:
-        peek = self.peek(size)
+        try:
+            peek = self.peek(size)
+        except KeyError:
+            return False
+
         for i in range(size):
             if peek[i].data != (value >> (i * 8)) & 0xFF:
                 return False

@@ -348,31 +348,31 @@ class Log:
 
         return sorted(self.jump_assertions[caller_pc], key=sort)
 
-    def suggest_assertion(
+    def suggest_assertions(
         self, i: Instruction, unsafe=False
-    ) -> Optional[Tuple[str, StateChange]]:
+    ) -> List[Tuple[str, Optional[StateChange]]]:
         def unified_state_suggestion():
             unified = i.subroutine.unified_state_change
             if unified is not None:
-                return ("subroutine", unified)
+                return [("subroutine", unified)]
             elif i.subroutine.does_save_state_in_incipit:
-                return ("subroutine", StateChange())
-            return None
+                return [("subroutine", StateChange())]
+            return []
 
         if not i.state_change_after.unknown:
-            return None
+            return []
         if i.has_asserted_state_change or i.asserted_subroutine_state_change:
-            return None
+            return []
         reason = i.state_change_after.unknown_reason
 
         if i.is_call and reason == UnknownReason.INDIRECT_JUMP:
-            return ("instruction", StateChange())
+            return [("jumptable", None), ("instruction", StateChange())]
 
         elif i.is_jump and reason == UnknownReason.INDIRECT_JUMP:
             if i.subroutine.does_save_state_in_incipit:
-                return ("subroutine", StateChange())
+                return [("jumptable", None), ("subroutine", StateChange())]
             else:
-                return ("subroutine", i.state_change_before)
+                return [("jumptable", None), ("subroutine", i.state_change_before)]
 
         elif i.is_return and reason == UnknownReason.STACK_MANIPULATION:
             return unified_state_suggestion()
@@ -381,9 +381,9 @@ class Log:
             if i.subroutine.is_recursive and reason == UnknownReason.RECURSION:
                 return unified_state_suggestion()
             elif i.operation == Op.PLP and reason == UnknownReason.STACK_MANIPULATION:
-                return ("instruction", StateChange())
+                return [("instruction", StateChange())]
 
-        return None
+        return []
 
     def _generate_labels(self) -> None:
         for target, sources in self.references.items():

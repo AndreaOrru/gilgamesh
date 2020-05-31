@@ -128,7 +128,9 @@ class Disassembly:
         # Asserted or unknown state.
         state_change, assertion_type = self._get_unknown_state(instr)
         if assertion_type != "none" or state_change == "unknown":
-            suggestion = self.log.suggest_assertion(instr)
+            suggestions = [
+                s for s in self.log.suggest_assertions(instr) if s[0] != "jumptable"
+            ]
             if state_change == "unknown":
                 add_line(T.UNKNOWN_STATE_HEADER)
             else:
@@ -140,9 +142,9 @@ class Disassembly:
                     T.UNKNOWN_REASON, str(instr.state_change_after.unknown_reason_str)
                 )
             add_line(T.SEPARATOR_LINE)
-            if suggestion:
-                add_line(T.SUGGESTED_ASSERTION_TYPE, suggestion[0])
-                add_line(T.SUGGESTED_ASSERTION, str(suggestion[1]))
+            if suggestions:
+                add_line(T.SUGGESTED_ASSERTION_TYPE, suggestions[0][0])
+                add_line(T.SUGGESTED_ASSERTION, str(suggestions[0][1]))
             else:
                 add_line(T.ASSERTION_TYPE, assertion_type)
                 add_line(T.ASSERTION, state_change)
