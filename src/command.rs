@@ -1,17 +1,17 @@
 type CommandMethod<App> = fn(&mut App, &[&str]) -> bool;
-type HelpMethod<App> = fn(&App) -> String;
+type HelpMethod = fn() -> &'static String;
 
 pub struct Command<App> {
     pub function: CommandMethod<App>,
-    pub help_function: HelpMethod<App>,
-    pub usage_function: HelpMethod<App>,
+    pub help_function: HelpMethod,
+    pub usage_function: HelpMethod,
 }
 
 impl<App> Command<App> {
     pub fn new(
         function: CommandMethod<App>,
-        help_function: HelpMethod<App>,
-        usage_function: HelpMethod<App>,
+        help_function: HelpMethod,
+        usage_function: HelpMethod,
     ) -> Command<App> {
         Command::<App> {
             function,
@@ -34,11 +34,10 @@ macro_rules! argument {
 
 #[macro_export]
 macro_rules! command {
-    ($self:ident, $name:ident, $help:literal, $body: expr) => {
-        command!($self, $name,, $help, $body);
-    };
-
-    ($self:ident, $name:ident, $(($arg:ident : $type:ident)),*, $help:literal, $body: expr) => {
+    (
+        #[doc = $help:expr]
+        fn $name:ident(&$self:ident $(, $arg:ident : $type:ident)*) $body:expr
+    ) => {
         fn $name(&mut $self, _args: &[&str]) -> bool {
             let mut _i = 0;
             $(
@@ -51,15 +50,23 @@ macro_rules! command {
         }
 
         paste::item! {
-            fn [<help_ $name>](&$self) -> String {
-                $help.to_string()
+            fn [<help_ $name>]() -> &'static String {
+                lazy_static::lazy_static! {
+                    static ref [<HELP_ $name:upper>]: String = $help.trim().to_string();
+                }
+                &[<HELP_ $name:upper>]
             }
 
-            fn [<usage_ $name>](&$self) -> String {
-                stringify!($name).to_string()
-                $(
-                    + " " + &stringify!($arg).to_uppercase()
-                )*
+            fn [<usage_ $name>]() -> &'static String {
+                lazy_static::lazy_static! {
+                    static ref [<USAGE_ $name:upper>]: String = {
+                        stringify!($name).to_string()
+                        $(
+                            + " " + &stringify!($arg).to_uppercase()
+                        )*
+                    };
+                }
+                &[<USAGE_ $name:upper>]
             }
         }
     };

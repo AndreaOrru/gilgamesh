@@ -1,6 +1,6 @@
 mod common;
 
-use gilgamesh::rom::{ROMType, ROM};
+use gilgamesh::rom::ROMType;
 
 test_rom!(setup_lorom, "lorom.asm");
 test_rom!(setup_hirom, "hirom.asm");

@@ -81,29 +81,29 @@ impl<W: Write> App<W> {
     }
 
     command!(
-        self,
-        help,
-        (command: String),
-        "Show help about commands.",
-        {
+        /// Show help about commands.
+        fn help(&self, command: String) {
             match self.commands.get(command) {
                 Some(command) => {
                     out!(
                         self,
                         "{} {}\n",
                         "Usage:".yellow(),
-                        (command.usage_function)(self).green()
+                        (command.usage_function)().green()
                     );
-                    out!(self, "{}\n", (command.help_function)(self));
+                    out!(self, "{}\n", (command.help_function)());
                 }
                 _ => unreachable!(),
             }
         }
     );
 
-    command!(self, quit, "Quit the application.", {
-        return true;
-    });
+    command!(
+        /// Quit the application.
+        fn quit(&self) {
+            return true;
+        }
+    );
 }
 
 #[cfg(test)]

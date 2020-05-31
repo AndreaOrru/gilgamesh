@@ -42,11 +42,13 @@ lazy_static! {
 #[macro_export]
 macro_rules! test_rom {
     ($setup_fn:ident, $filename:literal) => {
-        fn $setup_fn() -> std::sync::Arc<ROM> {
+        fn $setup_fn() -> std::sync::Arc<gilgamesh::rom::ROM> {
             let mut roms = common::ASSEMBLED_ROMS.lock().unwrap();
-            (*roms.entry($filename).or_insert(std::sync::Arc::new(
-                ROM::from(common::assemble($filename)).unwrap(),
-            )))
+            (*roms.entry($filename).or_insert_with(|| {
+                let rom_path = common::assemble($filename);
+                let rom = gilgamesh::rom::ROM::from(rom_path).unwrap();
+                std::sync::Arc::new(rom)
+            }))
             .clone()
         }
     };

@@ -1,4 +1,4 @@
-use getset::CopyGetters;
+use getset::{CopyGetters, Getters};
 
 use std::fs::File;
 use std::io;
@@ -33,8 +33,10 @@ mod header {
 }
 
 /// Structure representing a SNES ROM.
-#[derive(CopyGetters)]
+#[derive(Getters, CopyGetters)]
 pub struct ROM {
+    #[getset(get = "pub")]
+    path: String,
     data: Vec<u8>,
 
     #[getset(get_copy = "pub")]
@@ -46,6 +48,7 @@ impl ROM {
     #[allow(clippy::new_without_default)]
     pub fn new() -> ROM {
         ROM {
+            path: String::new(),
             data: Vec::new(),
             rom_type: ROMType::Unknown,
         }
@@ -60,6 +63,7 @@ impl ROM {
 
     /// Load ROM data from file.
     pub fn load(&mut self, path: String) -> io::Result<()> {
+        self.path = path.to_owned();
         let mut file = File::open(path)?;
         file.read_to_end(&mut self.data)?;
         self.rom_type = self.discover_type();
