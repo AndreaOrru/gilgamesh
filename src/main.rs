@@ -1,12 +1,14 @@
+#![allow(dead_code)]
+
+use clap::clap_app;
+use std::io;
+
 mod app;
 mod command;
 mod rom;
 
 use app::App;
 use rom::ROM;
-
-use clap::clap_app;
-use std::io;
 
 /// Get the ball rolling.
 fn main() -> io::Result<()> {
@@ -34,7 +36,7 @@ fn main() -> io::Result<()> {
     let rom = ROM::from(rom_path.into())?;
 
     // Run the command prompt.
-    let mut app = App::new(rom, io::stdout());
+    let mut app = App::new(rom);
     app.run();
 
     Ok(())

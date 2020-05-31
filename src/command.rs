@@ -1,6 +1,7 @@
 type CommandMethod<App> = fn(&mut App, &[&str]) -> bool;
 type HelpMethod = fn() -> &'static String;
 
+/// Command for the interactive prompt.
 pub struct Command<App> {
     pub function: CommandMethod<App>,
     pub help_function: HelpMethod,
@@ -8,6 +9,7 @@ pub struct Command<App> {
 }
 
 impl<App> Command<App> {
+    /// Instantiate a command.
     pub fn new(
         function: CommandMethod<App>,
         help_function: HelpMethod,
@@ -21,6 +23,7 @@ impl<App> Command<App> {
     }
 }
 
+/// Fetch a command argument based on its type and position.
 #[macro_export]
 macro_rules! argument {
     ($args:ident, $i:ident, String) => {
@@ -32,6 +35,7 @@ macro_rules! argument {
     };
 }
 
+/// Define a command for the interactive prompt.
 #[macro_export]
 macro_rules! command {
     (
@@ -72,6 +76,7 @@ macro_rules! command {
     };
 }
 
+/// Create a reference to a prompt command (used to define the hierarchy of commands).
 #[macro_export]
 macro_rules! command_ref {
     ($app:ident, $name:ident) => {

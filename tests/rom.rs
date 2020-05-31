@@ -1,5 +1,4 @@
 mod common;
-
 use gilgamesh::rom::ROMType;
 
 test_rom!(setup_lorom, "lorom.asm");

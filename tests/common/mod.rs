@@ -1,10 +1,13 @@
-use lazy_static::lazy_static;
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::fs::remove_file;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
+
+use lazy_static::lazy_static;
+use rexpect::session::{spawn_command, PtyReplSession};
 
 use gilgamesh::rom::ROM;
 
@@ -30,6 +33,29 @@ pub fn assemble(filename: &'static str) -> String {
     assert!(status.success());
 
     sfc.to_str().unwrap().into()
+}
+
+/// Return a rexpect session to test the command prompt on a ROM.
+pub fn session(rom: &ROM) -> PtyReplSession {
+    // Find the Gilgamesh binary.
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push("target/debug/gilgamesh");
+
+    // Run Gilgamesh on the given ROM, disabling colors.
+    let mut command = Command::new(path);
+    command.arg(rom.path()).env("NO_COLOR", "1");
+
+    // Build the session.
+    let mut s = PtyReplSession {
+        echo_on: false,
+        prompt: "> ".to_string(),
+        pty_session: spawn_command(command, Some(2_000)).unwrap(),
+        quit_command: Some("quit".to_string()),
+    };
+
+    // Wait for the prompt to be ready.
+    s.wait_for_prompt().unwrap();
+    s
 }
 
 lazy_static! {

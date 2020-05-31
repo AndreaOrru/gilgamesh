@@ -1,8 +1,8 @@
-use getset::{CopyGetters, Getters};
-
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+
+use getset::{CopyGetters, Getters};
 
 /// ROM classification.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -13,7 +13,6 @@ pub enum ROMType {
 }
 
 /// ROM's header.
-#[allow(dead_code)]
 mod header {
     /// ROM's title max length.
     pub const TITLE_LEN: usize = 21;

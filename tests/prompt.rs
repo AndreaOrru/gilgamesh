@@ -1,24 +1,7 @@
 mod common;
-use rexpect::session::{spawn_command, PtyReplSession};
-use std::process::Command;
-
-use gilgamesh::rom::ROM;
+use common::session;
 
 test_rom!(setup_lorom, "lorom.asm");
-
-fn session(rom: &ROM) -> PtyReplSession {
-    let mut command = Command::new("./target/debug/gilgamesh");
-    command.arg(rom.path()).env("NO_COLOR", "1");
-
-    let mut s = PtyReplSession {
-        echo_on: false,
-        prompt: "> ".to_string(),
-        pty_session: spawn_command(command, Some(1_000)).unwrap(),
-        quit_command: Some("quit".to_string()),
-    };
-    s.wait_for_prompt().unwrap();
-    s
-}
 
 #[test]
 fn test_help() {
