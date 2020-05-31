@@ -97,8 +97,15 @@ class Subroutine(Invalidable):
 
     @property
     def unified_state_change(self) -> Optional[StateChange]:
-        if sum(1 for s in self.state_changes.values() if s.unknown) > 1:
+        n_known = n_unknown = 0
+        for s in self.state_changes.values():
+            if s.unknown:
+                n_unknown += 1
+            else:
+                n_known += 1
+        if n_unknown > 1 or n_known == 0:
             return None
+
         unified = StateChange()
         for s in self.state_changes.values():
             if s.unknown:

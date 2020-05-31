@@ -360,6 +360,9 @@ class Log:
     def suggest_assertions(
         self, i: Instruction, unsafe=False
     ) -> List[Tuple[str, Optional[StateChange]]]:
+        def jump_table_suggestion():
+            return [] if i.is_jump_table else [("jumptable", None)]
+
         def unified_state_suggestion():
             unified = i.subroutine.unified_state_change
             if unified is not None:
@@ -375,22 +378,22 @@ class Log:
         reason = i.state_change_after.unknown_reason
 
         if i.is_call and reason == UnknownReason.INDIRECT_JUMP:
-            return [("jumptable", None), ("instruction", StateChange())]
+            return [*jump_table_suggestion(), ("instruction", StateChange())]
 
         elif i.is_jump and reason == UnknownReason.INDIRECT_JUMP:
             if i.subroutine.does_save_state_in_incipit:
-                return [("jumptable", None), ("subroutine", StateChange())]
+                return [*jump_table_suggestion(), ("subroutine", StateChange())]
             else:
-                return [("jumptable", None), ("subroutine", i.state_change_before)]
+                return [*jump_table_suggestion(), *unified_state_suggestion()]
 
         elif i.is_return and reason == UnknownReason.STACK_MANIPULATION:
             return unified_state_suggestion()
 
         elif i.is_return and reason == UnknownReason.INDIRECT_JUMP:
             if i.ret_indirect_type == RetIndirectType.CALL:
-                return [("jumptable", None), ("instruction", StateChange())]
+                return [*jump_table_suggestion(), ("instruction", StateChange())]
             elif i.ret_indirect_type == RetIndirectType.JUMP:
-                return [("jumptable", None), ("subroutine", i.state_change_before)]
+                return [*jump_table_suggestion(), *unified_state_suggestion()]
             else:
                 assert False
 
