@@ -1,23 +1,22 @@
-use std::collections::HashMap;
 use std::io::{stdout, Stdout, Write};
 
 use colored::*;
-use maplit::hashmap;
+use maplit::btreemap;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 use crate::command::Command;
 use crate::rom::ROM;
-use crate::{command, command_ref};
+use crate::{command, command_ref, container};
 
-/// Wrapper around `println!` using the configured output stream.
-macro_rules! out {
-    ($self:ident) => {
-        out!($self, "");
+/// Wrapper around `println!` using the given output stream.
+macro_rules! outln {
+    ($out:expr) => {
+        writeln!($out, "").unwrap();
     };
 
-    ($self:ident, $format:literal, $($arg:tt)*) => {
-        writeln!($self.output, $format, $($arg)*).unwrap();
+    ($out:expr, $format:literal, $($args:expr),*) => {
+        writeln!($out, $format, $($args,)*).unwrap();
     };
 }
 
@@ -26,9 +25,9 @@ pub struct App<W: Write> {
     /// ROM on which Gilgamesh is operating.
     rom: Option<ROM>,
     /// Output stream.
-    output: W,
+    out: W,
     /// The hierarchy of commands.
-    commands: HashMap<&'static str, Command<Self>>,
+    commands: Command<Self>,
 }
 
 impl App<Stdout> {
@@ -36,7 +35,7 @@ impl App<Stdout> {
     pub fn new(rom: ROM) -> Self {
         Self {
             rom: Some(rom),
-            output: stdout(),
+            out: stdout(),
             commands: Self::build_commands(),
         }
     }
@@ -45,20 +44,27 @@ impl App<Stdout> {
 impl<W: Write> App<W> {
     /// Instantiate a prompt with redirected output (for test purposes).
     #[cfg(test)]
-    fn with_output(output: W) -> Self {
+    fn with_output(out: W) -> Self {
         Self {
             rom: None,
-            output,
+            out,
             commands: Self::build_commands(),
         }
     }
 
     /// Return the hierarchy of supported commands.
-    fn build_commands() -> HashMap<&'static str, Command<Self>> {
-        hashmap! {
+    fn build_commands() -> Command<Self> {
+        container!(btreemap! {
+            "assert" => container!(
+                /// Assert stuff.
+                btreemap! {
+                    "instruction" => command_ref!(Self, assert_instruction),
+                    "subroutine"  => command_ref!(Self, assert_subroutine),
+                }),
+
             "help" => command_ref!(Self, help),
             "quit" => command_ref!(Self, quit),
-        }
+        })
     }
 
     /// Start the prompt loop.
@@ -71,10 +77,13 @@ impl<W: Write> App<W> {
             match readline {
                 // Command line to be parsed.
                 Ok(line) => {
-                    rl.add_history_entry(line.as_str());
-                    // Commands return true to signal an exit condition.
-                    if self.handle_line(line) {
-                        break;
+                    if !line.is_empty() {
+                        rl.add_history_entry(line.as_str());
+                        // Commands return true to signal an exit condition.
+                        if self.handle_line(line) {
+                            break;
+                        }
+                        outln!(self.out);
                     }
                 }
                 Err(ReadlineError::Interrupted) => continue, // Ctrl-C.
@@ -84,39 +93,95 @@ impl<W: Write> App<W> {
         }
     }
 
+    /// Find command inside the hierarchy of commands.
+    fn dig_command<'a>(commands: &'a Command<Self>, parts: &[&str]) -> (&'a Command<Self>, usize) {
+        let mut command = commands;
+        let mut i = 0;
+
+        while i < parts.len() {
+            match command.subcommands.get(parts[i]) {
+                Some(c) => command = &c,
+                None => break,
+            };
+            i += 1;
+        }
+
+        (command, i)
+    }
+
     /// Parse and execute a command.
     fn handle_line(&mut self, line: String) -> bool {
         let parts: Vec<&str> = line.trim().split_whitespace().collect();
-        let name = parts[0];
-        let args = &parts[1..];
 
-        match self.commands.get(name) {
-            Some(command) => (command.function)(self, args),
-            _ => unreachable!(),
+        let (command, i) = Self::dig_command(&self.commands, &parts);
+        match command.function {
+            Some(function) => function(self, &parts[i..]),
+            None => self.help(&parts),
+        }
+    }
+
+    /// Show help and usage of a command.
+    fn help_command(out: &mut W, parts: &[&str], command: &Command<Self>, root: bool) {
+        if !root {
+            outln!(
+                out,
+                "{} {}{}\n",
+                "Usage:".yellow(),
+                parts.join(" ").green(),
+                (command.usage_function)().green()
+            );
+            outln!(out, "{}", (command.help_function.unwrap())());
+        }
+    }
+
+    /// Show a list of subcommands.
+    fn help_list(out: &mut W, command: &Command<Self>, root: bool) {
+        if !command.subcommands.is_empty() {
+            if root {
+                outln!(out, "{}", "Commands:".yellow());
+            } else {
+                outln!(out, "\n{}", "Subcommands:".yellow());
+            }
+            for (name, subcommand) in command.subcommands.iter() {
+                outln!(
+                    out,
+                    "  {:15}{}",
+                    name.green(),
+                    (subcommand.help_function.unwrap())()
+                );
+            }
         }
     }
 
     command!(
         /// Show help about commands.
-        fn help(&self, command: String) {
-            match self.commands.get(command) {
-                Some(command) => {
-                    out!(
-                        self,
-                        "{} {}\n",
-                        "Usage:".yellow(),
-                        (command.usage_function)().green()
-                    );
-                    out!(self, "{}\n", (command.help_function)());
-                }
-                _ => unreachable!(),
-            }
+        fn help(&mut self, command: Args) {
+            let (cmd, i) = Self::dig_command(&self.commands, command);
+            let root = i == 0;
+            Self::help_command(&mut self.out, &command[..i], cmd, root);
+            Self::help_list(&mut self.out, cmd, root);
         }
     );
 
     command!(
         /// Quit the application.
-        fn quit(&self) {
+        fn quit(&mut self) {
+            return true;
+        }
+    );
+
+    command!(
+        /// Assert instruction.
+        fn assert_instruction(&mut self, pc: Integer) {
+            // TODO: implement.
+            return true;
+        }
+    );
+
+    command!(
+        /// Assert subroutine.
+        fn assert_subroutine(&mut self) {
+            // TODO: implement.
             return true;
         }
     );
@@ -142,9 +207,44 @@ mod tests {
     }
 
     #[test]
-    fn test_help_command() {
+    fn test_help() {
+        let output = run_command("help");
+        assert!(output.starts_with("Commands:"));
+        assert!(output.contains("quit"));
+        assert!(output.contains("Quit the application."));
+    }
+
+    #[test]
+    fn test_help_simple_command() {
         let output = run_command("help quit");
-        assert_eq!("Usage: quit\n\nQuit the application.\n\n", output);
+        assert_eq!("Usage: quit\n\nQuit the application.\n", output);
+    }
+
+    #[test]
+    fn test_help_command_container() {
+        let output = run_command("help assert");
+        assert!(output.starts_with("Usage: assert SUBCOMMAND\n\nAssert stuff."));
+    }
+
+    #[test]
+    fn test_help_nested_command() {
+        let output = run_command("help assert instruction");
+        assert_eq!(
+            "Usage: assert instruction PC\n\nAssert instruction.\n",
+            output
+        );
+    }
+
+    #[test]
+    fn test_help_invalid_command() {
+        let output = run_command("help foobar");
+        assert!(output.starts_with("Commands:"));
+    }
+
+    #[test]
+    fn test_help_invalid_subcommand() {
+        let output = run_command("help assert foobar");
+        assert!(output.starts_with("Usage: assert SUBCOMMAND"));
     }
 
     #[test]

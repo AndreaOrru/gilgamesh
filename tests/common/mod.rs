@@ -47,7 +47,7 @@ pub fn session(rom: &ROM) -> PtyReplSession {
 
     // Build the session.
     let mut s = PtyReplSession {
-        echo_on: false,
+        echo_on: true,
         prompt: "> ".to_string(),
         pty_session: spawn_command(command, Some(2_000)).unwrap(),
         quit_command: Some("quit".to_string()),

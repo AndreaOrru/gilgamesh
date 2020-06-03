@@ -1,31 +1,61 @@
-type CommandMethod<App> = fn(&mut App, &[&str]) -> bool;
-type HelpMethod = fn() -> &'static String;
+use lazy_static::lazy_static;
+use std::collections::BTreeMap;
+
+type CommandFunction<App> = fn(&mut App, &[&str]) -> bool;
+type HelpFunction = fn() -> &'static String;
 
 /// Command for the interactive prompt.
 pub struct Command<App> {
-    pub function: CommandMethod<App>,
-    pub help_function: HelpMethod,
-    pub usage_function: HelpMethod,
+    pub function: Option<CommandFunction<App>>,
+    pub help_function: Option<HelpFunction>,
+    pub usage_function: HelpFunction,
+    pub subcommands: BTreeMap<&'static str, Self>,
 }
 
 impl<App> Command<App> {
     /// Instantiate a command.
     pub fn new(
-        function: CommandMethod<App>,
-        help_function: HelpMethod,
-        usage_function: HelpMethod,
-    ) -> Command<App> {
-        Command::<App> {
-            function,
-            help_function,
+        function: CommandFunction<App>,
+        help_function: HelpFunction,
+        usage_function: HelpFunction,
+    ) -> Self {
+        Self {
+            function: Some(function),
+            help_function: Some(help_function),
             usage_function,
+            subcommands: BTreeMap::new(),
         }
     }
+
+    /// Instantiate a container.
+    pub fn new_container(
+        help_function: HelpFunction,
+        subcommands: BTreeMap<&'static str, Self>,
+    ) -> Self {
+        Self {
+            function: None,
+            help_function: Some(help_function),
+            usage_function: usage_container,
+            subcommands,
+        }
+    }
+}
+
+/// Return usage string for container commands.
+pub fn usage_container() -> &'static String {
+    lazy_static! {
+        static ref USAGE: String = String::from(" SUBCOMMAND");
+    }
+    &USAGE
 }
 
 /// Fetch a command argument based on its type and position.
 #[macro_export]
 macro_rules! argument {
+    ($args:ident, $i:ident, Args) => {
+        $args
+    };
+
     ($args:ident, $i:ident, String) => {
         $args[$i]
     };
@@ -40,7 +70,7 @@ macro_rules! argument {
 macro_rules! command {
     (
         #[doc = $help:expr]
-        fn $name:ident(&$self:ident $(, $arg:ident : $type:ident)*) $body:expr
+        fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)*) $body:expr
     ) => {
         fn $name(&mut $self, _args: &[&str]) -> bool {
             let mut _i = 0;
@@ -64,7 +94,7 @@ macro_rules! command {
             fn [<usage_ $name>]() -> &'static String {
                 lazy_static::lazy_static! {
                     static ref [<USAGE_ $name:upper>]: String = {
-                        stringify!($name).to_string()
+                        String::new()
                         $(
                             + " " + &stringify!($arg).to_uppercase()
                         )*
@@ -81,7 +111,35 @@ macro_rules! command {
 macro_rules! command_ref {
     ($app:ident, $name:ident) => {
         paste::expr! {
-            Command::new($app::$name, $app::[<help_ $name>], $app::[<usage_ $name>])
+            Command::new(
+                $app::$name,
+                $app::[<help_ $name>],
+                $app::[<usage_ $name>],
+            )
         }
+    };
+}
+
+/// Define a command container.
+#[macro_export]
+macro_rules! container {
+    (
+        #[doc = $help:expr]
+        $subcmds:expr
+    ) => {{
+        fn help() -> &'static String {
+            lazy_static::lazy_static! {
+                static ref HELP: String = $help.trim().to_string();
+            }
+            &HELP
+        }
+        Command::new_container(help, $subcmds)
+    }};
+
+    ($subcmds:expr) => {
+        container!(
+            ///
+            $subcmds
+        )
     };
 }
