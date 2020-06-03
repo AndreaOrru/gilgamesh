@@ -1,3 +1,4 @@
+use std::io;
 use std::io::{stdout, Stdout, Write};
 
 use colored::*;
@@ -5,6 +6,7 @@ use maplit::btreemap;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
+use crate::analysis::Analysis;
 use crate::command::Command;
 use crate::rom::ROM;
 use crate::{command, command_ref, container};
@@ -22,8 +24,7 @@ macro_rules! outln {
 
 /// Gilgamesh's interactive prompt.
 pub struct App<W: Write> {
-    /// ROM on which Gilgamesh is operating.
-    rom: Option<ROM>,
+    analysis: Analysis,
     /// Output stream.
     out: W,
     /// The hierarchy of commands.
@@ -32,12 +33,12 @@ pub struct App<W: Write> {
 
 impl App<Stdout> {
     /// Instantiate a prompt session from a ROM.
-    pub fn new(rom: ROM) -> Self {
-        Self {
-            rom: Some(rom),
+    pub fn new(rom_path: String) -> io::Result<Self> {
+        Ok(Self {
+            analysis: Analysis::new(ROM::from(rom_path)?),
             out: stdout(),
             commands: Self::build_commands(),
-        }
+        })
     }
 }
 
@@ -46,7 +47,7 @@ impl<W: Write> App<W> {
     #[cfg(test)]
     fn with_output(out: W) -> Self {
         Self {
-            rom: None,
+            analysis: Analysis::new(ROM::new()),
             out,
             commands: Self::build_commands(),
         }

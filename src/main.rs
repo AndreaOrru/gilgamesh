@@ -3,12 +3,12 @@
 use clap::clap_app;
 use std::io;
 
+mod analysis;
 mod app;
 mod command;
 mod rom;
 
 use app::App;
-use rom::ROM;
 
 /// Get the ball rolling.
 fn main() -> io::Result<()> {
@@ -31,12 +31,9 @@ fn main() -> io::Result<()> {
     )
     .get_matches();
 
-    // Load the ROM.
-    let rom_path = matches.value_of("ROM").unwrap();
-    let rom = ROM::from(rom_path.into())?;
-
     // Run the command prompt.
-    let mut app = App::new(rom);
+    let rom_path = matches.value_of("ROM").unwrap();
+    let mut app = App::new(rom_path.into())?;
     app.run();
 
     Ok(())
