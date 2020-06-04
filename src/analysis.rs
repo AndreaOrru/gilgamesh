@@ -1,4 +1,4 @@
-use crate::rom::ROM;
+use crate::snes::rom::ROM;
 
 pub struct Analysis {
     rom: ROM,

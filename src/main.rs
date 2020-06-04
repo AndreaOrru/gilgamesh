@@ -6,7 +6,7 @@ use std::io;
 mod analysis;
 mod app;
 mod command;
-mod rom;
+mod snes;
 
 use app::App;
 

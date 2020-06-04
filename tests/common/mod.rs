@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
 use rexpect::session::{spawn_command, PtyReplSession};
 
-use gilgamesh::rom::ROM;
+use gilgamesh::snes::rom::ROM;
 
 /// Assemble a test ROM.
 pub fn assemble(filename: &'static str) -> String {
@@ -68,11 +68,11 @@ lazy_static! {
 #[macro_export]
 macro_rules! test_rom {
     ($setup_fn:ident, $filename:literal) => {
-        fn $setup_fn() -> std::sync::Arc<gilgamesh::rom::ROM> {
+        fn $setup_fn() -> std::sync::Arc<gilgamesh::snes::rom::ROM> {
             let mut roms = common::ASSEMBLED_ROMS.lock().unwrap();
             (*roms.entry($filename).or_insert_with(|| {
                 let rom_path = common::assemble($filename);
-                let rom = gilgamesh::rom::ROM::from(rom_path).unwrap();
+                let rom = gilgamesh::snes::rom::ROM::from(rom_path).unwrap();
                 std::sync::Arc::new(rom)
             }))
             .clone()

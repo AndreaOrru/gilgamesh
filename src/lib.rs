@@ -3,4 +3,4 @@
 pub mod analysis;
 pub mod app;
 pub mod command;
-pub mod rom;
+pub mod snes;

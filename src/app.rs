@@ -8,7 +8,7 @@ use rustyline::Editor;
 
 use crate::analysis::Analysis;
 use crate::command::Command;
-use crate::rom::ROM;
+use crate::snes::rom::ROM;
 use crate::{command, command_ref, container};
 
 /// Wrapper around `println!` using the given output stream.

@@ -1,5 +1,5 @@
 mod common;
-use gilgamesh::rom::ROMType;
+use gilgamesh::snes::rom::ROMType;
 
 test_rom!(setup_lorom, "lorom.asm");
 test_rom!(setup_hirom, "hirom.asm");
