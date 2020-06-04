@@ -1,5 +1,6 @@
 use std::io;
 use std::io::{stdout, Stdout, Write};
+use std::str::FromStr;
 
 use colored::*;
 use maplit::btreemap;
@@ -8,6 +9,7 @@ use rustyline::Editor;
 
 use crate::analysis::Analysis;
 use crate::command::Command;
+use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
 use crate::{command, command_ref, container};
 
@@ -63,6 +65,7 @@ impl<W: Write> App<W> {
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
 
+            "describe" => command_ref!(Self, describe),
             "help" => command_ref!(Self, help),
             "quit" => command_ref!(Self, quit),
         })
@@ -84,7 +87,6 @@ impl<W: Write> App<W> {
                         if self.handle_line(line) {
                             break;
                         }
-                        outln!(self.out);
                     }
                 }
                 Err(ReadlineError::Interrupted) => continue, // Ctrl-C.
@@ -116,8 +118,11 @@ impl<W: Write> App<W> {
 
         let (command, i) = Self::dig_command(&self.commands, &parts);
         match command.function {
-            Some(function) => function(self, &parts[i..]),
-            None => self.help(&parts),
+            Some(function) => match function(self, &parts[i..]) {
+                Some(exit) => exit,
+                None => self.help(&parts).unwrap(),
+            },
+            None => self.help(&parts).unwrap(),
         }
     }
 
@@ -155,19 +160,29 @@ impl<W: Write> App<W> {
     }
 
     command!(
+        /// Describe an opcode.
+        fn describe(&mut self, opcode: String) {
+            if let Ok(op) = Op::from_str(&opcode.to_uppercase()) {
+                outln!(self.out, "{}\n", op.description());
+            }
+        }
+    );
+
+    command!(
         /// Show help about commands.
         fn help(&mut self, command: Args) {
             let (cmd, i) = Self::dig_command(&self.commands, command);
             let root = i == 0;
             Self::help_command(&mut self.out, &command[..i], cmd, root);
             Self::help_list(&mut self.out, cmd, root);
+            outln!(self.out);
         }
     );
 
     command!(
         /// Quit the application.
         fn quit(&mut self) {
-            return true;
+            return Some(true);
         }
     );
 
@@ -175,7 +190,7 @@ impl<W: Write> App<W> {
         /// Assert instruction.
         fn assert_instruction(&mut self, pc: Integer) {
             // TODO: implement.
-            return true;
+            return Some(true);
         }
     );
 
@@ -183,7 +198,7 @@ impl<W: Write> App<W> {
         /// Assert subroutine.
         fn assert_subroutine(&mut self) {
             // TODO: implement.
-            return true;
+            return Some(true);
         }
     );
 }

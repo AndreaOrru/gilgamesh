@@ -1,6 +1,6 @@
 use enum_map::{enum_map, Enum, EnumMap};
 use lazy_static::lazy_static;
-use strum_macros::IntoStaticStr;
+use strum_macros::{EnumString, IntoStaticStr};
 
 /// Memory addressing modes.
 #[derive(Copy, Clone, Enum, Eq, PartialEq, Hash)]
@@ -71,7 +71,7 @@ lazy_static! {
 }
 
 /// 65c816 operations.
-#[derive(Copy, Clone, Enum, Eq, PartialEq, Hash, IntoStaticStr)]
+#[derive(Copy, Clone, Enum, EnumString, Eq, PartialEq, Hash, IntoStaticStr)]
 pub enum Op {
     ADC,
     AND,
@@ -165,6 +165,13 @@ pub enum Op {
     WDM,
     XBA,
     XCE,
+}
+
+impl Op {
+    /// Return the operation's description.
+    pub fn description(self) -> &'static str {
+        DESCRIPTIONS[self]
+    }
 }
 
 // All 65c816 opcodes expressed as a combination of

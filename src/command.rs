@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use std::collections::BTreeMap;
 
-type CommandFunction<App> = fn(&mut App, &[&str]) -> bool;
+type CommandFunction<App> = fn(&mut App, &[&str]) -> Option<bool>;
 type HelpFunction = fn() -> &'static String;
 
 /// Command for the interactive prompt.
@@ -57,7 +57,7 @@ macro_rules! argument {
     };
 
     ($args:ident, $i:ident, String) => {
-        $args[$i]
+        $args.get($i)?
     };
 
     ($args:ident, $i:ident, Integer) => {
@@ -72,7 +72,7 @@ macro_rules! command {
         #[doc = $help:expr]
         fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)*) $body:expr
     ) => {
-        fn $name(&mut $self, _args: &[&str]) -> bool {
+        fn $name(&mut $self, _args: &[&str]) -> Option<bool> {
             let mut _i = 0;
             $(
                 let $arg = $crate::argument!(_args, _i, $type);
@@ -80,7 +80,7 @@ macro_rules! command {
             )*
             $body
             #[allow(unreachable_code)]
-            false
+            Some(false)
         }
 
         paste::item! {
