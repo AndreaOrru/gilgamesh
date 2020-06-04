@@ -1,9 +1,9 @@
+use enum_map::{enum_map, Enum, EnumMap};
 use lazy_static::lazy_static;
-use maplit::hashmap;
-use std::collections::HashMap;
+use strum_macros::IntoStaticStr;
 
-///
-#[derive(Eq, PartialEq, Hash)]
+/// Memory addressing modes.
+#[derive(Copy, Clone, Enum, Eq, PartialEq, Hash)]
 pub enum AddressMode {
     Implied,
     ImmediateM,
@@ -35,8 +35,10 @@ pub enum AddressMode {
     PeiDirectPageIndirect,
 }
 
+// Size of the argument for each addressing mode.
+// A value of -1 means the size depends on the state register.
 lazy_static! {
-    static ref ARGUMENT_SIZES: HashMap<AddressMode, isize> = hashmap! {
+    pub static ref ARGUMENT_SIZES: EnumMap<AddressMode, isize> = enum_map! {
         AddressMode::Implied => 0,
         AddressMode::ImmediateM => -1,
         AddressMode::ImmediateX => -1,
@@ -68,7 +70,8 @@ lazy_static! {
     };
 }
 
-#[derive(Eq, PartialEq, Hash)]
+/// 65c816 operations.
+#[derive(Copy, Clone, Enum, Eq, PartialEq, Hash, IntoStaticStr)]
 pub enum Op {
     ADC,
     AND,
@@ -164,8 +167,10 @@ pub enum Op {
     XCE,
 }
 
+// All 65c816 opcodes expressed as a combination of
+// operations and addressing modes.
 lazy_static! {
-    static ref OPCODES: Vec<(Op, AddressMode)> = vec![
+    pub static ref OPCODES: Vec<(Op, AddressMode)> = vec![
         (Op::BRK, AddressMode::Immediate8),
         (Op::ORA, AddressMode::DirectPageIndexedIndirect),
         (Op::COP, AddressMode::Immediate8),
@@ -425,8 +430,9 @@ lazy_static! {
     ];
 }
 
+// Human-readable description of each operation.
 lazy_static! {
-    static ref DESCRIPTIONS: HashMap<Op, &'static str> = hashmap! {
+    pub static ref DESCRIPTIONS: EnumMap<Op, &'static str> = enum_map! {
         Op::ADC => "Add With Carry",
         Op::AND => "AND Accumulator With Memory",
         Op::ASL => "Accumulator or Memory Shift Left",
