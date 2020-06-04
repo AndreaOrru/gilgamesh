@@ -1,7 +1,10 @@
-use lazy_static::lazy_static;
 use std::collections::BTreeMap;
 
-type CommandFunction<App> = fn(&mut App, &[&str]) -> Option<bool>;
+use lazy_static::lazy_static;
+
+use crate::error::Error;
+
+type CommandFunction<App> = fn(&mut App, &[&str]) -> Result<(), Error>;
 type HelpFunction = fn() -> &'static String;
 
 /// Command for the interactive prompt.
@@ -52,15 +55,17 @@ pub fn usage_container() -> &'static String {
 /// Fetch a command argument based on its type and position.
 #[macro_export]
 macro_rules! argument {
-    ($args:ident, $i:ident, Args) => {
+    ($args:ident, $i:ident, $arg:ident, Args) => {
         $args
     };
 
-    ($args:ident, $i:ident, String) => {
-        $args.get($i)?
+    ($args:ident, $i:ident, $arg:ident, String) => {
+        $args.get($i).ok_or($crate::error::Error::MissingArg(
+            stringify!($arg).to_uppercase(),
+        ))?
     };
 
-    ($args:ident, $i:ident, Integer) => {
+    ($args:ident, $i:ident, $arg:ident, Integer) => {
         usize::from_str_radix($args[$i], 16).unwrap()
     };
 }
@@ -72,15 +77,15 @@ macro_rules! command {
         #[doc = $help:expr]
         fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)*) $body:expr
     ) => {
-        fn $name(&mut $self, _args: &[&str]) -> Option<bool> {
+        fn $name(&mut $self, _args: &[&str]) -> Result<(), $crate::error::Error> {
             let mut _i = 0;
             $(
-                let $arg = $crate::argument!(_args, _i, $type);
+                let $arg = $crate::argument!(_args, _i, $arg, $type);
                 _i += 1;
             )*
             $body
             #[allow(unreachable_code)]
-            Some(false)
+            Ok(())
         }
 
         paste::item! {

@@ -9,6 +9,7 @@ use rustyline::Editor;
 
 use crate::analysis::Analysis;
 use crate::command::Command;
+use crate::error::Error;
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
 use crate::{command, command_ref, container};
@@ -31,6 +32,8 @@ pub struct App<W: Write> {
     out: W,
     /// The hierarchy of commands.
     commands: Command<Self>,
+    /// Whether the user has requested to exit.
+    exit: bool,
 }
 
 impl App<Stdout> {
@@ -40,6 +43,7 @@ impl App<Stdout> {
             analysis: Analysis::new(ROM::from(rom_path)?),
             out: stdout(),
             commands: Self::build_commands(),
+            exit: false,
         })
     }
 }
@@ -52,6 +56,7 @@ impl<W: Write> App<W> {
             analysis: Analysis::new(ROM::new()),
             out,
             commands: Self::build_commands(),
+            exit: false,
         }
     }
 
@@ -74,7 +79,7 @@ impl<W: Write> App<W> {
     /// Start the prompt loop.
     pub fn run(&mut self) {
         let mut rl = Editor::<()>::new();
-        loop {
+        while !self.exit {
             let prompt = "> ".yellow().to_string();
             let readline = rl.readline(prompt.as_str());
 
@@ -83,10 +88,7 @@ impl<W: Write> App<W> {
                 Ok(line) => {
                     if !line.is_empty() {
                         rl.add_history_entry(line.as_str());
-                        // Commands return true to signal an exit condition.
-                        if self.handle_line(line) {
-                            break;
-                        }
+                        self.handle_line(line);
                     }
                 }
                 Err(ReadlineError::Interrupted) => continue, // Ctrl-C.
@@ -113,14 +115,17 @@ impl<W: Write> App<W> {
     }
 
     /// Parse and execute a command.
-    fn handle_line(&mut self, line: String) -> bool {
+    fn handle_line(&mut self, line: String) {
         let parts: Vec<&str> = line.trim().split_whitespace().collect();
 
         let (command, i) = Self::dig_command(&self.commands, &parts);
         match command.function {
             Some(function) => match function(self, &parts[i..]) {
-                Some(exit) => exit,
-                None => self.help(&parts).unwrap(),
+                Ok(()) => {}
+                Err(e @ Error::MissingArg(_)) => {
+                    self.help(&parts).unwrap();
+                    outln!(self.out, "{}\n", e.to_string().red());
+                }
             },
             None => self.help(&parts).unwrap(),
         }
@@ -182,7 +187,7 @@ impl<W: Write> App<W> {
     command!(
         /// Quit the application.
         fn quit(&mut self) {
-            return Some(true);
+            self.exit = true;
         }
     );
 
@@ -190,7 +195,6 @@ impl<W: Write> App<W> {
         /// Assert instruction.
         fn assert_instruction(&mut self, pc: Integer) {
             // TODO: implement.
-            return Some(true);
         }
     );
 
@@ -198,7 +202,6 @@ impl<W: Write> App<W> {
         /// Assert subroutine.
         fn assert_subroutine(&mut self) {
             // TODO: implement.
-            return Some(true);
         }
     );
 }
@@ -233,7 +236,7 @@ mod tests {
     #[test]
     fn test_help_simple_command() {
         let output = run_command("help quit");
-        assert_eq!("Usage: quit\n\nQuit the application.\n", output);
+        assert_eq!("Usage: quit\n\nQuit the application.\n\n", output);
     }
 
     #[test]
@@ -246,7 +249,7 @@ mod tests {
     fn test_help_nested_command() {
         let output = run_command("help assert instruction");
         assert_eq!(
-            "Usage: assert instruction PC\n\nAssert instruction.\n",
+            "Usage: assert instruction PC\n\nAssert instruction.\n\n",
             output
         );
     }
@@ -266,7 +269,7 @@ mod tests {
     #[test]
     fn test_quit() {
         let mut app = App::with_output(stdout());
-        let exit = app.handle_line("quit".to_string());
-        assert!(exit);
+        app.handle_line("quit".to_string());
+        assert!(app.exit);
     }
 }
