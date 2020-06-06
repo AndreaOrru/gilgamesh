@@ -267,6 +267,12 @@ mod tests {
     }
 
     #[test]
+    fn test_missing_argument() {
+        let output = run_command("describe");
+        assert!(output.ends_with("Missing argument OPCODE.\n\n"));
+    }
+
+    #[test]
     fn test_quit() {
         let mut app = App::with_output(stdout());
         app.handle_line("quit".to_string());

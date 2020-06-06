@@ -1,6 +1,7 @@
 use std::error;
 use std::fmt;
 
+/// Gilgamesh error type.
 #[derive(Debug)]
 pub enum Error {
     MissingArg(String),

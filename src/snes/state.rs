@@ -83,3 +83,63 @@ impl StateRegister {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_mx() {
+        let state = StateRegister::from_mx(true, false);
+        assert!(state.m());
+        assert!(!state.x());
+    }
+
+    #[test]
+    fn test_size_ax() {
+        let mut state = StateRegister::from_mx(true, true);
+        assert_eq!(state.a_size(), 1);
+        assert_eq!(state.x_size(), 1);
+
+        state.reset(0b0011_0000);
+        assert_eq!(state.a_size(), 2);
+        assert_eq!(state.x_size(), 2);
+    }
+
+    #[test]
+    fn test_set() {
+        let mut state = StateRegister::new(0b0000_0000);
+
+        state.set(0b0000_0000);
+        assert_eq!(state.p(), 0b0000_0000);
+
+        state.set(0b1111_1111);
+        assert_eq!(state.p(), 0b0011_0000);
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut state = StateRegister::new(0b1111_1111);
+
+        state.reset(0b0000_0000);
+        assert_eq!(state.p(), 0b1111_1111);
+
+        state.reset(0b1111_1111);
+        assert_eq!(state.p(), 0b1100_1111);
+    }
+
+    #[test]
+    fn test_set_reset_mx() {
+        let mut state = StateRegister::new(0b0000_0000);
+
+        state.set_m(true);
+        state.set_x(true);
+        assert!(state.m());
+        assert!(state.x());
+
+        state.set_m(false);
+        state.set_x(false);
+        assert!(!state.m());
+        assert!(!state.x());
+    }
+}
