@@ -122,8 +122,14 @@ impl Instruction {
                 }
             }
 
-            AddressMode::Relative => Some((pc + size + argument) as usize),
-            AddressMode::RelativeLong => Some((pc + size + argument) as usize),
+            AddressMode::Relative => {
+                let argument = (argument as i8) as isize;
+                Some((pc + size + argument) as usize)
+            }
+            AddressMode::RelativeLong => {
+                let argument = (argument as i16) as isize;
+                Some((pc + size + argument) as usize)
+            }
 
             _ => None,
         }
@@ -209,5 +215,48 @@ impl Instruction {
             || (op == Op::PHP)
             || (op == Op::PHX)
             || (op == Op::PHY);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::snes::rom::ROM;
+
+    fn setup_analysis() -> Rc<Analysis> {
+        let rom = ROM::new();
+        let analysis = Analysis::new(rom);
+        Rc::new(analysis)
+    }
+
+    #[test]
+    fn test_instruction_lda() {
+        let instruction =
+            Instruction::new(setup_analysis(), 0x8000, 0x8000, 0b0000_0000, 0xA9, 0x1234);
+
+        assert_eq!(instruction.name(), "lda");
+        assert_eq!(instruction.operation(), Op::LDA);
+        assert_eq!(instruction.address_mode(), AddressMode::ImmediateM);
+        assert_eq!(instruction.argument_size(), 2);
+        assert_eq!(instruction.size(), 3);
+        assert_eq!(instruction.argument().unwrap(), 0x1234);
+        assert_eq!(instruction.absolute_argument().unwrap(), 0x1234);
+        assert!(!instruction.is_control());
+    }
+
+    #[test]
+    fn test_instruction_brl() {
+        let instruction =
+            Instruction::new(setup_analysis(), 0x8000, 0x8000, 0b0000_0000, 0x82, 0xFFFD);
+
+        assert_eq!(instruction.name(), "brl");
+        assert_eq!(instruction.operation(), Op::BRL);
+        assert_eq!(instruction.address_mode(), AddressMode::RelativeLong);
+        assert_eq!(instruction.argument_size(), 2);
+        assert_eq!(instruction.size(), 3);
+        assert_eq!(instruction.argument().unwrap(), 0xFFFD);
+        assert_eq!(instruction.absolute_argument().unwrap(), 0x8000);
+        assert!(instruction.is_control());
+        assert!(instruction.is_jump());
     }
 }

@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use strum_macros::{EnumString, IntoStaticStr};
 
 /// Memory addressing modes.
-#[derive(Copy, Clone, Enum, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Enum, Eq, PartialEq, Hash)]
 pub enum AddressMode {
     Implied,
     ImmediateM,
@@ -71,7 +71,7 @@ lazy_static! {
 }
 
 /// 65c816 operations.
-#[derive(Copy, Clone, Enum, EnumString, Eq, PartialEq, Hash, IntoStaticStr)]
+#[derive(Copy, Clone, Debug, Enum, EnumString, Eq, PartialEq, Hash, IntoStaticStr)]
 pub enum Op {
     ADC,
     AND,
