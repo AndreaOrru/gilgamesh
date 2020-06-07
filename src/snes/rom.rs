@@ -120,6 +120,11 @@ impl ROM {
         self.read_word(header::NMI) as usize
     }
 
+    /// Return true if the address is in RAM, false otherwise.
+    pub fn is_ram(address: usize) -> bool {
+        (address <= 0x001FFF) || (0x7E0000 <= address && address <= 0x7FFFFF)
+    }
+
     /// Translate an address from SNES to PC.
     pub fn translate(&self, address: usize) -> usize {
         match self.rom_type {

@@ -1,5 +1,6 @@
 use std::io;
 use std::io::{stdout, Stdout, Write};
+use std::rc::Rc;
 use std::str::FromStr;
 
 use colored::*;
@@ -27,7 +28,7 @@ macro_rules! outln {
 
 /// Gilgamesh's interactive prompt.
 pub struct App<W: Write> {
-    analysis: Analysis,
+    analysis: Rc<Analysis>,
     /// Output stream.
     out: W,
     /// The hierarchy of commands.
