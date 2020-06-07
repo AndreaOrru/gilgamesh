@@ -90,7 +90,7 @@ impl CPU {
         // Log the fact that the current instruction references the
         // instruction pointed by the branch. Then take the branch.
         let target = instruction.absolute_argument().unwrap();
-        // TODO: self.log.add_reference(instruction, target)
+        self.analysis.add_reference(instruction.pc(), target);
         self.pc = target;
     }
 

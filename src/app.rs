@@ -64,6 +64,7 @@ impl<W: Write> App<W> {
     /// Return the hierarchy of supported commands.
     fn build_commands() -> Command<Self> {
         container!(btreemap! {
+            "analyze" => command_ref!(Self, analyze),
             "assert" => container!(
                 /// Assert stuff.
                 btreemap! {
@@ -164,6 +165,13 @@ impl<W: Write> App<W> {
             }
         }
     }
+
+    command!(
+        /// Run the analysis on the ROM.
+        fn analyze(&mut self) {
+            self.analysis.run();
+        }
+    );
 
     command!(
         /// Describe an opcode.

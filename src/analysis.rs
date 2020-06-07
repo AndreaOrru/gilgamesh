@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::snes::cpu::CPU;
@@ -9,8 +9,9 @@ use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
 struct EntryPoint {
-    name: String,
+    pc: usize,
     p: u8,
+    name: String,
 }
 
 /// Structure holding the state of the analysis.
@@ -25,7 +26,10 @@ pub struct Analysis {
     subroutines: RefCell<HashMap<usize, Subroutine>>,
 
     /// ROM's entry points.
-    entry_points: HashMap<usize, EntryPoint>,
+    entry_points: HashSet<EntryPoint>,
+
+    /// Instructions referenced by other instructions.
+    references: RefCell<HashMap<usize, usize>>,
 }
 
 impl Analysis {
@@ -35,13 +39,14 @@ impl Analysis {
             rom,
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(HashMap::new()),
-            entry_points: HashMap::new(),
+            entry_points: HashSet::new(),
+            references: HashMap::new(),
         })
     }
 
     /// Analyze the ROM.
     pub fn run(self: &Rc<Self>) {
-        for (pc, EntryPoint { name: _, p }) in self.entry_points.iter() {
+        for EntryPoint { pc, p, name: _ } in self.entry_points.iter() {
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
         }
@@ -70,5 +75,11 @@ impl Analysis {
         subroutine.add_instruction(instruction.id());
 
         instruction
+    }
+
+    /// Add a reference from an instruction to another.
+    pub fn add_reference(&mut self, source: usize, target: usize) {
+        let mut references = self.references.borrow_mut();
+        references.insert(source, target);
     }
 }
