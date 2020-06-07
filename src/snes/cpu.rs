@@ -68,10 +68,10 @@ impl CPU {
         self.pc += instruction.size();
 
         match instruction.typ() {
-            // InstructionType::Return => self.ret(instruction),
-            InstructionType::Interrupt => unreachable!(),
-            // InstructionType::Jump => self.jump(instruction),
-            // InstructionType::Call => self.call(instruction),
+            InstructionType::Return => self.ret(instruction),
+            InstructionType::Interrupt => self.interrupt(instruction),
+            InstructionType::Jump => self.jump(instruction),
+            InstructionType::Call => self.call(instruction),
             InstructionType::Branch => self.branch(instruction),
             InstructionType::SepRep => self.sep_rep(instruction),
             // InstructionType::Pop => self.pop(instruction),
@@ -92,6 +92,56 @@ impl CPU {
         let target = instruction.absolute_argument().unwrap();
         self.analysis.add_reference(instruction.pc(), target);
         self.pc = target;
+    }
+
+    /// Call instruction emulation.
+    fn call(&mut self, instruction: Instruction) {
+        match instruction.absolute_argument() {
+            Some(target) => {
+                // Create a parallel instance of the CPU to
+                // execute the subroutine that is being called.
+                let mut cpu = self.clone();
+                cpu.subroutine = target;
+                cpu.pc = target;
+
+                // Emulate the called subroutine.
+                self.analysis.add_reference(instruction.pc(), target);
+                self.analysis.add_subroutine(target);
+                cpu.run();
+
+                // TODO: propagate subroutine state.
+            }
+            None => {
+                self.stop = true;
+                // TODO: signal unknown state.
+            }
+        }
+    }
+
+    /// Interrupt instruction emulation.
+    fn interrupt(&mut self, _instruction: Instruction) {
+        self.stop = true;
+        // TODO: signal unknown state.
+    }
+
+    /// Jump instruction emulation.
+    fn jump(&mut self, instruction: Instruction) {
+        match instruction.absolute_argument() {
+            Some(target) => {
+                self.analysis.add_reference(instruction.pc(), target);
+                self.pc = target;
+            }
+            None => {
+                self.stop = true;
+                // TODO: signal unknown state.
+            }
+        }
+    }
+
+    /// Return instruction emulation.
+    fn ret(&mut self, _instruction: Instruction) {
+        self.stop = true;
+        // TODO: handle subroutine state.
     }
 
     /// SEP/REP instruction emulation.
