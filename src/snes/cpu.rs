@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::analysis::Analysis;
-use crate::snes::instruction::{Instruction, InstructionID, InstructionType};
+use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
 use crate::snes::state::StateRegister;
@@ -46,21 +46,23 @@ impl CPU {
 
     /// Fetch and execute the next instruction.
     fn step(&mut self) {
-        if ROM::is_ram(self.pc) || self.analysis.is_visited(self.instruction_id()) {
+        // Stop if we have jumped into RAM.
+        if ROM::is_ram(self.pc) {
             self.stop = true;
         }
 
         let opcode = self.analysis.rom.read_byte(self.pc);
         let argument = self.analysis.rom.read_address(self.pc + 1);
-        let instruction = self.analysis.add_instruction(
-            self.pc,
-            self.subroutine,
-            self.state.p(),
-            opcode,
-            argument,
-        );
+        let instruction =
+            Instruction::new(self.pc, self.subroutine, self.state.p(), opcode, argument);
 
-        self.execute(instruction);
+        // Stop the analysis if we have already visited this instruction.
+        if self.analysis.is_visited(instruction) {
+            self.stop = true;
+        } else {
+            self.analysis.add_instruction(instruction);
+            self.execute(instruction);
+        }
     }
 
     /// Emulate an instruction.
@@ -155,15 +157,6 @@ impl CPU {
         }
     }
 
-    /// Return the InstructionID of the instruction currently being executed.
-    fn instruction_id(&self) -> InstructionID {
-        InstructionID {
-            pc: self.pc,
-            subroutine: self.subroutine,
-            p: self.state.p(),
-        }
-    }
-
     #[cfg(test)]
     fn setup_instruction(&self, opcode: u8, argument: usize) -> Instruction {
         Instruction::new(self.pc, self.subroutine, self.state.p(), opcode, argument)
@@ -243,20 +236,5 @@ mod tests {
         cpu.execute(rep);
         assert_eq!(cpu.pc, rep.pc() + 2);
         assert_eq!(cpu.state.p(), 0b0000_0000);
-    }
-
-    #[test]
-    fn test_instruction_id() {
-        let analysis = Analysis::new(ROM::new());
-        let cpu = CPU::new(&analysis, 0x8000, 0x8000, 0b0011_0000);
-
-        assert_eq!(
-            cpu.instruction_id(),
-            InstructionID {
-                pc: 0x8000,
-                subroutine: 0x8000,
-                p: 0b0011_0000
-            }
-        );
     }
 }

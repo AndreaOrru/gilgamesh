@@ -1,24 +1,9 @@
-use derive_new::new;
 use getset::CopyGetters;
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 
 use crate::snes::opcodes::{AddressMode, Op, ARGUMENT_SIZES, OPCODES};
 use crate::snes::state::StateRegister;
-
-/// Unique identifier of an instruction executed
-/// in a specific state and subroutine.
-#[derive(new, Copy, Clone, Debug, Eq, PartialEq, Hash, Ord)]
-pub struct InstructionID {
-    pub pc: usize,
-    pub subroutine: usize,
-    pub p: u8,
-}
-// Order instructions by address.
-impl PartialOrd for InstructionID {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.pc.cmp(&other.pc))
-    }
-}
 
 /// Categories of instructions.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -35,13 +20,14 @@ pub enum InstructionType {
 }
 
 /// Structure representing an instruction.
-#[derive(Copy, Clone, CopyGetters)]
+#[derive(Copy, Clone, CopyGetters, Eq)]
 pub struct Instruction {
     /// The address of the instruction.
     #[getset(get_copy = "pub")]
     pc: usize,
 
     /// The address of the subroutine this instruction belongs to.
+    #[getset(get_copy = "pub")]
     subroutine: usize,
 
     /// Processor state in which the instruction is executed.
@@ -54,6 +40,32 @@ pub struct Instruction {
     _argument: usize,
 }
 
+// Implement some traits for Instruction.
+impl Hash for Instruction {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.pc.hash(state);
+        self.subroutine.hash(state);
+        self.state.p().hash(state);
+    }
+}
+impl PartialEq for Instruction {
+    fn eq(&self, other: &Self) -> bool {
+        self.pc == other.pc
+            && self.subroutine == other.subroutine
+            && self.state.p() == other.state.p()
+    }
+}
+impl PartialOrd for Instruction {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Instruction {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.pc.cmp(&other.pc)
+    }
+}
+
 impl Instruction {
     /// Instantiate an instruction.
     pub fn new(pc: usize, subroutine: usize, p: u8, opcode: u8, argument: usize) -> Self {
@@ -64,11 +76,6 @@ impl Instruction {
             opcode,
             _argument: argument,
         }
-    }
-
-    /// Return the InstructionID associated with the current instruction.
-    pub fn id(&self) -> InstructionID {
-        InstructionID::new(self.pc, self.subroutine, self.state.p())
     }
 
     /// Return the name of the instruction's operation.
@@ -204,14 +211,13 @@ impl Instruction {
     }
 
     /// Return whether this is a control instruction.
-    #[allow(clippy::needless_return)]
     pub fn is_control(&self) -> bool {
         let typ = self.typ();
-        return typ == InstructionType::Branch
+        typ == InstructionType::Branch
             || typ == InstructionType::Call
             || typ == InstructionType::Jump
             || typ == InstructionType::Return
-            || typ == InstructionType::Interrupt;
+            || typ == InstructionType::Interrupt
     }
 }
 

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::snes::cpu::CPU;
-use crate::snes::instruction::{Instruction, InstructionID};
+use crate::snes::instruction::Instruction;
 use crate::snes::rom::ROM;
 use crate::snes::subroutine::Subroutine;
 
@@ -23,7 +23,7 @@ pub struct Analysis {
     subroutines: RefCell<HashMap<usize, Subroutine>>,
 
     /// All analyzed instructions.
-    instructions: RefCell<HashMap<InstructionID, Instruction>>,
+    instructions: RefCell<HashMap<usize, HashSet<Instruction>>>,
 
     /// ROM's entry points.
     entry_points: HashSet<EntryPoint>,
@@ -53,8 +53,18 @@ impl Analysis {
     }
 
     /// Return true if the instruction has already been analyzed, false otherwise.
-    pub fn is_visited(&self, instruction_id: InstructionID) -> bool {
-        self.instructions.borrow().contains_key(&instruction_id)
+    pub fn is_visited(&self, instruction: Instruction) -> bool {
+        let instructions = self.instructions.borrow();
+        match instructions.get(&instruction.pc()) {
+            Some(instr_set) => instr_set.contains(&instruction),
+            None => false,
+        }
+    }
+
+    /// Return true if an instruction with the same address
+    /// has already been analyzed, false otherwise.
+    pub fn is_visited_pc(&self, pc: usize) -> bool {
+        self.instructions.borrow().contains_key(&pc)
     }
 
     /// Return true if the given subroutine is part of the analysis, false otherwise.
@@ -63,21 +73,16 @@ impl Analysis {
     }
 
     /// Add an instruction to the analysis.
-    pub fn add_instruction(
-        &self,
-        pc: usize,
-        subroutine: usize,
-        p: u8,
-        opcode: u8,
-        argument: usize,
-    ) -> Instruction {
+    pub fn add_instruction(&self, instruction: Instruction) -> Instruction {
         let mut instructions = self.instructions.borrow_mut();
-        let instruction = Instruction::new(pc, subroutine, p, opcode, argument);
-        instructions.insert(instruction.id(), instruction);
+        instructions
+            .entry(instruction.pc())
+            .or_insert_with(HashSet::new)
+            .insert(instruction);
 
         let mut subroutines = self.subroutines.borrow_mut();
-        let subroutine = subroutines.get_mut(&subroutine).unwrap();
-        subroutine.add_instruction(instruction.id());
+        let subroutine = subroutines.get_mut(&instruction.subroutine()).unwrap();
+        subroutine.add_instruction(instruction);
 
         instruction
     }
@@ -115,11 +120,8 @@ mod tests {
         analysis.add_subroutine(0x8000);
         assert!(analysis.is_subroutine(0x8000));
 
-        analysis.add_instruction(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
-        assert!(analysis.is_visited(InstructionID {
-            pc: 0x8000,
-            subroutine: 0x8000,
-            p: 0b0011_0000,
-        }));
+        let nop = Instruction::new(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
+        analysis.add_instruction(nop);
+        assert!(analysis.is_visited_pc(0x8000));
     }
 }

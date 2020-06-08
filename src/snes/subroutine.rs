@@ -1,10 +1,10 @@
 use std::collections::BTreeSet;
 
-use crate::snes::instruction::InstructionID;
+use crate::snes::instruction::Instruction;
 
 pub struct Subroutine {
     pc: usize,
-    instructions: BTreeSet<InstructionID>,
+    instructions: BTreeSet<Instruction>,
 }
 
 impl Subroutine {
@@ -15,7 +15,7 @@ impl Subroutine {
         }
     }
 
-    pub fn add_instruction(&mut self, instruction: InstructionID) {
+    pub fn add_instruction(&mut self, instruction: Instruction) {
         self.instructions.insert(instruction);
     }
 }
