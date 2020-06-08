@@ -180,6 +180,35 @@ mod tests {
     }
 
     #[test]
+    fn test_interrupt() {
+        let mut cpu = setup_cpu(0b0000_0000);
+        let brk = cpu.setup_instruction(0x00, 0x00);
+        cpu.execute(brk);
+        assert!(cpu.stop);
+    }
+
+    #[test]
+    fn test_jump() {
+        let mut cpu = setup_cpu(0b0000_0000);
+        let jmp = cpu.setup_instruction(0x4C, 0x9000);
+        cpu.execute(jmp);
+        assert_eq!(cpu.pc, 0x9000);
+    }
+
+    #[test]
+    fn test_ret() {
+        let mut cpu = setup_cpu(0b0000_0000);
+        let rts = cpu.setup_instruction(0x60, 0x00);
+        cpu.execute(rts);
+        assert!(cpu.stop);
+
+        let mut cpu = setup_cpu(0b0000_0000);
+        let rtl = cpu.setup_instruction(0x6B, 0x00);
+        cpu.execute(rtl);
+        assert!(cpu.stop);
+    }
+
+    #[test]
     fn test_sep_rep() {
         let mut cpu = setup_cpu(0b0000_0000);
 
