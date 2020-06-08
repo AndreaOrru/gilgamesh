@@ -202,7 +202,7 @@ impl<W: Write> App<W> {
 
     command!(
         /// Assert instruction.
-        fn assert_instruction(&mut self, pc: Integer) {
+        fn assert_instruction(&mut self, _pc: Integer) {
             // TODO: implement.
         }
     );
@@ -258,7 +258,7 @@ mod tests {
     fn test_help_nested_command() {
         let output = run_command("help assert instruction");
         assert_eq!(
-            "Usage: assert instruction PC\n\nAssert instruction.\n\n",
+            "Usage: assert instruction _PC\n\nAssert instruction.\n\n",
             output
         );
     }

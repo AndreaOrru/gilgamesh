@@ -218,7 +218,6 @@ impl Instruction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::snes::rom::ROM;
 
     #[test]
     fn test_instruction_lda() {
