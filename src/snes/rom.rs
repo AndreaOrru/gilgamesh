@@ -217,6 +217,19 @@ mod tests {
     }
 
     #[test]
+    fn test_is_ram() {
+        assert!(ROM::is_ram(0x000000));
+        assert!(ROM::is_ram(0x001FFF));
+
+        assert!(ROM::is_ram(0x7E0000));
+        assert!(ROM::is_ram(0x7FFFFF));
+
+        assert!(!ROM::is_ram(0x002000));
+        assert!(!ROM::is_ram(0x800000));
+        assert!(!ROM::is_ram(0xC00000));
+    }
+
+    #[test]
     fn test_translate() {
         let lorom = setup_lorom();
         assert_eq!(lorom.translate(0x008000), 0x000000);

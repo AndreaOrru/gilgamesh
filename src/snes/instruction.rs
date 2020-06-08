@@ -21,7 +21,7 @@ impl PartialOrd for InstructionID {
 }
 
 /// Categories of instructions.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum InstructionType {
     Branch,
     Call,
@@ -89,24 +89,44 @@ impl Instruction {
 
     /// Category of the instruction.
     pub fn typ(&self) -> InstructionType {
-        if self.is_return() {
-            InstructionType::Return
-        } else if self.is_interrupt() {
-            InstructionType::Interrupt
-        } else if self.is_jump() {
-            InstructionType::Jump
-        } else if self.is_call() {
-            InstructionType::Call
-        } else if self.is_branch() {
-            InstructionType::Branch
-        } else if self.is_sep_rep() {
-            InstructionType::SepRep
-        } else if self.is_pop() {
-            InstructionType::Pop
-        } else if self.is_push() {
-            InstructionType::Push
-        } else {
-            InstructionType::Other
+        match self.operation() {
+            // Call instructions.
+            Op::JSR | Op::JSL => InstructionType::Call,
+
+            // Jump instructions.
+            Op::JMP | Op::JML | Op::BRA | Op::BRL => InstructionType::Jump,
+
+            // Return instructions.
+            Op::RTS | Op::RTL | Op::RTI => InstructionType::Return,
+
+            // Interrupt instructions.
+            Op::BRK => InstructionType::Interrupt,
+
+            // SEP/REP instructions.
+            Op::SEP | Op::REP => InstructionType::SepRep,
+
+            // Pop instructions.
+            Op::PLA | Op::PLB | Op::PLD | Op::PLP | Op::PLX | Op::PLY => InstructionType::Pop,
+
+            // Push instructions.
+            Op::PEA
+            | Op::PEI
+            | Op::PER
+            | Op::PHA
+            | Op::PHB
+            | Op::PHD
+            | Op::PHK
+            | Op::PHP
+            | Op::PHX
+            | Op::PHY => InstructionType::Push,
+
+            // Branch instructions.
+            Op::BCC | Op::BCS | Op::BEQ | Op::BMI | Op::BNE | Op::BPL | Op::BVC | Op::BVS => {
+                InstructionType::Branch
+            }
+
+            // Other instructions.
+            _ => InstructionType::Other,
         }
     }
 
@@ -183,86 +203,15 @@ impl Instruction {
         }
     }
 
-    /// Return whether the instruction is a branch.
-    #[allow(clippy::needless_return)]
-    pub fn is_branch(&self) -> bool {
-        let op = self.operation();
-        return (op == Op::BCC)
-            || (op == Op::BCS)
-            || (op == Op::BEQ)
-            || (op == Op::BMI)
-            || (op == Op::BNE)
-            || (op == Op::BPL)
-            || (op == Op::BVC)
-            || (op == Op::BVS);
-    }
-
-    /// Return whether the instruction is a call.
-    pub fn is_call(&self) -> bool {
-        let op = self.operation();
-        (op == Op::JSR) || (op == Op::JSL)
-    }
-
-    /// Return whether the instruction is a jump.
-    pub fn is_jump(&self) -> bool {
-        let op = self.operation();
-        (op == Op::BRA) || (op == Op::BRL) || (op == Op::JMP) || (op == Op::JML)
-    }
-
-    /// Return whether the instruction is a return.
-    pub fn is_return(&self) -> bool {
-        let op = self.operation();
-        (op == Op::RTS) || (op == Op::RTL) || (op == Op::RTI)
-    }
-
-    /// Return whether the instruction handles interrupts.
-    pub fn is_interrupt(&self) -> bool {
-        let op = self.operation();
-        (op == Op::BRK) || (op == Op::RTI)
-    }
-
     /// Return whether this is a control instruction.
     #[allow(clippy::needless_return)]
     pub fn is_control(&self) -> bool {
-        return self.is_branch()
-            || self.is_call()
-            || self.is_jump()
-            || self.is_return()
-            || self.is_interrupt();
-    }
-
-    /// Return whether the instruction is a SEP/REP.
-    pub fn is_sep_rep(&self) -> bool {
-        let op = self.operation();
-        (op == Op::SEP) || (op == Op::REP)
-    }
-
-    /// Return whether the instruction is a pop.
-    #[allow(clippy::needless_return)]
-    pub fn is_pop(&self) -> bool {
-        let op = self.operation();
-        return (op == Op::PLA)
-            || (op == Op::PLB)
-            || (op == Op::PLD)
-            || (op == Op::PLP)
-            || (op == Op::PLX)
-            || (op == Op::PLY);
-    }
-
-    /// Return whether the instruction is a push.
-    #[allow(clippy::needless_return)]
-    pub fn is_push(&self) -> bool {
-        let op = self.operation();
-        return (op == Op::PEA)
-            || (op == Op::PEI)
-            || (op == Op::PER)
-            || (op == Op::PHA)
-            || (op == Op::PHB)
-            || (op == Op::PHD)
-            || (op == Op::PHK)
-            || (op == Op::PHP)
-            || (op == Op::PHX)
-            || (op == Op::PHY);
+        let typ = self.typ();
+        return typ == InstructionType::Branch
+            || typ == InstructionType::Call
+            || typ == InstructionType::Jump
+            || typ == InstructionType::Return
+            || typ == InstructionType::Interrupt;
     }
 }
 
@@ -274,7 +223,6 @@ mod tests {
     #[test]
     fn test_instruction_lda() {
         let instruction = Instruction::new(0x8000, 0x8000, 0b0000_0000, 0xA9, 0x1234);
-
         assert_eq!(instruction.name(), "lda");
         assert_eq!(instruction.operation(), Op::LDA);
         assert_eq!(instruction.address_mode(), AddressMode::ImmediateM);
@@ -282,6 +230,7 @@ mod tests {
         assert_eq!(instruction.size(), 3);
         assert_eq!(instruction.argument().unwrap(), 0x1234);
         assert_eq!(instruction.absolute_argument().unwrap(), 0x1234);
+        assert_eq!(instruction.typ(), InstructionType::Other);
         assert!(!instruction.is_control());
     }
 
@@ -296,7 +245,7 @@ mod tests {
         assert_eq!(instruction.size(), 3);
         assert_eq!(instruction.argument().unwrap(), 0xFFFD);
         assert_eq!(instruction.absolute_argument().unwrap(), 0x8000);
+        assert_eq!(instruction.typ(), InstructionType::Jump);
         assert!(instruction.is_control());
-        assert!(instruction.is_jump());
     }
 }

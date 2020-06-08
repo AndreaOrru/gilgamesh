@@ -40,7 +40,7 @@ impl Analysis {
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(HashMap::new()),
             entry_points: HashSet::new(),
-            references: HashMap::new(),
+            references: RefCell::new(HashMap::new()),
         })
     }
 
@@ -78,7 +78,7 @@ impl Analysis {
     }
 
     /// Add a subroutine to the analysis.
-    pub fn add_subroutine(&mut self, pc: usize) {
+    pub fn add_subroutine(&self, pc: usize) {
         // Do not log subroutines in RAM.
         if !ROM::is_ram(pc) {
             // Create and register subroutine (unless it already exists).
@@ -88,7 +88,7 @@ impl Analysis {
     }
 
     /// Add a reference from an instruction to another.
-    pub fn add_reference(&mut self, source: usize, target: usize) {
+    pub fn add_reference(&self, source: usize, target: usize) {
         let mut references = self.references.borrow_mut();
         references.insert(source, target);
     }
