@@ -30,7 +30,7 @@ impl CPU {
     pub fn new(analysis: &Rc<Analysis>, pc: usize, subroutine: usize, p: u8) -> Self {
         Self {
             analysis: analysis.clone(),
-            stop: true,
+            stop: false,
             pc,
             subroutine,
             state: StateRegister::new(p),
@@ -68,11 +68,11 @@ impl CPU {
         self.pc += instruction.size();
 
         match instruction.typ() {
-            InstructionType::Return => self.ret(instruction),
+            InstructionType::Branch => self.branch(instruction),
+            InstructionType::Call => self.call(instruction),
             InstructionType::Interrupt => self.interrupt(instruction),
             InstructionType::Jump => self.jump(instruction),
-            InstructionType::Call => self.call(instruction),
-            InstructionType::Branch => self.branch(instruction),
+            InstructionType::Return => self.ret(instruction),
             InstructionType::SepRep => self.sep_rep(instruction),
             // InstructionType::Pop => self.pop(instruction),
             // InstructionType::Push => self.push(instruction),
@@ -177,6 +177,28 @@ mod tests {
     fn setup_cpu(p: u8) -> CPU {
         let analysis = Analysis::new(ROM::new());
         CPU::new(&analysis, 0x8000, 0x8000, p)
+    }
+
+    #[test]
+    fn test_branch() {
+        let mut cpu = setup_cpu(0b0000_0000);
+        cpu.stop = true;
+
+        let bcc = cpu.setup_instruction(0x90, 0x10);
+        cpu.execute(bcc);
+        assert_eq!(cpu.pc, 0x8012);
+    }
+
+    #[test]
+    fn test_call() {
+        let mut cpu = setup_cpu(0b0000_0000);
+        cpu.stop = true;
+
+        let jsr = cpu.setup_instruction(0x20, 0x9000);
+        cpu.execute(jsr);
+
+        assert_eq!(cpu.pc, 0x8003);
+        assert!(cpu.analysis.has_subroutine(0x9000));
     }
 
     #[test]

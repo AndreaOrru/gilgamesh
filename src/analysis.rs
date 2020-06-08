@@ -19,11 +19,11 @@ pub struct Analysis {
     /// Reference to the ROM being analyzed.
     pub rom: ROM,
 
-    /// All analyzed instructions.
-    instructions: RefCell<HashMap<InstructionID, Instruction>>,
-
     /// All analyzed subroutines.
     subroutines: RefCell<HashMap<usize, Subroutine>>,
+
+    /// All analyzed instructions.
+    instructions: RefCell<HashMap<InstructionID, Instruction>>,
 
     /// ROM's entry points.
     entry_points: HashSet<EntryPoint>,
@@ -92,5 +92,10 @@ impl Analysis {
     pub fn add_reference(&self, source: usize, target: usize) {
         let mut references = self.references.borrow_mut();
         references.insert(source, target);
+    }
+
+    /// Return true if the given subroutine is part of the analysis, false otherwise.
+    pub fn has_subroutine(&self, pc: usize) -> bool {
+        self.subroutines.borrow().contains_key(&pc)
     }
 }
