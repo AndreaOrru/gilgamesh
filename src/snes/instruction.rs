@@ -7,7 +7,7 @@ use crate::snes::state::StateRegister;
 
 /// Unique identifier of an instruction executed
 /// in a specific state and subroutine.
-#[derive(new, Copy, Clone, Eq, PartialEq, Hash, Ord)]
+#[derive(new, Copy, Clone, Debug, Eq, PartialEq, Hash, Ord)]
 pub struct InstructionID {
     pub pc: usize,
     pub subroutine: usize,

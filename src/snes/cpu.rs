@@ -163,4 +163,49 @@ impl CPU {
             p: self.state.p(),
         }
     }
+
+    #[cfg(test)]
+    fn setup_instruction(&self, opcode: u8, argument: usize) -> Instruction {
+        Instruction::new(self.pc, self.subroutine, self.state.p(), opcode, argument)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_cpu(p: u8) -> CPU {
+        let analysis = Analysis::new(ROM::new());
+        CPU::new(&analysis, 0x8000, 0x8000, p)
+    }
+
+    #[test]
+    fn test_sep_rep() {
+        let mut cpu = setup_cpu(0b0000_0000);
+
+        let sep = cpu.setup_instruction(0xE2, 0x30);
+        cpu.execute(sep);
+        assert_eq!(cpu.pc, sep.pc() + 2);
+        assert_eq!(cpu.state.p(), 0b0011_0000);
+
+        let rep = cpu.setup_instruction(0xC2, 0x30);
+        cpu.execute(rep);
+        assert_eq!(cpu.pc, rep.pc() + 2);
+        assert_eq!(cpu.state.p(), 0b0000_0000);
+    }
+
+    #[test]
+    fn test_instruction_id() {
+        let analysis = Analysis::new(ROM::new());
+        let cpu = CPU::new(&analysis, 0x8000, 0x8000, 0b0011_0000);
+
+        assert_eq!(
+            cpu.instruction_id(),
+            InstructionID {
+                pc: 0x8000,
+                subroutine: 0x8000,
+                p: 0b0011_0000
+            }
+        );
+    }
 }
