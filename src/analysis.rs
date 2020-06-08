@@ -80,11 +80,12 @@ impl Analysis {
     /// Add a subroutine to the analysis.
     pub fn add_subroutine(&self, pc: usize) {
         // Do not log subroutines in RAM.
-        if !ROM::is_ram(pc) {
-            // Create and register subroutine (unless it already exists).
-            let mut subroutines = self.subroutines.borrow_mut();
-            subroutines.entry(pc).or_insert(Subroutine::new(pc));
+        if ROM::is_ram(pc) {
+            return;
         }
+        // Create and register subroutine (unless it already exists).
+        let mut subroutines = self.subroutines.borrow_mut();
+        subroutines.entry(pc).or_insert_with(|| Subroutine::new(pc));
     }
 
     /// Add a reference from an instruction to another.
