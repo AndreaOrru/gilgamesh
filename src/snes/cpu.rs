@@ -198,7 +198,7 @@ mod tests {
         cpu.execute(jsr);
 
         assert_eq!(cpu.pc, 0x8003);
-        assert!(cpu.analysis.has_subroutine(0x9000));
+        assert!(cpu.analysis.is_subroutine(0x9000));
     }
 
     #[test]

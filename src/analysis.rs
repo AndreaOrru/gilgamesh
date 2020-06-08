@@ -57,6 +57,11 @@ impl Analysis {
         self.instructions.borrow().contains_key(&instruction_id)
     }
 
+    /// Return true if the given subroutine is part of the analysis, false otherwise.
+    pub fn is_subroutine(&self, pc: usize) -> bool {
+        self.subroutines.borrow().contains_key(&pc)
+    }
+
     /// Add an instruction to the analysis.
     pub fn add_instruction(
         &self,
@@ -93,9 +98,28 @@ impl Analysis {
         let mut references = self.references.borrow_mut();
         references.insert(source, target);
     }
+}
 
-    /// Return true if the given subroutine is part of the analysis, false otherwise.
-    pub fn has_subroutine(&self, pc: usize) -> bool {
-        self.subroutines.borrow().contains_key(&pc)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_analysis() -> Rc<Analysis> {
+        Analysis::new(ROM::new())
+    }
+
+    #[test]
+    fn test_add_instruction_and_subroutine() {
+        let analysis = setup_analysis();
+
+        analysis.add_subroutine(0x8000);
+        assert!(analysis.is_subroutine(0x8000));
+
+        analysis.add_instruction(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
+        assert!(analysis.is_visited(InstructionID {
+            pc: 0x8000,
+            subroutine: 0x8000,
+            p: 0b0011_0000,
+        }));
     }
 }
