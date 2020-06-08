@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use crate::snes::instruction::Instruction;
 
+#[derive(Debug)]
 pub struct Subroutine {
     pc: usize,
     instructions: BTreeSet<Instruction>,

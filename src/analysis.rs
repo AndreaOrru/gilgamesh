@@ -8,10 +8,11 @@ use crate::snes::rom::ROM;
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
+#[derive(Eq, Hash, PartialEq)]
 struct EntryPoint {
+    name: String,
     pc: usize,
     p: u8,
-    name: String,
 }
 
 /// Structure holding the state of the analysis.
@@ -35,18 +36,33 @@ pub struct Analysis {
 impl Analysis {
     /// Instantiate a new Analysis object.
     pub fn new(rom: ROM) -> Rc<Self> {
+        let entry_points = Self::default_entry_points(&rom);
         Rc::new(Self {
             rom,
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(HashMap::new()),
-            entry_points: HashSet::new(),
+            entry_points,
             references: RefCell::new(HashMap::new()),
         })
     }
 
+    /// Return the default entry points for the ROM under analysis.
+    #[cfg(not(test))]
+    fn default_entry_points(rom: &ROM) -> HashSet<EntryPoint> {
+        maplit::hashset! {
+            EntryPoint { name: "reset".into(), pc: rom.reset_vector(), p: 0b0011_0000},
+            EntryPoint { name: "nmi".into(),   pc: rom.nmi_vector(),   p: 0b0011_0000},
+        }
+    }
+    #[cfg(test)]
+    fn default_entry_points(_rom: &ROM) -> HashSet<EntryPoint> {
+        HashSet::new()
+    }
+
     /// Analyze the ROM.
     pub fn run(self: &Rc<Self>) {
-        for EntryPoint { pc, p, name: _ } in self.entry_points.iter() {
+        for EntryPoint { name: _, pc, p } in self.entry_points.iter() {
+            self.add_subroutine(*pc);
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
         }

@@ -4,7 +4,7 @@ const M_BIT: usize = 5;
 const X_BIT: usize = 4;
 
 /// SNES state register (P).
-#[derive(Copy, Clone, CopyGetters, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, CopyGetters, Debug, Eq, PartialEq, Hash)]
 pub struct StateRegister {
     #[getset(get_copy = "pub")]
     p: u8,

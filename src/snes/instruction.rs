@@ -20,7 +20,7 @@ pub enum InstructionType {
 }
 
 /// Structure representing an instruction.
-#[derive(Copy, Clone, CopyGetters, Eq)]
+#[derive(Copy, Clone, CopyGetters, Debug, Eq)]
 pub struct Instruction {
     /// The address of the instruction.
     #[getset(get_copy = "pub")]
