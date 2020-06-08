@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs::remove_file;
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use rexpect::session::{spawn_command, PtyReplSession};
@@ -59,8 +59,8 @@ pub fn session(rom: &ROM) -> PtyReplSession {
 }
 
 lazy_static! {
-    /// A map of (asm filename) -> (corresponding assembled ROM).
-    pub static ref ASSEMBLED_ROMS: Mutex<HashMap<&'static str, Arc<ROM>>> =
+    /// A map of (asm filename) -> (corresponding assembled ROM file).
+    pub static ref ASSEMBLED_ROMS: Mutex<HashMap<&'static str, String>> =
         Mutex::new(HashMap::new());
 }
 
@@ -68,14 +68,13 @@ lazy_static! {
 #[macro_export]
 macro_rules! test_rom {
     ($setup_fn:ident, $filename:literal) => {
-        fn $setup_fn() -> std::sync::Arc<gilgamesh::snes::rom::ROM> {
+        fn $setup_fn() -> gilgamesh::snes::rom::ROM {
             let mut roms = common::ASSEMBLED_ROMS.lock().unwrap();
-            (*roms.entry($filename).or_insert_with(|| {
-                let rom_path = common::assemble($filename);
-                let rom = gilgamesh::snes::rom::ROM::from(rom_path).unwrap();
-                std::sync::Arc::new(rom)
-            }))
-            .clone()
+            let rom_path = roms
+                .entry($filename)
+                .or_insert_with(|| common::assemble($filename))
+                .to_string();
+            gilgamesh::snes::rom::ROM::from(rom_path).unwrap()
         }
     };
 }
