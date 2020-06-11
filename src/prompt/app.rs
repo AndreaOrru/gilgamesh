@@ -9,8 +9,8 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 use crate::analysis::Analysis;
-use crate::command::Command;
-use crate::error::Error;
+use crate::prompt::command::Command;
+use crate::prompt::error::Error;
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
 use crate::{command, command_ref, container};

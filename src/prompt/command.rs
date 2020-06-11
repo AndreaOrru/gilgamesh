@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use lazy_static::lazy_static;
 
-use crate::error::Error;
+use crate::prompt::error::Error;
 
 type CommandFunction<App> = fn(&mut App, &[&str]) -> Result<(), Error>;
 type HelpFunction = fn() -> &'static String;
@@ -60,9 +60,11 @@ macro_rules! argument {
     };
 
     ($args:ident, $i:ident, $arg:ident, String) => {
-        $args.get($i).ok_or($crate::error::Error::MissingArg(
-            stringify!($arg).to_uppercase(),
-        ))?
+        $args
+            .get($i)
+            .ok_or($crate::prompt::error::Error::MissingArg(
+                stringify!($arg).to_uppercase(),
+            ))?
     };
 
     ($args:ident, $i:ident, $arg:ident, Integer) => {
@@ -77,7 +79,7 @@ macro_rules! command {
         #[doc = $help:expr]
         fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)*) $body:expr
     ) => {
-        fn $name(&mut $self, _args: &[&str]) -> Result<(), $crate::error::Error> {
+        fn $name(&mut $self, _args: &[&str]) -> Result<(), $crate::prompt::error::Error> {
             let mut _i = 0;
             $(
                 let $arg = $crate::argument!(_args, _i, $arg, $type);

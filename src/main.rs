@@ -4,12 +4,11 @@ use clap::clap_app;
 use std::io;
 
 mod analysis;
-mod app;
-mod command;
-mod error;
+mod prompt;
 mod snes;
+mod utils;
 
-use app::App;
+use prompt::app::App;
 
 /// Get the ball rolling.
 fn main() -> io::Result<()> {

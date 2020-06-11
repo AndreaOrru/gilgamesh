@@ -16,7 +16,6 @@ pub enum ROMType {
 mod header {
     /// ROM's title max length.
     pub const TITLE_LEN: usize = 21;
-
     /// ROM's title.
     pub const TITLE: usize = 0xFFC0;
     /// Markup byte.
@@ -174,47 +173,10 @@ impl ROM {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gilgamesh::test_rom;
 
-    fn setup_lorom() -> ROM {
-        let mut rom = ROM::new();
-        let title = header::TITLE - 0x8000;
-        rom.data.resize(0x10000, 0);
-
-        rom.data[title + 0] = 0x54; // T
-        rom.data[title + 1] = 0x45; // E
-        rom.data[title + 2] = 0x53; // S
-        rom.data[title + 3] = 0x54; // T
-
-        rom.rom_type = rom.discover_type();
-        rom
-    }
-
-    fn setup_hirom() -> ROM {
-        let mut rom = ROM::new();
-        rom.data.resize(0x10000, 0);
-
-        rom.data[header::TITLE + 0] = 0x54; // T
-        rom.data[header::TITLE + 1] = 0x45; // E
-        rom.data[header::TITLE + 2] = 0x53; // S
-        rom.data[header::TITLE + 3] = 0x54; // T
-
-        rom.rom_type = rom.discover_type();
-        rom
-    }
-
-    #[test]
-    fn test_actual_size() {
-        let (lorom, hirom) = (setup_lorom(), setup_hirom());
-        assert_eq!(lorom.actual_size(), 0x10000);
-        assert_eq!(hirom.actual_size(), 0x10000);
-    }
-
-    #[test]
-    fn test_discover_type() {
-        let (lorom, hirom) = (setup_lorom(), setup_hirom());
-        assert_eq!(lorom.rom_type, ROMType::LoROM);
-        assert_eq!(hirom.rom_type, ROMType::HiROM);
-    }
+    test_rom!(setup_lorom, "lorom.asm");
+    test_rom!(setup_hirom, "hirom.asm");
 
     #[test]
     fn test_is_ram() {
@@ -227,6 +189,35 @@ mod tests {
         assert!(!ROM::is_ram(0x002000));
         assert!(!ROM::is_ram(0x800000));
         assert!(!ROM::is_ram(0xC00000));
+    }
+
+    #[test]
+    fn test_discover_type() {
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
+        assert_eq!(lorom.rom_type, ROMType::LoROM);
+        assert_eq!(hirom.rom_type, ROMType::HiROM);
+    }
+
+    #[test]
+    fn test_actual_size() {
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
+        assert_eq!(lorom.actual_size(), 0x8000);
+        assert_eq!(hirom.actual_size(), 0x10000);
+    }
+
+    #[test]
+    fn test_size() {
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
+        assert_eq!(lorom.size(), 2048);
+        assert_eq!(hirom.size(), 2048);
+    }
+
+    #[test]
+    fn test_title() {
+        let roms = [setup_lorom(), setup_hirom()];
+        for rom in roms.iter() {
+            assert_eq!(rom.title(), "TEST");
+        }
     }
 
     #[test]
@@ -271,10 +262,16 @@ mod tests {
     }
 
     #[test]
-    fn test_title() {
-        let roms = [setup_lorom(), setup_hirom()];
-        for rom in roms.iter() {
-            assert_eq!(rom.title(), "TEST");
-        }
+    fn test_reset_vector() {
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
+        assert_eq!(lorom.reset_vector(), 0x8000);
+        assert_eq!(hirom.reset_vector(), 0x8000);
+    }
+
+    #[test]
+    fn test_nmi_vector() {
+        let (lorom, hirom) = (setup_lorom(), setup_hirom());
+        assert_eq!(lorom.nmi_vector(), 0x0000);
+        assert_eq!(hirom.nmi_vector(), 0x0000);
     }
 }
