@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
-use crate::snes::rom::ROM;
+use crate::snes::rom::{ROMType, ROM};
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
@@ -47,16 +47,15 @@ impl Analysis {
     }
 
     /// Return the default entry points for the ROM under analysis.
-    #[cfg(not(test))]
     fn default_entry_points(rom: &ROM) -> HashSet<EntryPoint> {
-        maplit::hashset! {
-            EntryPoint { name: "reset".into(), pc: rom.reset_vector(), p: 0b0011_0000},
-            EntryPoint { name: "nmi".into(),   pc: rom.nmi_vector(),   p: 0b0011_0000},
+        if rom.rom_type() == ROMType::Unknown {
+            HashSet::new()
+        } else {
+            maplit::hashset! {
+                EntryPoint { name: "reset".into(), pc: rom.reset_vector(), p: 0b0011_0000},
+                EntryPoint { name: "nmi".into(),   pc: rom.nmi_vector(),   p: 0b0011_0000},
+            }
         }
-    }
-    #[cfg(test)]
-    fn default_entry_points(_rom: &ROM) -> HashSet<EntryPoint> {
-        HashSet::new()
     }
 
     /// Analyze the ROM.
@@ -124,14 +123,14 @@ impl Analysis {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gilgamesh::snes::opcodes::Op;
+    use gilgamesh::test_rom;
 
-    fn setup_analysis() -> Rc<Analysis> {
-        Analysis::new(ROM::new())
-    }
+    test_rom!(setup_rom, "infinite_loop.asm");
 
     #[test]
-    fn test_add_instruction_and_subroutine() {
-        let analysis = setup_analysis();
+    fn test_instruction_subroutine_references() {
+        let analysis = Analysis::new(ROM::new());
 
         analysis.add_subroutine(0x8000);
         assert!(analysis.is_subroutine(0x8000));
@@ -139,5 +138,29 @@ mod tests {
         let nop = Instruction::new(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
         analysis.add_instruction(nop);
         assert!(analysis.is_visited_pc(0x8000));
+    }
+
+    #[test]
+    fn test_infinite_loop_analysis() {
+        let analysis = Analysis::new(setup_rom());
+        analysis.run();
+
+        let subroutines = analysis.subroutines.borrow();
+        assert_eq!(subroutines.len(), 1);
+        assert_eq!(subroutines[&0x8000].pc(), 0x8000);
+        assert_eq!(subroutines[&0x8000].instructions().len(), 1);
+
+        let instructions = analysis.instructions.borrow();
+        assert_eq!(instructions.len(), 1);
+        assert_eq!(instructions[&0x8000].len(), 1);
+
+        let jmp = instructions[&0x8000].iter().next().unwrap();
+        assert_eq!(jmp.pc(), 0x8000);
+        assert_eq!(jmp.subroutine(), 0x8000);
+        assert_eq!(jmp.operation(), Op::JMP);
+
+        let references = analysis.references.borrow();
+        assert_eq!(references.len(), 1);
+        assert_eq!(references[&0x8000], 0x8000);
     }
 }

@@ -1,10 +1,15 @@
 use std::collections::BTreeSet;
 
+use getset::{CopyGetters, Getters};
+
 use crate::snes::instruction::Instruction;
 
-#[derive(Debug)]
+#[derive(Debug, CopyGetters, Getters)]
 pub struct Subroutine {
+    #[getset(get_copy = "pub")]
     pc: usize,
+
+    #[getset(get = "pub")]
     instructions: BTreeSet<Instruction>,
 }
 
