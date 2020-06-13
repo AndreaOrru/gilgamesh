@@ -5,7 +5,7 @@ use crate::bihashmap;
 
 // SNES hardware registers' names.
 lazy_static! {
-    static ref HARDWARE_REGISTERS: BiHashMap<&'static str, usize> = bihashmap! {
+    pub static ref HARDWARE_REGISTERS: BiHashMap<&'static str, usize> = bihashmap! {
         "INIDISP" => 0x2100,
         "OBSEL" => 0x2101,
         "OAMADDL" => 0x2102,

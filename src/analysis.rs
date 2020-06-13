@@ -149,10 +149,12 @@ impl Analysis {
     }
 
     /// Return a subroutine's label.
-    pub fn label(&self, pc: usize) -> String {
+    pub fn label(&self, pc: usize) -> Option<String> {
         let labels = self.labels.borrow();
-        let label = labels.get_by_right(&pc).unwrap();
-        label.to_owned()
+        match labels.get_by_right(&pc) {
+            Some(label) => Some(label.clone()),
+            None => None,
+        }
     }
 
     /// Return the subroutine associated with a label, if any.

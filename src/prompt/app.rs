@@ -126,7 +126,7 @@ impl<W: Write> App<W> {
 
     fn prompt(&self) -> String {
         let prompt = match self.current_subroutine {
-            Some(pc) => format!("[{}]> ", self.analysis.label(pc)).yellow(),
+            Some(pc) => format!("[{}]> ", self.analysis.label(pc).unwrap()).yellow(),
             None => "> ".yellow(),
         };
         prompt.to_string()
@@ -221,7 +221,11 @@ impl<W: Write> App<W> {
             let sub = &subroutines[&self.current_subroutine.unwrap()];
 
             for instruction in sub.instructions().iter() {
-                outln!(self.out, "{}", instruction);
+                outln!(
+                    self.out,
+                    "{}",
+                    instruction.disassembly(self.analysis.clone())
+                );
             }
         }
     );

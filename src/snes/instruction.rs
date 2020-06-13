@@ -2,7 +2,10 @@ use getset::CopyGetters;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
+use crate::analysis::Analysis;
+use crate::snes::hardware_registers::HARDWARE_REGISTERS;
 use crate::snes::opcodes::{AddressMode, Op, ARGUMENT_SIZES, OPCODES};
 use crate::snes::state::StateRegister;
 
@@ -158,6 +161,14 @@ impl Instruction {
         }
     }
 
+    pub fn disassembly(&self, analysis: Rc<Analysis>) -> String {
+        let arg = match self.argument_alias(analysis) {
+            Some(arg) => arg,
+            None => self.argument_string(),
+        };
+        format!("{} {}", self.name(), arg)
+    }
+
     /// Return the instruction's argument, if any.
     pub fn argument(&self) -> Option<usize> {
         match self.argument_size() {
@@ -279,12 +290,20 @@ impl Instruction {
             }
         }
     }
-}
 
-/// Implement the Display trait to print an instruction's disassembly.
-impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.name(), self.argument_string())
+    fn argument_alias(&self, analysis: Rc<Analysis>) -> Option<String> {
+        match self.absolute_argument() {
+            Some(arg) => {
+                if let Some(hw_register) = HARDWARE_REGISTERS.get_by_right(&arg) {
+                    Some(hw_register.to_string())
+                } else if self.is_control() {
+                    analysis.label(arg)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
     }
 }
 
