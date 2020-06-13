@@ -1,5 +1,7 @@
+use std::fs::create_dir_all;
 use std::io;
 use std::io::{stdout, Stdout, Write};
+use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -14,6 +16,8 @@ use crate::prompt::error::Error;
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
 use crate::{command, command_ref, container};
+
+const HISTORY_FILE: &str = "~/.local/share/gilgamesh/history.log";
 
 /// Wrapper around `println!` using the given output stream.
 macro_rules! outln {
@@ -92,6 +96,11 @@ impl<W: Write> App<W> {
     /// Start the prompt loop.
     pub fn run(&mut self) {
         let mut rl = Editor::<()>::new();
+
+        // Load history file if it exists.
+        let history = shellexpand::tilde(HISTORY_FILE).into_owned();
+        rl.load_history(&history).ok();
+
         while !self.exit {
             let prompt = self.prompt();
             let readline = rl.readline(prompt.as_str());
@@ -109,6 +118,10 @@ impl<W: Write> App<W> {
                 _ => unreachable!(),
             }
         }
+
+        // Save history file, creating parent folders if necessary.
+        create_dir_all(Path::new(&history).parent().unwrap()).ok();
+        rl.save_history(&history).unwrap();
     }
 
     fn prompt(&self) -> String {
