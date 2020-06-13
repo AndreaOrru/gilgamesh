@@ -226,10 +226,11 @@ impl<W: Write> App<W> {
     command!(
         /// List subroutines.
         fn list_subroutines(&mut self) {
-            let labels = self.analysis.labels().borrow();
-            for (label, _) in labels.iter() {
-                outln!(self.out, "{}", label);
+            let subroutines = self.analysis.subroutines().borrow();
+            for (_, sub) in subroutines.iter() {
+                outln!(self.out, "{}", sub.label().green());
             }
+            outln!(self.out);
         }
     );
 

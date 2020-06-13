@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
 use bimap::BiHashMap;
@@ -27,7 +27,7 @@ pub struct Analysis {
 
     /// All analyzed subroutines.
     #[getset(get = "pub")]
-    subroutines: RefCell<HashMap<usize, Subroutine>>,
+    subroutines: RefCell<BTreeMap<usize, Subroutine>>,
 
     /// All analyzed instructions.
     instructions: RefCell<HashMap<usize, HashSet<Instruction>>>,
@@ -50,7 +50,7 @@ impl Analysis {
         Rc::new(Self {
             rom,
             instructions: RefCell::new(HashMap::new()),
-            subroutines: RefCell::new(HashMap::new()),
+            subroutines: RefCell::new(BTreeMap::new()),
             entry_points,
             references: RefCell::new(HashMap::new()),
             labels: RefCell::new(BiHashMap::new()),
