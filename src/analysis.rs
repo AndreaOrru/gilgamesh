@@ -14,7 +14,7 @@ use crate::snes::subroutine::Subroutine;
 /// ROM's entry point.
 #[derive(Eq, Hash, PartialEq)]
 struct EntryPoint {
-    name: String,
+    label: String,
     pc: usize,
     p: u8,
 }
@@ -63,16 +63,16 @@ impl Analysis {
             HashSet::new()
         } else {
             maplit::hashset! {
-                EntryPoint { name: "reset".into(), pc: rom.reset_vector(), p: 0b0011_0000},
-                EntryPoint { name: "nmi".into(),   pc: rom.nmi_vector(),   p: 0b0011_0000},
+                EntryPoint { label: "reset".into(), pc: rom.reset_vector(), p: 0b0011_0000},
+                EntryPoint { label: "nmi".into(),   pc: rom.nmi_vector(),   p: 0b0011_0000},
             }
         }
     }
 
     /// Analyze the ROM.
     pub fn run(self: &Rc<Self>) {
-        for EntryPoint { name: _, pc, p } in self.entry_points.iter() {
-            self.add_subroutine(*pc);
+        for EntryPoint { label, pc, p } in self.entry_points.iter() {
+            self.add_subroutine(*pc, Some(label.clone()));
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
         }
@@ -114,7 +114,7 @@ impl Analysis {
     }
 
     /// Add a subroutine to the analysis.
-    pub fn add_subroutine(&self, pc: usize) {
+    pub fn add_subroutine(&self, pc: usize, label: Option<String>) {
         // Do not log subroutines in RAM.
         if ROM::is_ram(pc) {
             return;
@@ -122,7 +122,10 @@ impl Analysis {
 
         // Register subroutine's label.
         let mut labels = self.labels.borrow_mut();
-        let label = format!("sub_{:06X}", pc);
+        let label = match label {
+            Some(s) => s,
+            None => format!("sub_{:06X}", pc),
+        };
         labels.insert(label.clone(), pc);
 
         // Create and register subroutine (unless it already exists).
@@ -145,20 +148,20 @@ impl Analysis {
         references.insert(source, target);
     }
 
+    /// Return a subroutine's label.
+    pub fn label(&self, pc: usize) -> String {
+        let labels = self.labels.borrow();
+        let label = labels.get_by_right(&pc).unwrap();
+        label.to_owned()
+    }
+
     /// Return the subroutine associated with a label, if any.
-    pub fn subroutine_by_label(&self, label: String) -> Option<usize> {
+    pub fn label_value(&self, label: String) -> Option<usize> {
         let labels = self.labels.borrow();
         match labels.get_by_left(&label) {
             Some(&pc) => Some(pc),
             None => None,
         }
-    }
-
-    /// Return a subroutine's label.
-    pub fn subroutine_label(&self, pc: usize) -> String {
-        let labels = self.labels.borrow();
-        let label = labels.get_by_right(&pc).unwrap();
-        label.to_owned()
     }
 }
 
@@ -175,7 +178,7 @@ mod tests {
     fn test_instruction_subroutine_references() {
         let analysis = Analysis::new(ROM::new());
 
-        analysis.add_subroutine(0x8000);
+        analysis.add_subroutine(0x8000, None);
         assert!(analysis.is_subroutine(0x8000));
 
         let nop = Instruction::new(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
@@ -220,10 +223,12 @@ mod tests {
         let subroutines = analysis.subroutines.borrow();
         assert_eq!(subroutines.len(), 2);
 
-        // Check the subroutines have the right number of instructions.
+        // Check the subroutines have the right name and number of instructions.
         let reset_sub = &subroutines[&0x8000];
-        let state_change_sub = &subroutines[&0x800E];
+        assert_eq!(reset_sub.label(), "reset");
         assert_eq!(reset_sub.instructions().len(), 5);
+        let state_change_sub = &subroutines[&0x800E];
+        assert_eq!(state_change_sub.label(), "sub_00800E");
         assert_eq!(state_change_sub.instructions().len(), 2);
 
         // Check the `state_change` subroutine sets M/X to 0.

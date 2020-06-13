@@ -113,7 +113,7 @@ impl<W: Write> App<W> {
 
     fn prompt(&self) -> String {
         let prompt = match self.current_subroutine {
-            Some(pc) => format!("[{}]> ", self.analysis.subroutine_label(pc)).yellow(),
+            Some(pc) => format!("[{}]> ", self.analysis.label(pc)).yellow(),
             None => "> ".yellow(),
         };
         prompt.to_string()
@@ -253,7 +253,7 @@ impl<W: Write> App<W> {
     command!(
         /// Select which subroutine to inspect.
         fn subroutine(&mut self, label: String) {
-            let sub = self.analysis.subroutine_by_label(label);
+            let sub = self.analysis.label_value(label);
             if let Some(pc) = sub {
                 self.current_subroutine = Some(pc);
             }

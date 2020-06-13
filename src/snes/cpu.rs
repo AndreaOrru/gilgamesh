@@ -113,7 +113,7 @@ impl CPU {
 
                 // Emulate the called subroutine.
                 self.analysis.add_reference(instruction.pc(), target);
-                self.analysis.add_subroutine(target);
+                self.analysis.add_subroutine(target, None);
                 cpu.run();
 
                 // Propagate called subroutine state to caller.
@@ -205,7 +205,7 @@ mod tests {
 
     fn setup_cpu(p: u8) -> CPU {
         let analysis = Analysis::new(ROM::new());
-        analysis.add_subroutine(0x8000);
+        analysis.add_subroutine(0x8000, None);
         CPU::new(&analysis, 0x8000, 0x8000, p)
     }
 
