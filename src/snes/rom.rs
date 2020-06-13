@@ -3,9 +3,10 @@ use std::io;
 use std::io::prelude::*;
 
 use getset::{CopyGetters, Getters};
+use strum_macros::AsRefStr;
 
 /// ROM classification.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(AsRefStr, Copy, Clone, Debug, PartialEq)]
 pub enum ROMType {
     Unknown,
     LoROM,

@@ -53,18 +53,6 @@ impl App<Stdout> {
 }
 
 impl<W: Write> App<W> {
-    /// Instantiate a prompt with redirected output (for test purposes).
-    #[cfg(test)]
-    fn with_output(out: W) -> Self {
-        Self {
-            analysis: Analysis::new(ROM::new()),
-            out,
-            commands: Self::build_commands(),
-            exit: false,
-            current_subroutine: None,
-        }
-    }
-
     /// Return the hierarchy of supported commands.
     fn build_commands() -> Command<Self> {
         container!(btreemap! {
@@ -83,9 +71,22 @@ impl<W: Write> App<W> {
                 btreemap! {
                     "subroutines"  => command_ref!(Self, list_subroutines),
                 }),
+            "rom" => command_ref!(Self, rom),
             "subroutine" => command_ref!(Self, subroutine),
             "quit" => command_ref!(Self, quit),
         })
+    }
+
+    /// Instantiate a prompt with redirected output (for test purposes).
+    #[cfg(test)]
+    fn with_output(out: W) -> Self {
+        Self {
+            analysis: Analysis::new(ROM::new()),
+            out,
+            commands: Self::build_commands(),
+            exit: false,
+            current_subroutine: None,
+        }
     }
 
     /// Start the prompt loop.
@@ -230,6 +231,21 @@ impl<W: Write> App<W> {
             for (_, sub) in subroutines.iter() {
                 outln!(self.out, "{}", sub.label().green());
             }
+            outln!(self.out);
+        }
+    );
+
+    #[rustfmt::skip]
+    command!(
+        /// Show general information on the ROM.
+        fn rom(&mut self) {
+            let rom = &self.analysis.rom;
+            outln!(self.out, "{:10}{}", "Title:".green(), rom.title());
+            outln!(self.out, "{:10}{}", "Type:".green(), rom.rom_type().as_ref());
+            outln!(self.out, "{:10}{}", "Size:".green(), rom.size() / 1024);
+            outln!(self.out, "{:10}",   "Vectors:".green());
+            outln!(self.out, "  {:8}${:06X}", "RESET:".green(), rom.reset_vector());
+            outln!(self.out, "  {:8}${:06X}", "NMI:".green(), rom.nmi_vector());
             outln!(self.out);
         }
     );
