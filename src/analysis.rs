@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use bimap::BiHashMap;
 use getset::Getters;
 
 use crate::snes::cpu::CPU;
@@ -36,6 +37,10 @@ pub struct Analysis {
 
     /// Instructions referenced by other instructions.
     references: RefCell<HashMap<usize, usize>>,
+
+    /// Subroutine labels.
+    #[getset(get = "pub")]
+    labels: RefCell<BiHashMap<String, usize>>,
 }
 
 impl Analysis {
@@ -48,6 +53,7 @@ impl Analysis {
             subroutines: RefCell::new(HashMap::new()),
             entry_points,
             references: RefCell::new(HashMap::new()),
+            labels: RefCell::new(BiHashMap::new()),
         })
     }
 
@@ -113,9 +119,17 @@ impl Analysis {
         if ROM::is_ram(pc) {
             return;
         }
+
+        // Register subroutine's label.
+        let mut labels = self.labels.borrow_mut();
+        let label = format!("sub_{:06X}", pc);
+        labels.insert(label.clone(), pc);
+
         // Create and register subroutine (unless it already exists).
         let mut subroutines = self.subroutines.borrow_mut();
-        subroutines.entry(pc).or_insert_with(|| Subroutine::new(pc));
+        subroutines
+            .entry(pc)
+            .or_insert_with(|| Subroutine::new(pc, label));
     }
 
     /// Add a state change to a subroutine.
@@ -129,6 +143,22 @@ impl Analysis {
     pub fn add_reference(&self, source: usize, target: usize) {
         let mut references = self.references.borrow_mut();
         references.insert(source, target);
+    }
+
+    /// Return the subroutine associated with a label, if any.
+    pub fn subroutine_by_label(&self, label: String) -> Option<usize> {
+        let labels = self.labels.borrow();
+        match labels.get_by_left(&label) {
+            Some(&pc) => Some(pc),
+            None => None,
+        }
+    }
+
+    /// Return a subroutine's label.
+    pub fn subroutine_label(&self, pc: usize) -> String {
+        let labels = self.labels.borrow();
+        let label = labels.get_by_right(&pc).unwrap();
+        label.to_owned()
     }
 }
 

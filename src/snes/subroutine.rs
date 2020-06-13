@@ -12,6 +12,9 @@ pub struct Subroutine {
     pc: usize,
 
     #[getset(get = "pub")]
+    label: String,
+
+    #[getset(get = "pub")]
     instructions: BTreeSet<Instruction>,
 
     #[getset(get = "pub")]
@@ -23,9 +26,10 @@ pub struct Subroutine {
 
 impl Subroutine {
     /// Instantiate a new subroutine.
-    pub fn new(pc: usize) -> Self {
+    pub fn new(pc: usize, label: String) -> Self {
         Self {
             pc,
+            label,
             instructions: BTreeSet::new(),
             state_changes: HashSet::new(),
             has_unknown_state_change: false,
@@ -52,7 +56,7 @@ mod tests {
 
     #[test]
     fn test_add_state_change() {
-        let mut subroutine = Subroutine::new(0x8000);
+        let mut subroutine = Subroutine::new(0x8000, "reset".to_string());
 
         subroutine.add_state_change(SubStateChange::new_empty());
         assert!(!subroutine.has_unknown_state_change());

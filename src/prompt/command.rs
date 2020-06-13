@@ -54,21 +54,28 @@ pub fn usage_container() -> &'static String {
 
 /// Fetch a command argument based on its type and position.
 #[macro_export]
-macro_rules! argument {
-    ($args:ident, $i:ident, $arg:ident, Args) => {
-        $args
-    };
-
-    ($args:ident, $i:ident, $arg:ident, String) => {
+macro_rules! fetch_arg {
+    ($args:ident, $i:ident, $arg:ident) => {
         $args
             .get($i)
             .ok_or($crate::prompt::error::Error::MissingArg(
                 stringify!($arg).to_uppercase(),
             ))?
     };
+}
+
+#[macro_export]
+macro_rules! argument {
+    ($args:ident, $i:ident, $arg:ident, Args) => {
+        $args
+    };
+
+    ($args:ident, $i:ident, $arg:ident, String) => {
+        $crate::fetch_arg!($args, $i, $arg).to_string()
+    };
 
     ($args:ident, $i:ident, $arg:ident, Integer) => {
-        usize::from_str_radix($args[$i], 16).unwrap()
+        usize::from_str_radix($crate::fetch_arg!($args, $i, $arg), 16).unwrap()
     };
 }
 

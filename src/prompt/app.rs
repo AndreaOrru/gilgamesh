@@ -35,6 +35,8 @@ pub struct App<W: Write> {
     commands: Command<Self>,
     /// Whether the user has requested to exit.
     exit: bool,
+    /// Subroutine currently under inspection.
+    current_subroutine: Option<usize>,
 }
 
 impl App<Stdout> {
@@ -45,6 +47,7 @@ impl App<Stdout> {
             out: stdout(),
             commands: Self::build_commands(),
             exit: false,
+            current_subroutine: None,
         })
     }
 }
@@ -58,6 +61,7 @@ impl<W: Write> App<W> {
             out,
             commands: Self::build_commands(),
             exit: false,
+            current_subroutine: None,
         }
     }
 
@@ -71,9 +75,15 @@ impl<W: Write> App<W> {
                     "instruction" => command_ref!(Self, assert_instruction),
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
-
             "describe" => command_ref!(Self, describe),
+            "disassembly" => command_ref!(Self, disassembly),
             "help" => command_ref!(Self, help),
+            "list" => container!(
+                /// List various types of entities.
+                btreemap! {
+                    "subroutines"  => command_ref!(Self, list_subroutines),
+                }),
+            "subroutine" => command_ref!(Self, subroutine),
             "quit" => command_ref!(Self, quit),
         })
     }
@@ -82,7 +92,7 @@ impl<W: Write> App<W> {
     pub fn run(&mut self) {
         let mut rl = Editor::<()>::new();
         while !self.exit {
-            let prompt = "> ".yellow().to_string();
+            let prompt = self.prompt();
             let readline = rl.readline(prompt.as_str());
 
             match readline {
@@ -98,6 +108,14 @@ impl<W: Write> App<W> {
                 _ => unreachable!(),
             }
         }
+    }
+
+    fn prompt(&self) -> String {
+        let prompt = match self.current_subroutine {
+            Some(pc) => format!("[{}]> ", self.analysis.subroutine_label(pc)).yellow(),
+            None => "> ".yellow(),
+        };
+        prompt.to_string()
     }
 
     /// Find command inside the hierarchy of commands.
@@ -183,6 +201,18 @@ impl<W: Write> App<W> {
     );
 
     command!(
+        /// Show disassembly of selected subroutine.
+        fn disassembly(&mut self) {
+            let subroutines = self.analysis.subroutines().borrow();
+            let sub = &subroutines[&self.current_subroutine.unwrap()];
+
+            for instruction in sub.instructions().iter() {
+                outln!(self.out, "{}", instruction);
+            }
+        }
+    );
+
+    command!(
         /// Show help about commands.
         fn help(&mut self, command: Args) {
             let (cmd, i) = Self::dig_command(&self.commands, command);
@@ -190,6 +220,26 @@ impl<W: Write> App<W> {
             Self::help_command(&mut self.out, &command[..i], cmd, root);
             Self::help_list(&mut self.out, cmd, root);
             outln!(self.out);
+        }
+    );
+
+    command!(
+        /// List subroutines.
+        fn list_subroutines(&mut self) {
+            let labels = self.analysis.labels().borrow();
+            for (label, _) in labels.iter() {
+                outln!(self.out, "{}", label);
+            }
+        }
+    );
+
+    command!(
+        /// Select which subroutine to inspect.
+        fn subroutine(&mut self, label: String) {
+            let sub = self.analysis.subroutine_by_label(label);
+            if let Some(pc) = sub {
+                self.current_subroutine = Some(pc);
+            }
         }
     );
 

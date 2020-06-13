@@ -1,5 +1,6 @@
 use getset::CopyGetters;
 use std::cmp::Ordering;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use crate::snes::opcodes::{AddressMode, Op, ARGUMENT_SIZES, OPCODES};
@@ -219,6 +220,72 @@ impl Instruction {
             || typ == InstructionType::Return
             || typ == InstructionType::Interrupt
     }
+
+    /// Return the instruction's argument as a string.
+    fn argument_string(&self) -> String {
+        // Return the string corresponding to the argument size.
+        let arg = || match self.argument_size() {
+            1 => format!("${:02X}", self.argument().unwrap()),
+            2 => format!("${:04X}", self.argument().unwrap()),
+            _ => format!("${:06X}", self.argument().unwrap()),
+        };
+
+        match self.address_mode() {
+            AddressMode::Implied => String::from(""),
+            AddressMode::ImpliedAccumulator => String::from("a"),
+
+            AddressMode::ImmediateM | AddressMode::ImmediateX | AddressMode::Immediate8 => {
+                format!("#{}", arg())
+            }
+
+            AddressMode::Relative
+            | AddressMode::RelativeLong
+            | AddressMode::DirectPage
+            | AddressMode::Absolute
+            | AddressMode::AbsoluteLong
+            | AddressMode::StackAbsolute => arg(),
+
+            AddressMode::DirectPageIndexedX
+            | AddressMode::AbsoluteIndexedX
+            | AddressMode::AbsoluteIndexedLong => format!("{},x", arg()),
+
+            AddressMode::DirectPageIndexedY | AddressMode::AbsoluteIndexedY => {
+                format!("{},y", arg())
+            }
+
+            AddressMode::DirectPageIndirect
+            | AddressMode::AbsoluteIndirect
+            | AddressMode::PeiDirectPageIndirect => format!("({})", arg()),
+
+            AddressMode::DirectPageIndirectLong | AddressMode::AbsoluteIndirectLong => {
+                format!("[{}]", arg())
+            }
+
+            AddressMode::DirectPageIndexedIndirect | AddressMode::AbsoluteIndexedIndirect => {
+                format!("({},x)", arg())
+            }
+
+            AddressMode::DirectPageIndirectIndexed => format!("({}),y", arg()),
+
+            AddressMode::DirectPageIndirectIndexedLong => format!("[{}],y", arg()),
+
+            AddressMode::StackRelative => format!("{},s", arg()),
+
+            AddressMode::StackRelativeIndirectIndexed => format!("({},s),y", arg()),
+
+            AddressMode::Move => {
+                let arg = self.argument().unwrap();
+                format!("{:02X},{:02X}", arg & 0xFF, arg >> 8)
+            }
+        }
+    }
+}
+
+/// Implement the Display trait to print an instruction's disassembly.
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.name(), self.argument_string())
+    }
 }
 
 #[cfg(test)]
@@ -231,11 +298,12 @@ mod tests {
         assert_eq!(instruction.name(), "lda");
         assert_eq!(instruction.operation(), Op::LDA);
         assert_eq!(instruction.address_mode(), AddressMode::ImmediateM);
+        assert_eq!(instruction.typ(), InstructionType::Other);
         assert_eq!(instruction.argument_size(), 2);
         assert_eq!(instruction.size(), 3);
         assert_eq!(instruction.argument().unwrap(), 0x1234);
         assert_eq!(instruction.absolute_argument().unwrap(), 0x1234);
-        assert_eq!(instruction.typ(), InstructionType::Other);
+        assert_eq!(instruction.argument_string(), "#$1234");
         assert!(!instruction.is_control());
     }
 
@@ -250,6 +318,7 @@ mod tests {
         assert_eq!(instruction.size(), 3);
         assert_eq!(instruction.argument().unwrap(), 0xFFFD);
         assert_eq!(instruction.absolute_argument().unwrap(), 0x8000);
+        assert_eq!(instruction.argument_string(), "$FFFD");
         assert_eq!(instruction.typ(), InstructionType::Jump);
         assert!(instruction.is_control());
     }
