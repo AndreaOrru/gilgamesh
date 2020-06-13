@@ -126,7 +126,7 @@ impl<W: Write> App<W> {
 
     fn prompt(&self) -> String {
         let prompt = match self.current_subroutine {
-            Some(pc) => format!("[{}]> ", self.analysis.label(pc).unwrap()).yellow(),
+            Some(pc) => format!("[{}]> ", self.analysis.label(pc, None).unwrap()).yellow(),
             None => "> ".yellow(),
         };
         prompt.to_string()
@@ -371,4 +371,6 @@ mod tests {
         app.handle_line("quit".to_string());
         assert!(app.exit);
     }
+
+    // TODO: write tests for new commands (subroutine, disassembly, etc.)
 }

@@ -1,6 +1,5 @@
 use getset::CopyGetters;
 use std::cmp::Ordering;
-use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -286,7 +285,7 @@ impl Instruction {
 
             AddressMode::Move => {
                 let arg = self.argument().unwrap();
-                format!("{:02X},{:02X}", arg & 0xFF, arg >> 8)
+                format!("${:02X},${:02X}", arg & 0xFF, arg >> 8)
             }
         }
     }
@@ -297,7 +296,7 @@ impl Instruction {
                 if let Some(hw_register) = HARDWARE_REGISTERS.get_by_right(&arg) {
                     Some(hw_register.to_string())
                 } else if self.is_control() {
-                    analysis.label(arg)
+                    analysis.label(arg, Some(self.subroutine))
                 } else {
                     None
                 }

@@ -96,7 +96,8 @@ impl CPU {
         // Log the fact that the current instruction references the
         // instruction pointed by the branch. Then take the branch.
         let target = instruction.absolute_argument().unwrap();
-        self.analysis.add_reference(instruction.pc(), target);
+        self.analysis
+            .add_reference(instruction.pc(), target, self.subroutine);
         self.pc = target;
     }
 
@@ -112,8 +113,9 @@ impl CPU {
                 cpu.pc = target;
 
                 // Emulate the called subroutine.
-                self.analysis.add_reference(instruction.pc(), target);
                 self.analysis.add_subroutine(target, None);
+                self.analysis
+                    .add_reference(instruction.pc(), target, self.subroutine);
                 cpu.run();
 
                 // Propagate called subroutine state to caller.
@@ -132,8 +134,9 @@ impl CPU {
     fn jump(&mut self, instruction: Instruction) {
         match instruction.absolute_argument() {
             Some(target) => {
-                self.analysis.add_reference(instruction.pc(), target);
                 self.pc = target;
+                self.analysis
+                    .add_reference(instruction.pc(), target, self.subroutine);
             }
             None => self.unknown_sub_state_change(),
         }

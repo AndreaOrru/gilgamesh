@@ -19,6 +19,13 @@ struct EntryPoint {
     p: u8,
 }
 
+/// Code reference.
+#[derive(Debug, Eq, PartialEq)]
+struct Reference {
+    target: usize,
+    subroutine: usize,
+}
+
 /// Structure holding the state of the analysis.
 #[derive(Getters)]
 pub struct Analysis {
@@ -36,11 +43,15 @@ pub struct Analysis {
     entry_points: HashSet<EntryPoint>,
 
     /// Instructions referenced by other instructions.
-    references: RefCell<HashMap<usize, usize>>,
+    references: RefCell<HashMap<usize, Reference>>,
 
     /// Subroutine labels.
     #[getset(get = "pub")]
-    labels: RefCell<BiHashMap<String, usize>>,
+    subroutine_labels: RefCell<BiHashMap<String, usize>>,
+
+    /// Subroutine local labels.
+    #[getset(get = "pub")]
+    local_labels: RefCell<HashMap<usize, BiHashMap<String, usize>>>,
 }
 
 impl Analysis {
@@ -53,7 +64,8 @@ impl Analysis {
             subroutines: RefCell::new(BTreeMap::new()),
             entry_points,
             references: RefCell::new(HashMap::new()),
-            labels: RefCell::new(BiHashMap::new()),
+            subroutine_labels: RefCell::new(BiHashMap::new()),
+            local_labels: RefCell::new(HashMap::new()),
         })
     }
 
@@ -76,6 +88,7 @@ impl Analysis {
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
         }
+        self.generate_local_labels();
     }
 
     /// Return true if the instruction has already been analyzed, false otherwise.
@@ -121,7 +134,7 @@ impl Analysis {
         }
 
         // Register subroutine's label.
-        let mut labels = self.labels.borrow_mut();
+        let mut labels = self.subroutine_labels.borrow_mut();
         let label = match label {
             Some(s) => s,
             None => format!("sub_{:06X}", pc),
@@ -143,26 +156,57 @@ impl Analysis {
     }
 
     /// Add a reference from an instruction to another.
-    pub fn add_reference(&self, source: usize, target: usize) {
+    pub fn add_reference(&self, source: usize, target: usize, subroutine: usize) {
         let mut references = self.references.borrow_mut();
-        references.insert(source, target);
+        references.insert(source, Reference { target, subroutine });
     }
 
-    /// Return a subroutine's label.
-    pub fn label(&self, pc: usize) -> Option<String> {
-        let labels = self.labels.borrow();
-        match labels.get_by_right(&pc) {
+    /// Return the label associated with an address, if any.
+    pub fn label(&self, pc: usize, subroutine: Option<usize>) -> Option<String> {
+        let sub_labels = self.subroutine_labels.borrow();
+        let local_labels = self.local_labels.borrow();
+
+        // Try and get the label of a subroutine first.
+        match sub_labels.get_by_right(&pc) {
+            // If there's a subroutine label, return it.
             Some(label) => Some(label.clone()),
+
+            // Retrieve the local labels internal to the given subroutine.
+            None if subroutine.is_some() => match local_labels.get(&subroutine.unwrap()) {
+                // Return the local label, if it exists.
+                Some(labels) => match labels.get_by_right(&pc) {
+                    Some(label) => Some(format!(".{}", label)),
+                    None => None,
+                },
+                // There is no local label at the given address.
+                None => None,
+            },
+
+            // No subroutine was provided.
+            _ => None,
+        }
+    }
+
+    /// Return the value associated with a label, if any.
+    pub fn label_value(&self, label: String) -> Option<usize> {
+        let labels = self.subroutine_labels.borrow();
+        match labels.get_by_left(&label) {
+            Some(&pc) => Some(pc),
             None => None,
         }
     }
 
-    /// Return the subroutine associated with a label, if any.
-    pub fn label_value(&self, label: String) -> Option<usize> {
-        let labels = self.labels.borrow();
-        match labels.get_by_left(&label) {
-            Some(&pc) => Some(pc),
-            None => None,
+    /// Generate local label names.
+    fn generate_local_labels(&self) {
+        for (_, Reference { target, subroutine }) in self.references.borrow().iter() {
+            if !self.is_subroutine(*target) {
+                let label = format!("loc_{:06X}", *target);
+                let mut local_labels = self.local_labels.borrow_mut();
+                local_labels
+                    .entry(*subroutine)
+                    .or_insert_with(BiHashMap::new)
+                    .insert(label, *target);
+            }
         }
     }
 }
@@ -213,7 +257,13 @@ mod tests {
         // Check the instruction points to itself.
         let references = analysis.references.borrow();
         assert_eq!(references.len(), 1);
-        assert_eq!(references[&0x8000], 0x8000);
+        assert_eq!(
+            references[&0x8000],
+            Reference {
+                target: 0x8000,
+                subroutine: 0x8000
+            }
+        );
     }
 
     #[test]
@@ -248,4 +298,6 @@ mod tests {
         assert_eq!(ldx.operation(), Op::LDX);
         assert_eq!(ldx.argument().unwrap(), 0x1234);
     }
+
+    // TODO: write label logic tests.
 }
