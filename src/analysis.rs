@@ -2,9 +2,12 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use getset::Getters;
+
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
 use crate::snes::rom::{ROMType, ROM};
+use crate::snes::state::SubStateChange;
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
@@ -16,11 +19,13 @@ struct EntryPoint {
 }
 
 /// Structure holding the state of the analysis.
+#[derive(Getters)]
 pub struct Analysis {
     /// Reference to the ROM being analyzed.
     pub rom: ROM,
 
     /// All analyzed subroutines.
+    #[getset(get = "pub")]
     subroutines: RefCell<HashMap<usize, Subroutine>>,
 
     /// All analyzed instructions.
@@ -113,6 +118,13 @@ impl Analysis {
         subroutines.entry(pc).or_insert_with(|| Subroutine::new(pc));
     }
 
+    /// Add a state change to a subroutine.
+    pub fn add_sub_state_change(&self, pc: usize, state_change: SubStateChange) {
+        let mut subroutines = self.subroutines.borrow_mut();
+        let subroutine = subroutines.get_mut(&pc).unwrap();
+        subroutine.add_state_change(state_change);
+    }
+
     /// Add a reference from an instruction to another.
     pub fn add_reference(&self, source: usize, target: usize) {
         let mut references = self.references.borrow_mut();
@@ -123,10 +135,11 @@ impl Analysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gilgamesh::snes::opcodes::Op;
+    use crate::snes::opcodes::Op;
     use gilgamesh::test_rom;
 
-    test_rom!(setup_rom, "infinite_loop.asm");
+    test_rom!(setup_infinite_loop, "infinite_loop.asm");
+    test_rom!(setup_state_change, "sub_state_change.asm");
 
     #[test]
     fn test_instruction_subroutine_references() {
@@ -142,25 +155,60 @@ mod tests {
 
     #[test]
     fn test_infinite_loop_analysis() {
-        let analysis = Analysis::new(setup_rom());
+        let analysis = Analysis::new(setup_infinite_loop());
         analysis.run();
 
+        // Check there is a single subroutine with one instruction.
         let subroutines = analysis.subroutines.borrow();
         assert_eq!(subroutines.len(), 1);
         assert_eq!(subroutines[&0x8000].pc(), 0x8000);
         assert_eq!(subroutines[&0x8000].instructions().len(), 1);
 
+        // Check there is a single instruction.
         let instructions = analysis.instructions.borrow();
         assert_eq!(instructions.len(), 1);
         assert_eq!(instructions[&0x8000].len(), 1);
 
+        // Check the instruction is a jump.
         let jmp = instructions[&0x8000].iter().next().unwrap();
         assert_eq!(jmp.pc(), 0x8000);
         assert_eq!(jmp.subroutine(), 0x8000);
         assert_eq!(jmp.operation(), Op::JMP);
 
+        // Check the instruction points to itself.
         let references = analysis.references.borrow();
         assert_eq!(references.len(), 1);
         assert_eq!(references[&0x8000], 0x8000);
+    }
+
+    #[test]
+    fn test_state_change() {
+        let analysis = Analysis::new(setup_state_change());
+        analysis.run();
+
+        // Check there are two subroutines.
+        let subroutines = analysis.subroutines.borrow();
+        assert_eq!(subroutines.len(), 2);
+
+        // Check the subroutines have the right number of instructions.
+        let reset_sub = &subroutines[&0x8000];
+        let state_change_sub = &subroutines[&0x800E];
+        assert_eq!(reset_sub.instructions().len(), 5);
+        assert_eq!(state_change_sub.instructions().len(), 2);
+
+        // Check the `state_change` subroutine sets M/X to 0.
+        let state_change = state_change_sub.state_changes().iter().next().unwrap();
+        assert_eq!(state_change_sub.state_changes().len(), 1);
+        assert_eq!(state_change.m().unwrap(), false);
+        assert_eq!(state_change.x().unwrap(), false);
+
+        // Check LDA and LDX have the right operand size.
+        let instructions = analysis.instructions.borrow();
+        let lda = instructions[&0x8005].iter().next().unwrap();
+        assert_eq!(lda.operation(), Op::LDA);
+        assert_eq!(lda.argument().unwrap(), 0x1234);
+        let ldx = instructions[&0x8008].iter().next().unwrap();
+        assert_eq!(ldx.operation(), Op::LDX);
+        assert_eq!(ldx.argument().unwrap(), 0x1234);
     }
 }

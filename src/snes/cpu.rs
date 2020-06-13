@@ -4,7 +4,7 @@ use crate::analysis::Analysis;
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
-use crate::snes::state::StateRegister;
+use crate::snes::state::{StateRegister, SubStateChange};
 
 /// SNES CPU emulation.
 #[derive(Clone)]
@@ -23,6 +23,9 @@ pub struct CPU {
 
     /// Processor state.
     state: StateRegister,
+
+    /// Processor state change caused by the execution of this subroutine.
+    sub_state_change: SubStateChange,
 }
 
 impl CPU {
@@ -34,6 +37,7 @@ impl CPU {
             pc,
             subroutine,
             state: StateRegister::new(p),
+            sub_state_change: SubStateChange::new_empty(),
         }
     }
 
@@ -103,6 +107,7 @@ impl CPU {
                 // Create a parallel instance of the CPU to
                 // execute the subroutine that is being called.
                 let mut cpu = self.clone();
+                cpu.sub_state_change = SubStateChange::new_empty();
                 cpu.subroutine = target;
                 cpu.pc = target;
 
@@ -111,19 +116,16 @@ impl CPU {
                 self.analysis.add_subroutine(target);
                 cpu.run();
 
-                // TODO: propagate subroutine state.
+                // Propagate called subroutine state to caller.
+                self.propagate_subroutine_state(target);
             }
-            None => {
-                self.stop = true;
-                // TODO: signal unknown state.
-            }
+            None => self.unknown_sub_state_change(),
         }
     }
 
     /// Interrupt instruction emulation.
     fn interrupt(&mut self, _instruction: Instruction) {
-        self.stop = true;
-        // TODO: signal unknown state.
+        self.unknown_sub_state_change();
     }
 
     /// Jump instruction emulation.
@@ -133,28 +135,62 @@ impl CPU {
                 self.analysis.add_reference(instruction.pc(), target);
                 self.pc = target;
             }
-            None => {
-                self.stop = true;
-                // TODO: signal unknown state.
-            }
+            None => self.unknown_sub_state_change(),
         }
     }
 
     /// Return instruction emulation.
     fn ret(&mut self, _instruction: Instruction) {
         self.stop = true;
-        // TODO: handle subroutine state.
+        self.analysis
+            .add_sub_state_change(self.subroutine, self.sub_state_change);
     }
 
     /// SEP/REP instruction emulation.
     fn sep_rep(&mut self, instruction: Instruction) {
         let arg = instruction.absolute_argument().unwrap();
-
         match instruction.operation() {
-            Op::SEP => self.state.set(arg as u8),
-            Op::REP => self.state.reset(arg as u8),
+            Op::SEP => {
+                self.state.set(arg as u8);
+                self.sub_state_change.set(arg as u8);
+            }
+            Op::REP => {
+                self.state.reset(arg as u8);
+                self.sub_state_change.reset(arg as u8);
+            }
             _ => unreachable!(),
         }
+    }
+
+    /// Take the state change of the given subroutine and
+    /// propagate it to to the current subroutine state.
+    fn propagate_subroutine_state(&mut self, subroutine: usize) {
+        let subroutines = self.analysis.subroutines().borrow();
+        let sub = &subroutines[&subroutine];
+
+        // Unknown or ambiguous state change.
+        if sub.state_changes().len() != 1 || sub.has_unknown_state_change() {
+            drop(subroutines);
+            return self.unknown_sub_state_change();
+        }
+
+        // Apply state change.
+        let state_change = *sub.state_changes().iter().next().unwrap();
+        if let Some(m) = state_change.m() {
+            self.state.set_m(m);
+            self.sub_state_change.set_m(m);
+        }
+        if let Some(x) = state_change.x() {
+            self.state.set_x(x);
+            self.sub_state_change.set_x(x);
+        }
+    }
+
+    /// Signal an unknown subroutine state change.
+    fn unknown_sub_state_change(&mut self) {
+        self.stop = true;
+        self.analysis
+            .add_sub_state_change(self.subroutine, SubStateChange::new_unknown());
     }
 
     #[cfg(test)]
@@ -169,6 +205,7 @@ mod tests {
 
     fn setup_cpu(p: u8) -> CPU {
         let analysis = Analysis::new(ROM::new());
+        analysis.add_subroutine(0x8000);
         CPU::new(&analysis, 0x8000, 0x8000, p)
     }
 

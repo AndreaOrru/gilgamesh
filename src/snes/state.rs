@@ -85,7 +85,7 @@ impl StateRegister {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_state_register {
     use super::*;
 
     #[test]
@@ -141,5 +141,94 @@ mod tests {
         state.set_x(false);
         assert!(!state.m());
         assert!(!state.x());
+    }
+}
+
+/// State change caused by the execution of a subroutine.
+#[derive(Copy, CopyGetters, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct SubStateChange {
+    #[getset(get_copy = "pub")]
+    m: Option<bool>,
+
+    #[getset(get_copy = "pub")]
+    x: Option<bool>,
+
+    #[getset(get_copy = "pub")]
+    unknown: bool,
+}
+
+impl SubStateChange {
+    /// Instantiate a new subroutine state change.
+    pub fn new(m: Option<bool>, x: Option<bool>) -> Self {
+        Self {
+            m,
+            x,
+            unknown: false,
+        }
+    }
+
+    /// Instantiate an empty state change (no changes).
+    pub fn new_empty() -> Self {
+        Self {
+            m: None,
+            x: None,
+            unknown: false,
+        }
+    }
+
+    /// Instantiate an unknown state change.
+    pub fn new_unknown() -> Self {
+        Self {
+            m: None,
+            x: None,
+            unknown: true,
+        }
+    }
+
+    /// Set a state change for M.
+    pub fn set_m(&mut self, m: bool) {
+        self.m = Some(m);
+    }
+
+    /// Set a state change for X.
+    pub fn set_x(&mut self, x: bool) {
+        self.x = Some(x);
+    }
+
+    /// Set bits changed to 1 in P.
+    pub fn set(&mut self, p_change: u8) {
+        let change = StateRegister::new(p_change);
+        self.m = if change.m() { Some(true) } else { self.m };
+        self.x = if change.x() { Some(true) } else { self.x };
+    }
+
+    /// Set bits changed to 0 in P.
+    pub fn reset(&mut self, p_change: u8) {
+        let change = StateRegister::new(p_change);
+        self.m = if change.m() { Some(false) } else { self.m };
+        self.x = if change.x() { Some(false) } else { self.x };
+    }
+}
+
+#[cfg(test)]
+mod test_sub_state_change {
+    use super::*;
+
+    #[test]
+    fn test_set() {
+        let mut state_change = SubStateChange::new_empty();
+        state_change.set(0b0011_0000);
+
+        assert!(state_change.m.unwrap());
+        assert!(state_change.x.unwrap());
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut state_change = SubStateChange::new_empty();
+        state_change.reset(0b0011_0000);
+
+        assert!(!state_change.m.unwrap());
+        assert!(!state_change.x.unwrap());
     }
 }
