@@ -219,6 +219,7 @@ mod tests {
 
     test_rom!(setup_infinite_loop, "infinite_loop.asm");
     test_rom!(setup_state_change, "sub_state_change.asm");
+    test_rom!(setup_unknown_call_jump, "unknown_call_jump.asm");
 
     #[test]
     fn test_instruction_subroutine_references() {
@@ -297,6 +298,25 @@ mod tests {
         let ldx = instructions[&0x8008].iter().next().unwrap();
         assert_eq!(ldx.operation(), Op::LDX);
         assert_eq!(ldx.argument().unwrap(), 0x1234);
+    }
+
+    #[test]
+    fn test_unknown_call_jump() {
+        let analysis = Analysis::new(setup_unknown_call_jump());
+        analysis.run();
+
+        let subroutines = analysis.subroutines.borrow();
+        assert_eq!(subroutines.len(), 2);
+
+        let reset_sub = &subroutines[&0x8000];
+        assert_eq!(reset_sub.label(), "reset");
+        assert_eq!(reset_sub.instructions().len(), 1);
+        let nmi_sub = &subroutines[&0x8003];
+        assert_eq!(nmi_sub.label(), "nmi");
+        assert_eq!(nmi_sub.instructions().len(), 2);
+
+        assert!(reset_sub.has_unknown_state_change());
+        assert!(nmi_sub.has_unknown_state_change());
     }
 
     // TODO: write label logic tests.

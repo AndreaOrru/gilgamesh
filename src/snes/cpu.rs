@@ -157,11 +157,11 @@ impl CPU {
                 self.state.set(arg as u8);
                 self.sub_state_change.set(arg as u8);
             }
-            Op::REP => {
+            // Op::REP
+            _ => {
                 self.state.reset(arg as u8);
                 self.sub_state_change.reset(arg as u8);
             }
-            _ => unreachable!(),
         }
     }
 
