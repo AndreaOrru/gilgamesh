@@ -282,6 +282,7 @@ impl Instruction {
         }
     }
 
+    /// Return an argument alias (a label or hardware register), if any.
     pub fn argument_alias(&self, analysis: Rc<Analysis>) -> Option<String> {
         match self.absolute_argument() {
             Some(arg) => {
