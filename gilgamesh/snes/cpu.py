@@ -157,7 +157,7 @@ class CPU:
         possible_states = set()
 
         for _, target in targets:
-            if target is None:
+            if target is None or self.rom.is_ram(target):
                 # If we can't reliably derive the address of the subroutine
                 # being called, we're left in an unknown state.
                 return self._unknown_subroutine_state(

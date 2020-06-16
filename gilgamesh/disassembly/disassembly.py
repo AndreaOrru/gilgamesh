@@ -449,6 +449,8 @@ class Disassembly:
                 s = "A: {}-bits"
             elif i.argument & 0x10 == 0x10:
                 s = "X: {}-bits"
+            else:
+                return ""
             return s.format(*([8 if i.operation == Op.SEP else 16] * 2))
         return ""
 
