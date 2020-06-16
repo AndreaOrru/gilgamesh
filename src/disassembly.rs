@@ -39,6 +39,7 @@ impl Disassembly {
             Some(arg) => arg.red(),
             None => i.argument_string().white(),
         };
-        format!("  {} {}\n", i.name().green(), arg)
+        let comment = format!("; ${:06X}", i.pc()).bright_black();
+        format!("  {:4}{:25}{}\n", i.name().green(), arg, comment)
     }
 }

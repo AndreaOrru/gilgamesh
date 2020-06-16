@@ -277,7 +277,7 @@ impl Instruction {
 
             AddressMode::Move => {
                 let arg = self.argument().unwrap();
-                format!("${:02X},${:02X}", arg & 0xFF, arg >> 8)
+                format!("${:02X},${:02X}", arg >> 8, arg & 0xFF)
             }
         }
     }
