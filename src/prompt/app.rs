@@ -367,10 +367,8 @@ mod tests {
 
     #[test]
     fn test_quit() {
-        let mut app = App::with_output(stdout());
+       let mut app = App::with_output(stdout());
         app.handle_line("quit".to_string());
         assert!(app.exit);
     }
-
-    // TODO: write tests for new commands (subroutine, disassembly, etc.)
 }

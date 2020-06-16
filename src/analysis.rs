@@ -318,6 +318,4 @@ mod tests {
         assert!(reset_sub.has_unknown_state_change());
         assert!(nmi_sub.has_unknown_state_change());
     }
-
-    // TODO: write label logic tests.
 }
