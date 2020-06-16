@@ -4,6 +4,7 @@ use clap::clap_app;
 use std::io;
 
 mod analysis;
+mod disassembly;
 mod prompt;
 mod snes;
 mod utils;

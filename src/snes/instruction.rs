@@ -160,14 +160,6 @@ impl Instruction {
         }
     }
 
-    pub fn disassembly(&self, analysis: Rc<Analysis>) -> String {
-        let arg = match self.argument_alias(analysis) {
-            Some(arg) => arg,
-            None => self.argument_string(),
-        };
-        format!("{} {}", self.name(), arg)
-    }
-
     /// Return the instruction's argument, if any.
     pub fn argument(&self) -> Option<usize> {
         match self.argument_size() {
@@ -232,7 +224,7 @@ impl Instruction {
     }
 
     /// Return the instruction's argument as a string.
-    fn argument_string(&self) -> String {
+    pub fn argument_string(&self) -> String {
         // Return the string corresponding to the argument size.
         let arg = || match self.argument_size() {
             1 => format!("${:02X}", self.argument().unwrap()),
@@ -290,7 +282,7 @@ impl Instruction {
         }
     }
 
-    fn argument_alias(&self, analysis: Rc<Analysis>) -> Option<String> {
+    pub fn argument_alias(&self, analysis: Rc<Analysis>) -> Option<String> {
         match self.absolute_argument() {
             Some(arg) => {
                 if let Some(hw_register) = HARDWARE_REGISTERS.get_by_right(&arg) {

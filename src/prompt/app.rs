@@ -11,6 +11,7 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 use crate::analysis::Analysis;
+use crate::disassembly::Disassembly;
 use crate::prompt::command::Command;
 use crate::prompt::error::Error;
 use crate::snes::opcodes::Op;
@@ -217,15 +218,10 @@ impl<W: Write> App<W> {
     command!(
         /// Show disassembly of selected subroutine.
         fn disassembly(&mut self) {
-            let subroutines = self.analysis.subroutines().borrow();
-            let sub = &subroutines[&self.current_subroutine.unwrap()];
-
-            for instruction in sub.instructions().iter() {
-                outln!(
-                    self.out,
-                    "{}",
-                    instruction.disassembly(self.analysis.clone())
-                );
+            if let Some(subroutine) = self.current_subroutine {
+                let disassembly = Disassembly::new(self.analysis.clone());
+                let s = disassembly.subroutine(subroutine);
+                outln!(self.out, "{}", s);
             }
         }
     );
@@ -367,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_quit() {
-       let mut app = App::with_output(stdout());
+        let mut app = App::with_output(stdout());
         app.handle_line("quit".to_string());
         assert!(app.exit);
     }
