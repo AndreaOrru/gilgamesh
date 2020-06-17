@@ -16,6 +16,8 @@ use crate::prompt::command::Command;
 use crate::prompt::error::{Error, Result};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
+use crate::snes::state::UnknownReason;
+use crate::snes::subroutine::Subroutine;
 use crate::{command, command_ref, container};
 
 const HISTORY_FILE: &str = "~/.local/share/gilgamesh/history.log";
@@ -104,13 +106,13 @@ impl<W: Write> App<W> {
 
         while !self.exit {
             let prompt = self.prompt();
-            let readline = rl.readline(prompt.as_str());
+            let readline = rl.readline(&prompt);
 
             match readline {
                 // Command line to be parsed.
                 Ok(line) => {
                     if !line.is_empty() {
-                        rl.add_history_entry(line.as_str());
+                        rl.add_history_entry(&line);
                         self.handle_line(line);
                     }
                 }
@@ -207,6 +209,24 @@ impl<W: Write> App<W> {
         self.current_subroutine.ok_or(Error::NoSelectedSubroutine)
     }
 
+    /// Return a subroutine label formatted for display inside a list.
+    fn format_subroutine(sub: &Subroutine) -> String {
+        let mut s = String::new();
+        if sub.has_unknown_state_change() {
+            s.push_str(&sub.label().red().to_string());
+            if sub.is_unknown_because_of(UnknownReason::SuspectInstruction) {
+                s.push_str(&format!(" {}", "[!]".on_bright_red()));
+            } else if sub.is_unknown_because_of(UnknownReason::IndirectJump) {
+                s.push_str(&" [*]".red().to_string());
+            }
+        } else {
+            s.push_str(&sub.label().green().to_string());
+        }
+        s
+    }
+
+    /**************************************************************************/
+
     command!(
         /// Run the analysis on the ROM.
         fn analyze(&mut self) {
@@ -249,7 +269,7 @@ impl<W: Write> App<W> {
         fn list_subroutines(&mut self) {
             let subroutines = self.analysis.subroutines().borrow();
             for (_, sub) in subroutines.iter() {
-                outln!(self.out, "{}", sub.label().green());
+                outln!(self.out, "{}", Self::format_subroutine(sub));
             }
             outln!(self.out);
         }
