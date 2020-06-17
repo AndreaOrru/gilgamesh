@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::analysis::Analysis;
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
+use crate::snes::registers::Registers;
 use crate::snes::rom::ROM;
 use crate::snes::stack;
 use crate::snes::state::{StateRegister, SubStateChange, UnknownReason};
@@ -30,19 +31,24 @@ pub struct CPU {
 
     /// Stack.
     stack: stack::Stack,
+
+    /// A/X/Y registers.
+    registers: Registers,
 }
 
 impl CPU {
     /// Instantiate a CPU object.
     pub fn new(analysis: &Rc<Analysis>, pc: usize, subroutine: usize, p: u8) -> Self {
+        let state = StateRegister::new(p);
         Self {
             analysis: analysis.clone(),
             stop: false,
             pc,
             subroutine,
-            state: StateRegister::new(p),
+            state,
             sub_state_change: SubStateChange::new_empty(),
             stack: stack::Stack::new(),
+            registers: Registers::new(state),
         }
     }
 

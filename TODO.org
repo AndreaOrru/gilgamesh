@@ -1,7 +1,7 @@
 * CPU
 ** DONE PHP / PLP
-** TODO Other stack opcodes
 ** TODO `A` register emulation
+** TODO Other stack opcodes
 
 * Disassembly
 ** DONE Add basic formatting for subroutine disassembly
