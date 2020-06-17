@@ -144,6 +144,15 @@ mod test_state_register {
     }
 }
 
+/// Possible reasons why a state change is unknown.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum UnknownReason {
+    Known,
+    Unknown,
+    IndirectJump,
+    SuspectInstruction,
+}
+
 /// State change caused by the execution of a subroutine.
 #[derive(Copy, CopyGetters, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct SubStateChange {
@@ -154,7 +163,7 @@ pub struct SubStateChange {
     x: Option<bool>,
 
     #[getset(get_copy = "pub")]
-    unknown: bool,
+    unknown_reason: UnknownReason,
 }
 
 impl SubStateChange {
@@ -163,7 +172,7 @@ impl SubStateChange {
         Self {
             m,
             x,
-            unknown: false,
+            unknown_reason: UnknownReason::Known,
         }
     }
 
@@ -172,17 +181,22 @@ impl SubStateChange {
         Self {
             m: None,
             x: None,
-            unknown: false,
+            unknown_reason: UnknownReason::Known,
         }
     }
 
     /// Instantiate an unknown state change.
-    pub fn new_unknown() -> Self {
+    pub fn new_unknown(reason: UnknownReason) -> Self {
         Self {
             m: None,
             x: None,
-            unknown: true,
+            unknown_reason: reason,
         }
+    }
+
+    /// Return true if the state is unknown, false otherwise.
+    pub fn unknown(&self) -> bool {
+        self.unknown_reason != UnknownReason::Known
     }
 
     /// Set a state change for M.
