@@ -2,6 +2,9 @@
 ** DONE Add basic formatting for subroutine disassembly
 ** TODO Add unknown state details
 
+* SubStateChange
+** TODO Test unknown states
+
 * Prompt
 ** TODO Show unknown subroutines in red
 ** TODO Autocompletion
