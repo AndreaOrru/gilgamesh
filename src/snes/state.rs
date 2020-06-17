@@ -150,6 +150,7 @@ pub enum UnknownReason {
     Known,
     Unknown,
     IndirectJump,
+    StackManipulation,
     SuspectInstruction,
 }
 

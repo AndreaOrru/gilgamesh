@@ -4,6 +4,7 @@ use crate::analysis::Analysis;
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
+use crate::snes::stack;
 use crate::snes::state::{StateRegister, SubStateChange, UnknownReason};
 
 /// SNES CPU emulation.
@@ -26,6 +27,9 @@ pub struct CPU {
 
     /// Processor state change caused by the execution of this subroutine.
     sub_state_change: SubStateChange,
+
+    /// Stack.
+    stack: stack::Stack,
 }
 
 impl CPU {
@@ -38,6 +42,7 @@ impl CPU {
             subroutine,
             state: StateRegister::new(p),
             sub_state_change: SubStateChange::new_empty(),
+            stack: stack::Stack::new(),
         }
     }
 
@@ -80,8 +85,8 @@ impl CPU {
             InstructionType::Jump => self.jump(instruction),
             InstructionType::Return => self.ret(instruction),
             InstructionType::SepRep => self.sep_rep(instruction),
-            // InstructionType::Pop => self.pop(instruction),
-            // InstructionType::Push => self.push(instruction),
+            InstructionType::Pop => self.pop(instruction),
+            InstructionType::Push => self.push(instruction),
             _ => {}
         }
     }
@@ -162,6 +167,44 @@ impl CPU {
                 self.state.reset(arg as u8);
                 self.sub_state_change.reset(arg as u8);
             }
+        }
+    }
+
+    /// Push a value onto the stack.
+    fn push(&mut self, instruction: Instruction) {
+        match instruction.operation() {
+            Op::PHP => self.stack.push_one(
+                instruction,
+                stack::Data::State(self.state, self.sub_state_change),
+            ),
+            // TODO: emulate other push instructions.
+            _ => {}
+        }
+    }
+
+    /// Pop a value from the stack.
+    fn pop(&mut self, instruction: Instruction) {
+        match instruction.operation() {
+            Op::PLP => {
+                let entry = self.stack.pop_one();
+                match entry.instruction {
+                    // Regular state restore.
+                    Some(i) if i.operation() == Op::PHP => match entry.data {
+                        stack::Data::State(state, state_change) => {
+                            self.state = state;
+                            self.sub_state_change = state_change;
+                        }
+                        _ => unreachable!(),
+                    },
+                    // Stack manipulation. Stop here.
+                    _ => {
+                        self.unknown_sub_state_change(UnknownReason::StackManipulation);
+                        self.stop = true;
+                    }
+                }
+            }
+            // TODO: emulate other pop instructions.
+            _ => {}
         }
     }
 

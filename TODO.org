@@ -1,5 +1,7 @@
 * CPU
-** TODO PHP / PLP
+** DONE PHP / PLP
+** TODO Other stack opcodes
+** TODO `A` register emulation
 
 * Disassembly
 ** DONE Add basic formatting for subroutine disassembly
@@ -13,5 +15,6 @@
 ** TODO Autocompletion
 
 * Tests
+** TODO Stack
 ** TODO Local labels
 ** TODO Changing subroutine
