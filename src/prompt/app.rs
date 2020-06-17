@@ -13,7 +13,7 @@ use rustyline::Editor;
 use crate::analysis::Analysis;
 use crate::disassembly::Disassembly;
 use crate::prompt::command::Command;
-use crate::prompt::error::Error;
+use crate::prompt::error::{Error, Result};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
 use crate::{command, command_ref, container};
@@ -161,6 +161,9 @@ impl<W: Write> App<W> {
                     self.help(&parts).unwrap();
                     outln!(self.out, "{}\n", e.to_string().red());
                 }
+                Err(e) => {
+                    outln!(self.out, "{}\n", e.to_string().red());
+                }
             },
             None => self.help(&parts).unwrap(),
         }
@@ -199,6 +202,11 @@ impl<W: Write> App<W> {
         }
     }
 
+    /// Get the current subroutine or raise an error.
+    pub fn get_subroutine(&self) -> Result<usize> {
+        self.current_subroutine.ok_or(Error::NoSelectedSubroutine)
+    }
+
     command!(
         /// Run the analysis on the ROM.
         fn analyze(&mut self) {
@@ -218,11 +226,10 @@ impl<W: Write> App<W> {
     command!(
         /// Show disassembly of selected subroutine.
         fn disassembly(&mut self) {
-            if let Some(subroutine) = self.current_subroutine {
-                let disassembly = Disassembly::new(self.analysis.clone());
-                let s = disassembly.subroutine(subroutine);
-                outln!(self.out, "{}", s);
-            }
+            let subroutine = self.get_subroutine()?;
+            let disassembly = Disassembly::new(self.analysis.clone());
+            let s = disassembly.subroutine(subroutine);
+            outln!(self.out, "{}", s);
         }
     );
 

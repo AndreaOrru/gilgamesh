@@ -1,7 +1,9 @@
 * Disassembly
 ** DONE Add basic formatting for subroutine disassembly
+** TODO Add unknown state details
 
 * Prompt
+** TODO Show unknown subroutines in red
 ** TODO Autocompletion
 
 * Tests

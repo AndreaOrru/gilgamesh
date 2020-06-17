@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 
 use lazy_static::lazy_static;
 
-use crate::prompt::error::Error;
+use crate::prompt::error::Result;
 
-type CommandFunction<App> = fn(&mut App, &[&str]) -> Result<(), Error>;
+type CommandFunction<App> = fn(&mut App, &[&str]) -> Result<()>;
 type HelpFunction = fn() -> &'static String;
 
 /// Command for the interactive prompt.
@@ -86,7 +86,7 @@ macro_rules! command {
         #[doc = $help:expr]
         fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)*) $body:expr
     ) => {
-        fn $name(&mut $self, _args: &[&str]) -> Result<(), $crate::prompt::error::Error> {
+        fn $name(&mut $self, _args: &[&str]) -> $crate::prompt::error::Result<()> {
             let mut _i = 0;
             $(
                 let $arg = $crate::argument!(_args, _i, $arg, $type);
