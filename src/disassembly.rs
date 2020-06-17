@@ -20,8 +20,8 @@ impl Disassembly {
         let mut s = String::new();
 
         for i in sub.instructions().iter() {
-            s.push_str(self.label(i.pc(), subroutine).as_str());
-            s.push_str(self.instruction(*i).as_str());
+            s.push_str(&self.label(i.pc(), subroutine));
+            s.push_str(&self.instruction(*i));
         }
 
         s
@@ -37,7 +37,7 @@ impl Disassembly {
     fn instruction(&self, i: Instruction) -> String {
         let arg = match i.argument_alias(self.analysis.clone()) {
             Some(arg) => arg.red(),
-            None => i.argument_string().white(),
+            None => i.argument_string().normal(),
         };
         let comment = format!("; ${:06X}", i.pc()).bright_black();
         format!("  {:4}{:25}{}\n", i.name().green(), arg, comment)
