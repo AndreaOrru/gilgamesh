@@ -4,7 +4,7 @@ use crate::analysis::Analysis;
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
-use crate::snes::state::{StateRegister, SubStateChange};
+use crate::snes::state::{StateRegister, SubStateChange, UnknownReason};
 
 /// SNES CPU emulation.
 #[derive(Clone)]
@@ -121,13 +121,13 @@ impl CPU {
                 // Propagate called subroutine state to caller.
                 self.propagate_subroutine_state(target);
             }
-            None => self.unknown_sub_state_change(),
+            None => self.unknown_sub_state_change(UnknownReason::IndirectJump),
         }
     }
 
     /// Interrupt instruction emulation.
     fn interrupt(&mut self, _instruction: Instruction) {
-        self.unknown_sub_state_change();
+        self.unknown_sub_state_change(UnknownReason::SuspectInstruction);
     }
 
     /// Jump instruction emulation.
@@ -138,7 +138,7 @@ impl CPU {
                 self.analysis
                     .add_reference(instruction.pc(), target, self.subroutine);
             }
-            None => self.unknown_sub_state_change(),
+            None => self.unknown_sub_state_change(UnknownReason::IndirectJump),
         }
     }
 
@@ -174,7 +174,7 @@ impl CPU {
         // Unknown or ambiguous state change.
         if sub.state_changes().len() != 1 || sub.has_unknown_state_change() {
             drop(subroutines);
-            return self.unknown_sub_state_change();
+            return self.unknown_sub_state_change(UnknownReason::Unknown);
         }
 
         // Apply state change.
@@ -190,10 +190,10 @@ impl CPU {
     }
 
     /// Signal an unknown subroutine state change.
-    fn unknown_sub_state_change(&mut self) {
+    fn unknown_sub_state_change(&mut self, reason: UnknownReason) {
         self.stop = true;
         self.analysis
-            .add_sub_state_change(self.subroutine, SubStateChange::new_unknown());
+            .add_sub_state_change(self.subroutine, SubStateChange::new_unknown(reason));
     }
 
     #[cfg(test)]

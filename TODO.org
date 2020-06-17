@@ -1,3 +1,6 @@
+* CPU
+** TODO PHP / PLP
+
 * Disassembly
 ** DONE Add basic formatting for subroutine disassembly
 ** TODO Add unknown state details
@@ -6,7 +9,7 @@
 ** TODO Test unknown states
 
 * Prompt
-** TODO Show unknown subroutines in red
+** DONE Show unknown subroutines in red
 ** TODO Autocompletion
 
 * Tests
