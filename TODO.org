@@ -1,6 +1,6 @@
 * CPU
 ** DONE PHP / PLP
-** TODO `A` register emulation
+** DONE `A` register emulation
 ** TODO Other stack opcodes
 
 * Disassembly
@@ -16,5 +16,7 @@
 
 * Tests
 ** TODO Stack
+** TODO Registers
 ** TODO Local labels
 ** TODO Changing subroutine
+** TODO Stack manipulation

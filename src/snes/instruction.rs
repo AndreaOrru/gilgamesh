@@ -223,6 +223,35 @@ impl Instruction {
             || typ == InstructionType::Interrupt
     }
 
+    /// Return whether this instruction modifies A.
+    pub fn changes_a(&self) -> bool {
+        let op = self.operation();
+        op == Op::ADC
+            || op == Op::AND
+            || op == Op::ASL
+            || op == Op::DEC
+            || op == Op::EOR
+            || op == Op::INC
+            || op == Op::LDA
+            || op == Op::LSR
+            || op == Op::ORA
+            || op == Op::PLA
+            || op == Op::ROL
+            || op == Op::ROR
+            || op == Op::SBC
+            || op == Op::TDC
+            || op == Op::TSC
+            || op == Op::TXA
+            || op == Op::TYA
+            || op == Op::XBA
+    }
+
+    /// Return whether this instruction modifies the stack pointer.
+    pub fn changes_stack(&self) -> bool {
+        let op = self.operation();
+        op == Op::TCS || op == Op::TXS
+    }
+
     /// Return the instruction's argument as a string.
     pub fn argument_string(&self) -> String {
         // Return the string corresponding to the argument size.

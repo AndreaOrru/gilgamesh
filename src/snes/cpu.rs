@@ -2,13 +2,14 @@ use std::rc::Rc;
 
 use crate::analysis::Analysis;
 use crate::snes::instruction::{Instruction, InstructionType};
-use crate::snes::opcodes::Op;
-use crate::snes::registers::Registers;
+use crate::snes::opcodes::{AddressMode, Op};
+use crate::snes::register::Register;
 use crate::snes::rom::ROM;
 use crate::snes::stack;
 use crate::snes::state::{StateRegister, SubStateChange, UnknownReason};
 
 /// SNES CPU emulation.
+#[allow(non_snake_case)]
 #[derive(Clone)]
 pub struct CPU {
     /// Reference to the analysis.
@@ -32,23 +33,22 @@ pub struct CPU {
     /// Stack.
     stack: stack::Stack,
 
-    /// A/X/Y registers.
-    registers: Registers,
+    /// Registers.
+    A: Register,
 }
 
 impl CPU {
     /// Instantiate a CPU object.
     pub fn new(analysis: &Rc<Analysis>, pc: usize, subroutine: usize, p: u8) -> Self {
-        let state = StateRegister::new(p);
         Self {
             analysis: analysis.clone(),
             stop: false,
             pc,
             subroutine,
-            state,
+            state: StateRegister::new(p),
             sub_state_change: SubStateChange::new_empty(),
             stack: stack::Stack::new(),
-            registers: Registers::new(state),
+            A: Register::new(true),
         }
     }
 
@@ -93,6 +93,8 @@ impl CPU {
             InstructionType::SepRep => self.sep_rep(instruction),
             InstructionType::Pop => self.pop(instruction),
             InstructionType::Push => self.push(instruction),
+            _ if instruction.changes_a() => self.change_a(instruction),
+            _ if instruction.changes_stack() => self.change_stack(instruction),
             _ => {}
         }
     }
@@ -133,6 +135,49 @@ impl CPU {
                 self.propagate_subroutine_state(target);
             }
             None => self.unknown_sub_state_change(UnknownReason::IndirectJump),
+        }
+    }
+
+    /// Emulate instructions that modify the value of A.
+    fn change_a(&mut self, i: Instruction) {
+        #[allow(non_snake_case)]
+        let A = &mut self.A;
+        let s = self.state;
+
+        match i.address_mode() {
+            AddressMode::ImmediateM => {
+                let a = A.get(s);
+                let arg = i.argument().unwrap() as u16;
+                match i.operation() {
+                    Op::LDA => A.set(s, Some(arg)),
+                    Op::ADC if a.is_some() => A.set(s, Some(a.unwrap() + arg)),
+                    Op::SBC if a.is_some() => A.set(s, Some(a.unwrap() - arg)),
+                    _ => A.set(s, None),
+                }
+            }
+            _ => {
+                match i.operation() {
+                    Op::TSC => A.set_whole(Some(self.stack.pointer() as u16)),
+                    Op::PLA => {
+                        // TODO: assign value to A.
+                        self.stack.pop(self.state.a_size());
+                    }
+                    _ => A.set(s, None),
+                }
+            }
+        }
+    }
+
+    /// Emulate instructions that modify the stack pointer.
+    fn change_stack(&mut self, i: Instruction) {
+        match i.operation() {
+            Op::TCS => match self.A.get_whole() {
+                Some(a) => {
+                    self.stack.set_pointer(a);
+                }
+                None => self.unknown_sub_state_change(UnknownReason::StackManipulation),
+            },
+            _ => {}
         }
     }
 

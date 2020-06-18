@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use derive_new::new;
+use getset::{CopyGetters, Setters};
 
 use crate::snes::instruction::Instruction;
 use crate::snes::state::{StateRegister, SubStateChange};
@@ -21,10 +22,12 @@ pub struct Entry {
 }
 
 /// SNES stack.
-#[derive(Clone)]
+#[derive(CopyGetters, Clone, Setters)]
 pub struct Stack {
-    memory: HashMap<isize, Entry>,
-    pointer: isize, // TODO: this should really be usize once TCS is implemented.
+    memory: HashMap<u16, Entry>,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    pointer: u16,
 }
 
 impl Stack {
