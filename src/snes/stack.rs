@@ -7,15 +7,15 @@ use crate::snes::instruction::Instruction;
 use crate::snes::state::{StateRegister, SubStateChange};
 
 /// Optional payload (value pushed onto the stack).
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Data {
     None,
-    Byte(u8),
+    Value(usize),
     State(StateRegister, SubStateChange),
 }
 
 /// Stack entry.
-#[derive(new, Copy, Clone)]
+#[derive(new, Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Entry {
     pub instruction: Option<Instruction>,
     pub data: Data,
@@ -53,7 +53,7 @@ impl Stack {
     pub fn push(&mut self, instruction: Instruction, data: Data, size: usize) {
         for i in (0..size).rev() {
             let data = match data {
-                Data::Byte(b) => Data::Byte(b >> (i * 8)),
+                Data::Value(b) => Data::Value((b >> (i * 8)) & 0xFF),
                 _ => data,
             };
 
@@ -84,5 +84,37 @@ impl Stack {
             Some(entry) => *entry,
             None => Entry::new(self.last_pointer_changer, Data::None),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_stack() -> Stack {
+        let mut stack = Stack::new();
+        let tcs = Instruction::new(0x8000, 0x8000, 0b0011_0000, 0x1B, 0x00);
+        stack.set_pointer(tcs, 0x100);
+        stack
+    }
+
+    #[test]
+    fn test_push_pop_one() {
+        let mut stack = setup_stack();
+
+        let pha = Instruction::new(0x8001, 0x8000, 0b0011_0000, 0x48, 0x00);
+        stack.push_one(pha, Data::Value(0xFF));
+        assert_eq!(stack.pop_one().data, Data::Value(0xFF));
+    }
+
+    #[test]
+    fn test_push_pop() {
+        let mut stack = setup_stack();
+
+        let pha = Instruction::new(0x8001, 0x8000, 0b0000_0000, 0x48, 0x00);
+        stack.push(pha, Data::Value(0x1234), 2);
+
+        let values: Vec<_> = stack.pop(2).iter().map(|e| e.data).collect();
+        assert_eq!(values, vec![Data::Value(0x34), Data::Value(0x12)]);
     }
 }
