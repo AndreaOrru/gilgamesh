@@ -132,9 +132,9 @@ impl CPU {
                 cpu.run();
 
                 // Propagate called subroutine state to caller.
-                self.propagate_subroutine_state(target);
+                self.propagate_subroutine_state(instruction.pc(), target);
             }
-            None => self.unknown_sub_state_change(UnknownReason::IndirectJump),
+            None => self.unknown_sub_state_change(instruction.pc(), UnknownReason::IndirectJump),
         }
     }
 
@@ -173,15 +173,15 @@ impl CPU {
         match i.operation() {
             Op::TCS => match self.A.get_whole() {
                 Some(a) => self.stack.set_pointer(i, a),
-                None => self.unknown_sub_state_change(UnknownReason::StackManipulation),
+                None => self.unknown_sub_state_change(i.pc(), UnknownReason::StackManipulation),
             },
             _ => {}
         }
     }
 
     /// Interrupt instruction emulation.
-    fn interrupt(&mut self, _instruction: Instruction) {
-        self.unknown_sub_state_change(UnknownReason::SuspectInstruction);
+    fn interrupt(&mut self, i: Instruction) {
+        self.unknown_sub_state_change(i.pc(), UnknownReason::SuspectInstruction);
     }
 
     /// Jump instruction emulation.
@@ -192,15 +192,15 @@ impl CPU {
                 self.analysis
                     .add_reference(instruction.pc(), target, self.subroutine);
             }
-            None => self.unknown_sub_state_change(UnknownReason::IndirectJump),
+            None => self.unknown_sub_state_change(instruction.pc(), UnknownReason::IndirectJump),
         }
     }
 
     /// Return instruction emulation.
-    fn ret(&mut self, _instruction: Instruction) {
+    fn ret(&mut self, i: Instruction) {
         self.stop = true;
         self.analysis
-            .add_sub_state_change(self.subroutine, self.sub_state_change);
+            .add_sub_state_change(self.subroutine, i.pc(), self.sub_state_change);
     }
 
     /// SEP/REP instruction emulation.
@@ -247,7 +247,10 @@ impl CPU {
                     },
                     // Stack manipulation. Stop here.
                     _ => {
-                        self.unknown_sub_state_change(UnknownReason::StackManipulation);
+                        self.unknown_sub_state_change(
+                            instruction.pc(),
+                            UnknownReason::StackManipulation,
+                        );
                         self.stop = true;
                     }
                 }
@@ -259,14 +262,14 @@ impl CPU {
 
     /// Take the state change of the given subroutine and
     /// propagate it to to the current subroutine state.
-    fn propagate_subroutine_state(&mut self, subroutine: usize) {
+    fn propagate_subroutine_state(&mut self, call_pc: usize, subroutine: usize) {
         let subroutines = self.analysis.subroutines().borrow();
         let sub = &subroutines[&subroutine];
 
         // Unknown or ambiguous state change.
         if sub.state_changes().len() != 1 || sub.has_unknown_state_change() {
             drop(subroutines);
-            return self.unknown_sub_state_change(UnknownReason::Unknown);
+            return self.unknown_sub_state_change(call_pc, UnknownReason::Unknown);
         }
 
         // Apply state change.
@@ -282,10 +285,13 @@ impl CPU {
     }
 
     /// Signal an unknown subroutine state change.
-    fn unknown_sub_state_change(&mut self, reason: UnknownReason) {
+    fn unknown_sub_state_change(&mut self, pc: usize, reason: UnknownReason) {
         self.stop = true;
-        self.analysis
-            .add_sub_state_change(self.subroutine, SubStateChange::new_unknown(reason));
+        self.analysis.add_sub_state_change(
+            self.subroutine,
+            pc,
+            SubStateChange::new_unknown(reason),
+        );
     }
 
     #[cfg(test)]

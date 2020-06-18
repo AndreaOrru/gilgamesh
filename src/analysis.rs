@@ -149,10 +149,10 @@ impl Analysis {
     }
 
     /// Add a state change to a subroutine.
-    pub fn add_sub_state_change(&self, pc: usize, state_change: SubStateChange) {
+    pub fn add_sub_state_change(&self, subroutine: usize, pc: usize, state_change: SubStateChange) {
         let mut subroutines = self.subroutines.borrow_mut();
-        let subroutine = subroutines.get_mut(&pc).unwrap();
-        subroutine.add_state_change(pc, state_change);
+        let sub = subroutines.get_mut(&subroutine).unwrap();
+        sub.add_state_change(pc, state_change);
     }
 
     /// Add a reference from an instruction to another.

@@ -1,10 +1,11 @@
 use getset::CopyGetters;
+use strum_macros::ToString;
 
 const M_BIT: usize = 5;
 const X_BIT: usize = 4;
 
 /// SNES state register (P).
-#[derive(Copy, Clone, CopyGetters, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, CopyGetters, Debug, Eq, Hash, PartialEq)]
 pub struct StateRegister {
     #[getset(get_copy = "pub")]
     p: u8,
@@ -145,7 +146,7 @@ mod test_state_register {
 }
 
 /// Possible reasons why a state change is unknown.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, ToString)]
 pub enum UnknownReason {
     Known,
     Unknown,
@@ -155,7 +156,7 @@ pub enum UnknownReason {
 }
 
 /// State change caused by the execution of a subroutine.
-#[derive(Copy, CopyGetters, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, CopyGetters, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SubStateChange {
     #[getset(get_copy = "pub")]
     m: Option<bool>,

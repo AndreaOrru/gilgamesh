@@ -1,9 +1,9 @@
 use enum_map::{enum_map, Enum, EnumMap};
 use lazy_static::lazy_static;
-use strum_macros::{EnumString, IntoStaticStr};
+use strum_macros::{EnumString, ToString};
 
 /// Memory addressing modes.
-#[derive(Copy, Clone, Debug, Enum, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Enum, Eq, Hash, PartialEq)]
 pub enum AddressMode {
     Implied,
     ImmediateM,
@@ -71,7 +71,7 @@ lazy_static! {
 }
 
 /// 65c816 operations.
-#[derive(Copy, Clone, Debug, Enum, EnumString, Eq, PartialEq, Hash, IntoStaticStr)]
+#[derive(Copy, Clone, Debug, Enum, EnumString, Eq, PartialEq, Hash, ToString)]
 pub enum Op {
     ADC,
     AND,

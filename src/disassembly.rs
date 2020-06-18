@@ -4,6 +4,7 @@ use colored::*;
 
 use crate::analysis::Analysis;
 use crate::snes::instruction::Instruction;
+use crate::snes::subroutine::Subroutine;
 
 pub struct Disassembly {
     analysis: Rc<Analysis>,
@@ -22,8 +23,8 @@ impl Disassembly {
         for i in sub.instructions().iter() {
             s.push_str(&self.label(i.pc(), subroutine));
             s.push_str(&self.instruction(*i));
+            s.push_str(&self.unknown_state(i.pc(), sub));
         }
-
         s
     }
 
@@ -41,5 +42,15 @@ impl Disassembly {
         };
         let comment = format!("; ${:06X}", i.pc()).bright_black();
         format!("  {:4}{:25}{}\n", i.name().green(), arg, comment)
+    }
+
+    fn unknown_state(&self, pc: usize, subroutine: &Subroutine) -> String {
+        match subroutine.unknown_state_changes().get(&pc) {
+            Some(state_change) => {
+                let reason = state_change.unknown_reason().to_string();
+                format!("  ; {}\n", reason).red().to_string()
+            }
+            None => String::new(),
+        }
     }
 }

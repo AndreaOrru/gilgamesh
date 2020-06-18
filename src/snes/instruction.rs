@@ -83,8 +83,7 @@ impl Instruction {
 
     /// Return the name of the instruction's operation.
     pub fn name(&self) -> String {
-        let name: &str = self.operation().into();
-        name.to_lowercase()
+        self.operation().to_string().to_lowercase()
     }
 
     /// Return the instruction's operation.
