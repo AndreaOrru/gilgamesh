@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use derive_new::new;
-use getset::{CopyGetters, Setters};
+use getset::CopyGetters;
 
 use crate::snes::instruction::Instruction;
 use crate::snes::state::{StateRegister, SubStateChange};
@@ -22,12 +22,14 @@ pub struct Entry {
 }
 
 /// SNES stack.
-#[derive(CopyGetters, Clone, Setters)]
+#[derive(CopyGetters, Clone)]
 pub struct Stack {
     memory: HashMap<u16, Entry>,
 
-    #[getset(get_copy = "pub", set = "pub")]
+    #[getset(get_copy = "pub")]
     pointer: u16,
+
+    last_pointer_changer: Option<Instruction>,
 }
 
 impl Stack {
@@ -37,7 +39,14 @@ impl Stack {
         Self {
             memory: HashMap::new(),
             pointer: 0,
+            last_pointer_changer: None,
         }
+    }
+
+    /// Set a new stack pointer.
+    pub fn set_pointer(&mut self, instruction: Instruction, pointer: u16) {
+        self.last_pointer_changer = Some(instruction);
+        self.pointer = pointer;
     }
 
     /// Push one or more values onto the stack.
@@ -73,10 +82,7 @@ impl Stack {
         self.pointer += 1;
         match self.memory.get(&self.pointer) {
             Some(entry) => *entry,
-            None => {
-                // TODO: return last instruction who changed the stack.
-                Entry::new(None, Data::None)
-            }
+            None => Entry::new(self.last_pointer_changer, Data::None),
         }
     }
 }

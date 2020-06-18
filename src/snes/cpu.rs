@@ -172,9 +172,7 @@ impl CPU {
     fn change_stack(&mut self, i: Instruction) {
         match i.operation() {
             Op::TCS => match self.A.get_whole() {
-                Some(a) => {
-                    self.stack.set_pointer(a);
-                }
+                Some(a) => self.stack.set_pointer(i, a),
                 None => self.unknown_sub_state_change(UnknownReason::StackManipulation),
             },
             _ => {}
