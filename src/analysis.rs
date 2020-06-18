@@ -152,7 +152,7 @@ impl Analysis {
     pub fn add_sub_state_change(&self, pc: usize, state_change: SubStateChange) {
         let mut subroutines = self.subroutines.borrow_mut();
         let subroutine = subroutines.get_mut(&pc).unwrap();
-        subroutine.add_state_change(state_change);
+        subroutine.add_state_change(pc, state_change);
     }
 
     /// Add a reference from an instruction to another.
@@ -198,7 +198,7 @@ impl Analysis {
 
     /// Generate local label names.
     fn generate_local_labels(&self) {
-        for (_, Reference { target, subroutine }) in self.references.borrow().iter() {
+        for Reference { target, subroutine } in self.references.borrow().values() {
             if !self.is_subroutine(*target) {
                 let label = format!("loc_{:06X}", *target);
                 let mut local_labels = self.local_labels.borrow_mut();
@@ -285,7 +285,7 @@ mod tests {
         assert_eq!(state_change_sub.instructions().len(), 2);
 
         // Check the `state_change` subroutine sets M/X to 0.
-        let state_change = state_change_sub.state_changes().iter().next().unwrap();
+        let state_change = state_change_sub.state_changes().values().next().unwrap();
         assert_eq!(state_change_sub.state_changes().len(), 1);
         assert_eq!(state_change.m().unwrap(), false);
         assert_eq!(state_change.x().unwrap(), false);

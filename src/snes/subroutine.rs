@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use getset::{CopyGetters, Getters};
 
@@ -18,10 +18,10 @@ pub struct Subroutine {
     instructions: BTreeSet<Instruction>,
 
     #[getset(get = "pub")]
-    state_changes: HashSet<SubStateChange>,
+    state_changes: HashMap<usize, SubStateChange>,
 
     #[getset(get = "pub")]
-    unknown_state_changes: HashSet<SubStateChange>,
+    unknown_state_changes: HashMap<usize, SubStateChange>,
 }
 
 impl Subroutine {
@@ -31,8 +31,8 @@ impl Subroutine {
             pc,
             label,
             instructions: BTreeSet::new(),
-            state_changes: HashSet::new(),
-            unknown_state_changes: HashSet::new(),
+            state_changes: HashMap::new(),
+            unknown_state_changes: HashMap::new(),
         }
     }
 
@@ -42,11 +42,11 @@ impl Subroutine {
     }
 
     /// Add a state change to the subroutine.
-    pub fn add_state_change(&mut self, state_change: SubStateChange) {
+    pub fn add_state_change(&mut self, pc: usize, state_change: SubStateChange) {
         if state_change.unknown() {
-            self.unknown_state_changes.insert(state_change);
+            self.unknown_state_changes.insert(pc, state_change);
         } else {
-            self.state_changes.insert(state_change);
+            self.state_changes.insert(pc, state_change);
         }
     }
 
@@ -58,7 +58,7 @@ impl Subroutine {
     /// Return true if the subroutine is unknown because of `reason`, false otherwise.
     pub fn is_unknown_because_of(&self, reason: UnknownReason) -> bool {
         self.unknown_state_changes
-            .iter()
+            .values()
             .any(|s| s.unknown_reason() == reason)
     }
 }
@@ -72,10 +72,10 @@ mod tests {
     fn test_add_state_change() {
         let mut subroutine = Subroutine::new(0x8000, "reset".to_string());
 
-        subroutine.add_state_change(SubStateChange::new_empty());
+        subroutine.add_state_change(0x8000, SubStateChange::new_empty());
         assert!(!subroutine.has_unknown_state_change());
 
-        subroutine.add_state_change(SubStateChange::new_unknown(UnknownReason::Unknown));
+        subroutine.add_state_change(0x8000, SubStateChange::new_unknown(UnknownReason::Unknown));
         assert!(subroutine.has_unknown_state_change());
     }
 }

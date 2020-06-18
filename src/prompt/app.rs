@@ -268,7 +268,7 @@ impl<W: Write> App<W> {
         /// List subroutines.
         fn list_subroutines(&mut self) {
             let subroutines = self.analysis.subroutines().borrow();
-            for (_, sub) in subroutines.iter() {
+            for sub in subroutines.values() {
                 outln!(self.out, "{}", Self::format_subroutine(sub));
             }
             outln!(self.out);

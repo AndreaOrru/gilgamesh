@@ -270,7 +270,7 @@ impl CPU {
         }
 
         // Apply state change.
-        let state_change = *sub.state_changes().iter().next().unwrap();
+        let state_change = *sub.state_changes().values().next().unwrap();
         if let Some(m) = state_change.m() {
             self.state.set_m(m);
             self.sub_state_change.set_m(m);
