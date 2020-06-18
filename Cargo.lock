@@ -292,6 +292,7 @@ dependencies = [
  "paste",
  "rexpect",
  "rustyline",
+ "shell-words",
  "shellexpand",
  "strip-ansi-escapes",
  "strum",
@@ -645,6 +646,12 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "shell-words"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 
 [[package]]
 name = "shellexpand"

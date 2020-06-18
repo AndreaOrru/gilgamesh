@@ -70,6 +70,7 @@ impl<W: Write> App<W> {
                     "instruction" => command_ref!(Self, assert_instruction),
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
+            "comment" => command_ref!(Self, comment),
             "describe" => command_ref!(Self, describe),
             "disassembly" => command_ref!(Self, disassembly),
             "help" => command_ref!(Self, help),
@@ -136,12 +137,15 @@ impl<W: Write> App<W> {
     }
 
     /// Find command inside the hierarchy of commands.
-    fn dig_command<'a>(commands: &'a Command<Self>, parts: &[&str]) -> (&'a Command<Self>, usize) {
+    fn dig_command<'a>(
+        commands: &'a Command<Self>,
+        parts: &[String],
+    ) -> (&'a Command<Self>, usize) {
         let mut command = commands;
         let mut i = 0;
 
         while i < parts.len() {
-            match command.subcommands.get(parts[i]) {
+            match command.subcommands.get(parts[i].as_str()) {
                 Some(c) => command = &c,
                 None => break,
             };
@@ -153,7 +157,7 @@ impl<W: Write> App<W> {
 
     /// Parse and execute a command.
     fn handle_line(&mut self, line: String) {
-        let parts: Vec<&str> = line.trim().split_whitespace().collect();
+        let parts = shell_words::split(line.trim()).unwrap();
 
         let (command, i) = Self::dig_command(&self.commands, &parts);
         match command.function {
@@ -172,7 +176,7 @@ impl<W: Write> App<W> {
     }
 
     /// Show help and usage of a command.
-    fn help_command(out: &mut W, parts: &[&str], command: &Command<Self>, root: bool) {
+    fn help_command(out: &mut W, parts: &[String], command: &Command<Self>, root: bool) {
         if !root {
             outln!(
                 out,
@@ -231,6 +235,18 @@ impl<W: Write> App<W> {
         /// Run the analysis on the ROM.
         fn analyze(&mut self) {
             self.analysis.run();
+        }
+    );
+
+    command!(
+        /// Set comment for an instruction.
+        fn comment(&mut self, pc: Integer, comment: String) {
+            let mut comments = self.analysis.comments().borrow_mut();
+            if comment.is_empty() {
+                comments.remove(&pc);
+            } else {
+                comments.insert(pc, comment);
+            }
         }
     );
 

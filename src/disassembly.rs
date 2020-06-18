@@ -28,11 +28,13 @@ impl Disassembly {
         s
     }
 
-    fn label(&self, pc: usize, subroutine: usize) -> String {
-        match self.analysis.label(pc, Some(subroutine)) {
-            Some(label) => format!("{}:\n", label.red()),
+    fn comment(&self, pc: usize) -> String {
+        let comments = self.analysis.comments().borrow();
+        let comment = match comments.get(&pc) {
+            Some(s) => s.to_owned(),
             None => String::new(),
-        }
+        };
+        format!("; ${:06X} | {}", pc, comment)
     }
 
     fn instruction(&self, i: Instruction) -> String {
@@ -40,8 +42,16 @@ impl Disassembly {
             Some(arg) => arg.red(),
             None => i.argument_string().normal(),
         };
-        let comment = format!("; ${:06X}", i.pc()).bright_black();
+
+        let comment = self.comment(i.pc()).bright_black();
         format!("  {:4}{:25}{}\n", i.name().green(), arg, comment)
+    }
+
+    fn label(&self, pc: usize, subroutine: usize) -> String {
+        match self.analysis.label(pc, Some(subroutine)) {
+            Some(label) => format!("{}:\n", label.red()),
+            None => String::new(),
+        }
     }
 
     fn unknown_state(&self, pc: usize, subroutine: &Subroutine) -> String {

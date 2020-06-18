@@ -52,6 +52,10 @@ pub struct Analysis {
     /// Subroutine local labels.
     #[getset(get = "pub")]
     local_labels: RefCell<HashMap<usize, BiHashMap<String, usize>>>,
+
+    /// Instruction comments.
+    #[getset(get = "pub")]
+    comments: RefCell<HashMap<usize, String>>,
 }
 
 impl Analysis {
@@ -66,6 +70,7 @@ impl Analysis {
             references: RefCell::new(HashMap::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
+            comments: RefCell::new(HashMap::new()),
         })
     }
 

@@ -17,6 +17,7 @@
 * Tests
 ** DONE Registers
 ** DONE Stack
+** TODO Comment
 ** TODO Local labels
 ** TODO Changing subroutine
 ** TODO Stack manipulation
