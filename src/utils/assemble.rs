@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 pub fn assemble(filename: &'static str) -> String {
     // Find the test ROMs' directory.
     let mut base = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    base.push("tests/roms");
+    base.push("tests");
 
     // Find the .asm file inside it.
     let mut asm = base.clone();

@@ -3,6 +3,8 @@ use std::fmt;
 use getset::CopyGetters;
 use strum_macros::IntoStaticStr;
 
+use crate::prompt::error::{Error, Result};
+
 const M_BIT: usize = 5;
 const X_BIT: usize = 4;
 
@@ -198,6 +200,35 @@ impl StateChange {
         }
     }
 
+    /// Instantiate a state change object from a human-readable expression.
+    pub fn from_expr(expr: String) -> Result<Self> {
+        match expr.as_str() {
+            "none" => Ok(Self::new_empty()),
+            "unknown" => Ok(Self::new_unknown(UnknownReason::Unknown)),
+            _ => {
+                let expressions: Vec<&str> = expr.split(',').collect();
+                match expressions.len() {
+                    1 | 2 => {
+                        let mut m = None;
+                        let mut x = None;
+
+                        for expression in expressions.iter() {
+                            let parts: Vec<&str> = expression.split('=').collect();
+                            let (register, value) = (parts[0], parts[1]);
+                            match register {
+                                "m" => m = Some(value.parse::<u8>()? != 0),
+                                "x" => x = Some(value.parse::<u8>()? != 0),
+                                _ => return Err(Error::InvalidStateExpr),
+                            }
+                        }
+                        Ok(Self::new(m, x))
+                    }
+                    _ => Err(Error::InvalidStateExpr),
+                }
+            }
+        }
+    }
+
     /// Return true if the state is unknown, false otherwise.
     pub fn unknown(&self) -> bool {
         self.unknown_reason != UnknownReason::Known
@@ -288,5 +319,21 @@ mod test_state_change {
 
         let mx = StateChange::new(Some(false), Some(true));
         assert_eq!(mx.to_string(), "m=0,x=1");
+    }
+
+    #[test]
+    fn from_expr() {
+        let unknown = StateChange::from_expr("unknown".to_string()).unwrap();
+        assert!(unknown.unknown());
+
+        let none = StateChange::from_expr("none".to_string()).unwrap();
+        assert_eq!(none.to_string(), "none");
+
+        let m = StateChange::from_expr("m=1".to_string()).unwrap();
+        assert_eq!(m.m(), Some(true));
+
+        let mx = StateChange::from_expr("m=1,x=0".to_string()).unwrap();
+        assert_eq!(mx.m(), Some(true));
+        assert_eq!(mx.x(), Some(false));
     }
 }

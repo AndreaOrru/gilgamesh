@@ -18,7 +18,7 @@ use crate::prompt::command::Command;
 use crate::prompt::error::{Error, Result};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
-use crate::snes::state::UnknownReason;
+use crate::snes::state::{StateChange, UnknownReason};
 use crate::snes::subroutine::Subroutine;
 use crate::{command, command_ref, container};
 
@@ -76,31 +76,6 @@ impl App<Stdout> {
 }
 
 impl<W: Write> App<W> {
-    /// Return the hierarchy of supported commands.
-    fn build_commands() -> Command<Self> {
-        container!(btreemap! {
-            "analyze" => command_ref!(Self, analyze),
-            "assert" => container!(
-                /// Assert stuff.
-                btreemap! {
-                    "instruction" => command_ref!(Self, assert_instruction),
-                    "subroutine"  => command_ref!(Self, assert_subroutine),
-                }),
-            "comment" => command_ref!(Self, comment),
-            "describe" => command_ref!(Self, describe),
-            "disassembly" => command_ref!(Self, disassembly),
-            "help" => command_ref!(Self, help),
-            "list" => container!(
-                /// List various types of entities.
-                btreemap! {
-                    "subroutines"  => command_ref!(Self, list_subroutines),
-                }),
-            "rom" => command_ref!(Self, rom),
-            "subroutine" => command_ref!(Self, subroutine),
-            "quit" => command_ref!(Self, quit),
-        })
-    }
-
     /// Instantiate a prompt with redirected output (for test purposes).
     #[cfg(test)]
     fn with_output(out: W) -> Self {
@@ -133,6 +108,7 @@ impl<W: Write> App<W> {
             match readline {
                 // Command line to be parsed.
                 Ok(line) => {
+                    // TODO: find a better way to handle colored hints.
                     let line = String::from_utf8(strip_ansi_escapes::strip(line).unwrap()).unwrap();
                     if !line.is_empty() {
                         rl.add_history_entry(&line);
@@ -253,10 +229,51 @@ impl<W: Write> App<W> {
 
     /**************************************************************************/
 
+    /// Return the hierarchy of supported commands.
+    fn build_commands() -> Command<Self> {
+        container!(btreemap! {
+            "analyze" => command_ref!(Self, analyze),
+            "assert" => container!(
+                /// Define known processor states for instructions and subroutines.
+                btreemap! {
+                    "instruction" => command_ref!(Self, assert_instruction),
+                    "subroutine"  => command_ref!(Self, assert_subroutine),
+                }),
+            "comment" => command_ref!(Self, comment),
+            "describe" => command_ref!(Self, describe),
+            "disassembly" => command_ref!(Self, disassembly),
+            "help" => command_ref!(Self, help),
+            "list" => container!(
+                /// List various types of entities.
+                btreemap! {
+                    "subroutines"  => command_ref!(Self, list_subroutines),
+                }),
+            "rom" => command_ref!(Self, rom),
+            "subroutine" => command_ref!(Self, subroutine),
+            "quit" => command_ref!(Self, quit),
+        })
+    }
+
     command!(
         /// Run the analysis on the ROM.
         fn analyze(&mut self) {
             self.analysis.run();
+        }
+    );
+
+    command!(
+        /// Define how the processor state changes after an instruction's execution.
+        fn assert_instruction(&mut self, pc: Integer, state_expr: String) {
+            let state_change = StateChange::from_expr(state_expr).unwrap();
+            self.analysis.add_instruction_assertion(pc, state_change);
+        }
+    );
+
+    command!(
+        /// Define a known processor return state for a given subroutine.
+        fn assert_subroutine(&mut self, pc: Integer, state_expr: String) {
+            let state_change = StateChange::from_expr(state_expr).unwrap();
+            self.analysis.add_subroutine_assertion(pc, state_change);
         }
     );
 
@@ -344,20 +361,6 @@ impl<W: Write> App<W> {
             self.exit = true;
         }
     );
-
-    command!(
-        /// Assert instruction.
-        fn assert_instruction(&mut self, _pc: Integer) {
-            // TODO: implement.
-        }
-    );
-
-    command!(
-        /// Assert subroutine.
-        fn assert_subroutine(&mut self) {
-            // TODO: implement.
-        }
-    );
 }
 
 #[cfg(test)]
@@ -396,16 +399,13 @@ mod tests {
     #[test]
     fn test_help_command_container() {
         let output = run_command("help assert");
-        assert!(output.starts_with("Usage: assert SUBCOMMAND\n\nAssert stuff."));
+        assert!(output.starts_with("Usage: assert SUBCOMMAND\n\n"));
     }
 
     #[test]
     fn test_help_nested_command() {
         let output = run_command("help assert instruction");
-        assert_eq!(
-            "Usage: assert instruction _PC\n\nAssert instruction.\n\n",
-            output
-        );
+        assert!(output.starts_with("Usage: assert instruction PC STATE_EXPR\n\n"));
     }
 
     #[test]

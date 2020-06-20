@@ -56,6 +56,12 @@ pub struct Analysis {
     /// Instruction comments.
     #[getset(get = "pub")]
     comments: RefCell<HashMap<usize, String>>,
+
+    /// Assertions on instruction state changes.
+    instruction_assertions: RefCell<HashMap<usize, StateChange>>,
+
+    /// Assertions on subroutine state changes.
+    subroutine_assertions: RefCell<HashMap<usize, StateChange>>,
 }
 
 impl Analysis {
@@ -71,6 +77,8 @@ impl Analysis {
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
             comments: RefCell::new(HashMap::new()),
+            instruction_assertions: RefCell::new(HashMap::new()),
+            subroutine_assertions: RefCell::new(HashMap::new()),
         })
     }
 
@@ -164,6 +172,18 @@ impl Analysis {
     pub fn add_reference(&self, source: usize, target: usize, subroutine: usize) {
         let mut references = self.references.borrow_mut();
         references.insert(source, Reference { target, subroutine });
+    }
+
+    /// Add an assertion on a instruction state change.
+    pub fn add_instruction_assertion(&self, pc: usize, state_change: StateChange) {
+        let mut assertions = self.instruction_assertions.borrow_mut();
+        assertions.insert(pc, state_change);
+    }
+
+    /// Add an assertion on a subroutine state change.
+    pub fn add_subroutine_assertion(&self, pc: usize, state_change: StateChange) {
+        let mut assertions = self.subroutine_assertions.borrow_mut();
+        assertions.insert(pc, state_change);
     }
 
     /// Return the label associated with an address, if any.
