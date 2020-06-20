@@ -1,4 +1,4 @@
-use crate::snes::state::StateRegister;
+use crate::snes::state::State;
 
 /// 8/16-bit SNES register.
 #[derive(Copy, Clone)]
@@ -19,7 +19,7 @@ impl Register {
     }
 
     /// Return the size of the register in the given state.
-    pub fn size(&self, state: StateRegister) -> usize {
+    pub fn size(&self, state: State) -> usize {
         if self.is_accumulator {
             state.a_size()
         } else {
@@ -28,7 +28,7 @@ impl Register {
     }
 
     /// Get the value of the register in the given state.
-    pub fn get(&self, state: StateRegister) -> Option<u16> {
+    pub fn get(&self, state: State) -> Option<u16> {
         match self.size(state) {
             1 => self.lo,
             _ => self.get_whole(),
@@ -46,7 +46,7 @@ impl Register {
     }
 
     /// Set the value of the register in the given state.
-    pub fn set(&mut self, state: StateRegister, value: Option<u16>) {
+    pub fn set(&mut self, state: State, value: Option<u16>) {
         match value {
             Some(v) => {
                 self.lo = Some(v & 0xFF);
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_size() {
-        let mut state = StateRegister::from_mx(true, true);
+        let mut state = State::from_mx(true, true);
         let a = Register::new(true);
         let x = Register::new(false);
 
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_get_set() {
-        let mut state = StateRegister::from_mx(true, true);
+        let mut state = State::from_mx(true, true);
         let mut a = Register::new(true);
 
         // Only lower 8-bits known.
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_get_set_whole() {
-        let mut state = StateRegister::from_mx(true, true);
+        let mut state = State::from_mx(true, true);
         let mut a = Register::new(true);
 
         a.set_whole(Some(0xFFFF));

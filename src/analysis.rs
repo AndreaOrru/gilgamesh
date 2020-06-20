@@ -8,7 +8,7 @@ use getset::Getters;
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
 use crate::snes::rom::{ROMType, ROM};
-use crate::snes::state::SubStateChange;
+use crate::snes::state::StateChange;
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
@@ -154,7 +154,7 @@ impl Analysis {
     }
 
     /// Add a state change to a subroutine.
-    pub fn add_sub_state_change(&self, subroutine: usize, pc: usize, state_change: SubStateChange) {
+    pub fn add_state_change(&self, subroutine: usize, pc: usize, state_change: StateChange) {
         let mut subroutines = self.subroutines.borrow_mut();
         let sub = subroutines.get_mut(&subroutine).unwrap();
         sub.add_state_change(pc, state_change);
@@ -223,7 +223,7 @@ mod tests {
     use gilgamesh::test_rom;
 
     test_rom!(setup_infinite_loop, "infinite_loop.asm");
-    test_rom!(setup_state_change, "sub_state_change.asm");
+    test_rom!(setup_state_change, "state_change.asm");
     test_rom!(setup_unknown_call_jump, "unknown_call_jump.asm");
 
     #[test]
@@ -233,7 +233,7 @@ mod tests {
         analysis.add_subroutine(0x8000, None);
         assert!(analysis.is_subroutine(0x8000));
 
-        let nop = Instruction::new(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
+        let nop = Instruction::test(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);
         analysis.add_instruction(nop);
         assert!(analysis.is_visited_pc(0x8000));
     }

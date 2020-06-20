@@ -1,10 +1,14 @@
+use std::iter::repeat;
 use std::rc::Rc;
 
 use colored::*;
+use inflections::case::to_sentence_case;
 
 use crate::analysis::Analysis;
 use crate::snes::instruction::Instruction;
 use crate::snes::subroutine::Subroutine;
+
+const SEPARATOR_WIDTH: usize = 38;
 
 pub struct Disassembly {
     analysis: Rc<Analysis>,
@@ -23,7 +27,7 @@ impl Disassembly {
         for i in sub.instructions().iter() {
             s.push_str(&self.label(i.pc(), subroutine));
             s.push_str(&self.instruction(*i));
-            s.push_str(&self.unknown_state(i.pc(), sub));
+            s.push_str(&self.unknown_state(*i, sub));
         }
         s
     }
@@ -35,6 +39,23 @@ impl Disassembly {
             None => String::new(),
         };
         format!("; ${:06X} | {}", pc, comment)
+    }
+
+    fn header(title: &str, color: &str) -> String {
+        let n = SEPARATOR_WIDTH;
+        let left_n = (n / 2) - (title.len() / 2);
+        let right_n = n - (left_n + title.len());
+
+        let left: String = repeat("-").take(left_n).collect();
+        let right: String = repeat("-").take(right_n).collect();
+
+        format!(
+            "  {}{}{}{}\n",
+            ";".bright_black(),
+            left.bright_black(),
+            title.color(color),
+            right.bright_black()
+        )
     }
 
     fn instruction(&self, i: Instruction) -> String {
@@ -54,11 +75,30 @@ impl Disassembly {
         }
     }
 
-    fn unknown_state(&self, pc: usize, subroutine: &Subroutine) -> String {
-        match subroutine.unknown_state_changes().get(&pc) {
+    fn unknown_state(&self, i: Instruction, subroutine: &Subroutine) -> String {
+        match subroutine.unknown_state_changes().get(&i.pc()) {
             Some(state_change) => {
-                let reason = state_change.unknown_reason().to_string();
-                format!("  ; {}\n", reason).red().to_string()
+                let mut s = Self::header("[UNKNOWN STATE]", "red");
+
+                let reason = to_sentence_case(state_change.unknown_reason().into());
+                s.push_str(
+                    &format!("  ; Reason: {}\n", reason)
+                        .bright_black()
+                        .to_string(),
+                );
+
+                s.push_str(
+                    &format!(
+                        "  ; Last known state change: {}\n",
+                        i.state_change().to_string().green()
+                    )
+                    .bright_black()
+                    .to_string(),
+                );
+
+                s.push_str(&Self::header("", "bright_black"));
+
+                s
             }
             None => String::new(),
         }

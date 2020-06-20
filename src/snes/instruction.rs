@@ -6,7 +6,7 @@ use std::rc::Rc;
 use crate::analysis::Analysis;
 use crate::snes::hardware_registers::HARDWARE_REGISTERS;
 use crate::snes::opcodes::{AddressMode, Op, ARGUMENT_SIZES, OPCODES};
-use crate::snes::state::StateRegister;
+use crate::snes::state::{State, StateChange};
 
 /// Categories of instructions.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -34,7 +34,11 @@ pub struct Instruction {
     subroutine: usize,
 
     /// Processor state in which the instruction is executed.
-    state: StateRegister,
+    state: State,
+
+    /// Subroutine state change before the execution of the instruction.
+    #[getset(get_copy = "pub")]
+    state_change: StateChange,
 
     /// The instruction's opcode byte.
     opcode: u8,
@@ -71,13 +75,21 @@ impl Ord for Instruction {
 
 impl Instruction {
     /// Instantiate an instruction.
-    pub fn new(pc: usize, subroutine: usize, p: u8, opcode: u8, argument: usize) -> Self {
+    pub fn new(
+        pc: usize,
+        subroutine: usize,
+        p: u8,
+        opcode: u8,
+        argument: usize,
+        state_change: StateChange,
+    ) -> Self {
         Self {
             pc,
             subroutine,
-            state: StateRegister::new(p),
+            state: State::new(p),
             opcode,
             _argument: argument,
+            state_change,
         }
     }
 
@@ -325,6 +337,19 @@ impl Instruction {
             None => None,
         }
     }
+
+    /// Simplified instantiation for test purposes.
+    #[cfg(test)]
+    pub fn test(pc: usize, subroutine: usize, p: u8, opcode: u8, argument: usize) -> Self {
+        Self {
+            pc,
+            subroutine,
+            state: State::new(p),
+            opcode,
+            _argument: argument,
+            state_change: StateChange::new_empty(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -333,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_instruction_lda() {
-        let instruction = Instruction::new(0x8000, 0x8000, 0b0000_0000, 0xA9, 0x1234);
+        let instruction = Instruction::test(0x8000, 0x8000, 0b0000_0000, 0xA9, 0x1234);
         assert_eq!(instruction.name(), "lda");
         assert_eq!(instruction.operation(), Op::LDA);
         assert_eq!(instruction.address_mode(), AddressMode::ImmediateM);
@@ -348,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_instruction_brl() {
-        let instruction = Instruction::new(0x8000, 0x8000, 0b0000_0000, 0x82, 0xFFFD);
+        let instruction = Instruction::test(0x8000, 0x8000, 0b0000_0000, 0x82, 0xFFFD);
 
         assert_eq!(instruction.name(), "brl");
         assert_eq!(instruction.operation(), Op::BRL);

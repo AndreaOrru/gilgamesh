@@ -6,7 +6,7 @@ use crate::snes::opcodes::{AddressMode, Op};
 use crate::snes::register::Register;
 use crate::snes::rom::ROM;
 use crate::snes::stack;
-use crate::snes::state::{StateRegister, SubStateChange, UnknownReason};
+use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// SNES CPU emulation.
 #[allow(non_snake_case)]
@@ -25,10 +25,10 @@ pub struct CPU {
     subroutine: usize,
 
     /// Processor state.
-    state: StateRegister,
+    state: State,
 
     /// Processor state change caused by the execution of this subroutine.
-    sub_state_change: SubStateChange,
+    state_change: StateChange,
 
     /// Stack.
     stack: stack::Stack,
@@ -45,8 +45,8 @@ impl CPU {
             stop: false,
             pc,
             subroutine,
-            state: StateRegister::new(p),
-            sub_state_change: SubStateChange::new_empty(),
+            state: State::new(p),
+            state_change: StateChange::new_empty(),
             stack: stack::Stack::new(),
             A: Register::new(true),
         }
@@ -68,8 +68,14 @@ impl CPU {
 
         let opcode = self.analysis.rom.read_byte(self.pc);
         let argument = self.analysis.rom.read_address(self.pc + 1);
-        let instruction =
-            Instruction::new(self.pc, self.subroutine, self.state.p(), opcode, argument);
+        let instruction = Instruction::new(
+            self.pc,
+            self.subroutine,
+            self.state.p(),
+            opcode,
+            argument,
+            self.state_change,
+        );
 
         // Stop the analysis if we have already visited this instruction.
         if self.analysis.is_visited(instruction) {
@@ -121,7 +127,7 @@ impl CPU {
                 // Create a parallel instance of the CPU to
                 // execute the subroutine that is being called.
                 let mut cpu = self.clone();
-                cpu.sub_state_change = SubStateChange::new_empty();
+                cpu.state_change = StateChange::new_empty();
                 cpu.subroutine = target;
                 cpu.pc = target;
 
@@ -134,7 +140,7 @@ impl CPU {
                 // Propagate called subroutine state to caller.
                 self.propagate_subroutine_state(instruction.pc(), target);
             }
-            None => self.unknown_sub_state_change(instruction.pc(), UnknownReason::IndirectJump),
+            None => self.unknown_state_change(instruction.pc(), UnknownReason::IndirectJump),
         }
     }
 
@@ -173,7 +179,7 @@ impl CPU {
         match i.operation() {
             Op::TCS => match self.A.get_whole() {
                 Some(a) => self.stack.set_pointer(i, a),
-                None => self.unknown_sub_state_change(i.pc(), UnknownReason::StackManipulation),
+                None => self.unknown_state_change(i.pc(), UnknownReason::StackManipulation),
             },
             _ => {}
         }
@@ -181,7 +187,7 @@ impl CPU {
 
     /// Interrupt instruction emulation.
     fn interrupt(&mut self, i: Instruction) {
-        self.unknown_sub_state_change(i.pc(), UnknownReason::SuspectInstruction);
+        self.unknown_state_change(i.pc(), UnknownReason::SuspectInstruction);
     }
 
     /// Jump instruction emulation.
@@ -192,7 +198,7 @@ impl CPU {
                 self.analysis
                     .add_reference(instruction.pc(), target, self.subroutine);
             }
-            None => self.unknown_sub_state_change(instruction.pc(), UnknownReason::IndirectJump),
+            None => self.unknown_state_change(instruction.pc(), UnknownReason::IndirectJump),
         }
     }
 
@@ -200,7 +206,7 @@ impl CPU {
     fn ret(&mut self, i: Instruction) {
         self.stop = true;
         self.analysis
-            .add_sub_state_change(self.subroutine, i.pc(), self.sub_state_change);
+            .add_state_change(self.subroutine, i.pc(), self.state_change);
     }
 
     /// SEP/REP instruction emulation.
@@ -209,12 +215,12 @@ impl CPU {
         match instruction.operation() {
             Op::SEP => {
                 self.state.set(arg as u8);
-                self.sub_state_change.set(arg as u8);
+                self.state_change.set(arg as u8);
             }
             // Op::REP
             _ => {
                 self.state.reset(arg as u8);
-                self.sub_state_change.reset(arg as u8);
+                self.state_change.reset(arg as u8);
             }
         }
     }
@@ -224,7 +230,7 @@ impl CPU {
         match instruction.operation() {
             Op::PHP => self.stack.push_one(
                 instruction,
-                stack::Data::State(self.state, self.sub_state_change),
+                stack::Data::State(self.state, self.state_change),
             ),
             // TODO: emulate other push instructions.
             _ => {}
@@ -241,13 +247,13 @@ impl CPU {
                     Some(i) if i.operation() == Op::PHP => match entry.data {
                         stack::Data::State(state, state_change) => {
                             self.state = state;
-                            self.sub_state_change = state_change;
+                            self.state_change = state_change;
                         }
                         _ => unreachable!(),
                     },
                     // Stack manipulation. Stop here.
                     _ => {
-                        self.unknown_sub_state_change(
+                        self.unknown_state_change(
                             instruction.pc(),
                             UnknownReason::StackManipulation,
                         );
@@ -269,34 +275,31 @@ impl CPU {
         // Unknown or ambiguous state change.
         if sub.state_changes().len() != 1 || sub.has_unknown_state_change() {
             drop(subroutines);
-            return self.unknown_sub_state_change(call_pc, UnknownReason::Unknown);
+            return self.unknown_state_change(call_pc, UnknownReason::Unknown);
         }
 
         // Apply state change.
         let state_change = *sub.state_changes().values().next().unwrap();
         if let Some(m) = state_change.m() {
             self.state.set_m(m);
-            self.sub_state_change.set_m(m);
+            self.state_change.set_m(m);
         }
         if let Some(x) = state_change.x() {
             self.state.set_x(x);
-            self.sub_state_change.set_x(x);
+            self.state_change.set_x(x);
         }
     }
 
     /// Signal an unknown subroutine state change.
-    fn unknown_sub_state_change(&mut self, pc: usize, reason: UnknownReason) {
+    fn unknown_state_change(&mut self, pc: usize, reason: UnknownReason) {
         self.stop = true;
-        self.analysis.add_sub_state_change(
-            self.subroutine,
-            pc,
-            SubStateChange::new_unknown(reason),
-        );
+        self.analysis
+            .add_state_change(self.subroutine, pc, StateChange::new_unknown(reason));
     }
 
     #[cfg(test)]
     fn setup_instruction(&self, opcode: u8, argument: usize) -> Instruction {
-        Instruction::new(self.pc, self.subroutine, self.state.p(), opcode, argument)
+        Instruction::test(self.pc, self.subroutine, self.state.p(), opcode, argument)
     }
 }
 

@@ -5,15 +5,16 @@
 
 * Disassembly
 ** DONE Add basic formatting for subroutine disassembly
-** TODO Add unknown state details
+** DONE Add unknown state details
 
-* SubStateChange
+* StateChange
 ** TODO Test unknown states
 
 * Prompt
 ** DONE Show unknown subroutines in red
 ** TODO Autocompletion
 
+** TODO Optional arguments
 * Tests
 ** DONE Registers
 ** DONE Stack

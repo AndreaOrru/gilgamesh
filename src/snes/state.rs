@@ -1,17 +1,19 @@
+use std::fmt;
+
 use getset::CopyGetters;
-use strum_macros::ToString;
+use strum_macros::IntoStaticStr;
 
 const M_BIT: usize = 5;
 const X_BIT: usize = 4;
 
 /// SNES state register (P).
 #[derive(Copy, Clone, CopyGetters, Debug, Eq, Hash, PartialEq)]
-pub struct StateRegister {
+pub struct State {
     #[getset(get_copy = "pub")]
     p: u8,
 }
 
-impl StateRegister {
+impl State {
     /// Instantiate state register from the value of P.
     pub fn new(p: u8) -> Self {
         Self { p }
@@ -86,19 +88,19 @@ impl StateRegister {
 }
 
 #[cfg(test)]
-mod test_state_register {
+mod test_state {
     use super::*;
 
     #[test]
     fn test_from_mx() {
-        let state = StateRegister::from_mx(true, false);
+        let state = State::from_mx(true, false);
         assert!(state.m());
         assert!(!state.x());
     }
 
     #[test]
     fn test_size_ax() {
-        let mut state = StateRegister::from_mx(true, true);
+        let mut state = State::from_mx(true, true);
         assert_eq!(state.a_size(), 1);
         assert_eq!(state.x_size(), 1);
 
@@ -109,7 +111,7 @@ mod test_state_register {
 
     #[test]
     fn test_set() {
-        let mut state = StateRegister::new(0b0000_0000);
+        let mut state = State::new(0b0000_0000);
 
         state.set(0b0000_0000);
         assert_eq!(state.p(), 0b0000_0000);
@@ -120,7 +122,7 @@ mod test_state_register {
 
     #[test]
     fn test_reset() {
-        let mut state = StateRegister::new(0b1111_1111);
+        let mut state = State::new(0b1111_1111);
 
         state.reset(0b0000_0000);
         assert_eq!(state.p(), 0b1111_1111);
@@ -131,7 +133,7 @@ mod test_state_register {
 
     #[test]
     fn test_set_reset_mx() {
-        let mut state = StateRegister::new(0b0000_0000);
+        let mut state = State::new(0b0000_0000);
 
         state.set_m(true);
         state.set_x(true);
@@ -146,7 +148,7 @@ mod test_state_register {
 }
 
 /// Possible reasons why a state change is unknown.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, ToString)]
+#[derive(Copy, Clone, Debug, Eq, Hash, IntoStaticStr, PartialEq)]
 pub enum UnknownReason {
     Known,
     Unknown,
@@ -157,7 +159,7 @@ pub enum UnknownReason {
 
 /// State change caused by the execution of a subroutine.
 #[derive(Copy, CopyGetters, Clone, Debug, Eq, Hash, PartialEq)]
-pub struct SubStateChange {
+pub struct StateChange {
     #[getset(get_copy = "pub")]
     m: Option<bool>,
 
@@ -168,7 +170,7 @@ pub struct SubStateChange {
     unknown_reason: UnknownReason,
 }
 
-impl SubStateChange {
+impl StateChange {
     /// Instantiate a new subroutine state change.
     pub fn new(m: Option<bool>, x: Option<bool>) -> Self {
         Self {
@@ -213,26 +215,51 @@ impl SubStateChange {
 
     /// Set bits changed to 1 in P.
     pub fn set(&mut self, p_change: u8) {
-        let change = StateRegister::new(p_change);
+        let change = State::new(p_change);
         self.m = if change.m() { Some(true) } else { self.m };
         self.x = if change.x() { Some(true) } else { self.x };
     }
 
     /// Set bits changed to 0 in P.
     pub fn reset(&mut self, p_change: u8) {
-        let change = StateRegister::new(p_change);
+        let change = State::new(p_change);
         self.m = if change.m() { Some(false) } else { self.m };
         self.x = if change.x() { Some(false) } else { self.x };
     }
 }
 
+/// Display a state change in human-readable form.
+impl fmt::Display for StateChange {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.unknown() {
+            write!(f, "unknown")
+        } else {
+            let m = match self.m {
+                Some(m) => vec![format!("m={}", m as u8)],
+                None => vec![],
+            };
+            let x = match self.x {
+                Some(x) => vec![format!("x={}", x as u8)],
+                None => vec![],
+            };
+            let mx = [&m[..], &x[..]].concat();
+
+            if m.is_empty() && x.is_empty() {
+                write!(f, "none")
+            } else {
+                write!(f, "{}", mx.join(","))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
-mod test_sub_state_change {
+mod test_state_change {
     use super::*;
 
     #[test]
     fn test_set() {
-        let mut state_change = SubStateChange::new_empty();
+        let mut state_change = StateChange::new_empty();
         state_change.set(0b0011_0000);
 
         assert!(state_change.m.unwrap());
@@ -241,7 +268,7 @@ mod test_sub_state_change {
 
     #[test]
     fn test_reset() {
-        let mut state_change = SubStateChange::new_empty();
+        let mut state_change = StateChange::new_empty();
         state_change.reset(0b0011_0000);
 
         assert!(!state_change.m.unwrap());

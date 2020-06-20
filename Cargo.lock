@@ -287,6 +287,7 @@ dependencies = [
  "derive-new",
  "enum-map",
  "getset",
+ "inflections",
  "lazy_static",
  "maplit",
  "paste",
@@ -331,6 +332,12 @@ checksum = "c398b2b113b55809ceb9ee3e753fcbac793f1956663f3c36549c1346015c2afe"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "inflections"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a257582fdcde896fd96463bf2d40eefea0580021c0712a0e2b028b60b47a837a"
 
 [[package]]
 name = "lazy_static"

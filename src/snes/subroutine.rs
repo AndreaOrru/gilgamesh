@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashMap};
 use getset::{CopyGetters, Getters};
 
 use crate::snes::instruction::Instruction;
-use crate::snes::state::{SubStateChange, UnknownReason};
+use crate::snes::state::{StateChange, UnknownReason};
 
 /// Structure representing a subroutine.
 #[derive(Debug, CopyGetters, Getters)]
@@ -18,10 +18,10 @@ pub struct Subroutine {
     instructions: BTreeSet<Instruction>,
 
     #[getset(get = "pub")]
-    state_changes: HashMap<usize, SubStateChange>,
+    state_changes: HashMap<usize, StateChange>,
 
     #[getset(get = "pub")]
-    unknown_state_changes: HashMap<usize, SubStateChange>,
+    unknown_state_changes: HashMap<usize, StateChange>,
 }
 
 impl Subroutine {
@@ -42,7 +42,7 @@ impl Subroutine {
     }
 
     /// Add a state change to the subroutine.
-    pub fn add_state_change(&mut self, pc: usize, state_change: SubStateChange) {
+    pub fn add_state_change(&mut self, pc: usize, state_change: StateChange) {
         if state_change.unknown() {
             self.unknown_state_changes.insert(pc, state_change);
         } else {
@@ -72,10 +72,10 @@ mod tests {
     fn test_add_state_change() {
         let mut subroutine = Subroutine::new(0x8000, "reset".to_string());
 
-        subroutine.add_state_change(0x8000, SubStateChange::new_empty());
+        subroutine.add_state_change(0x8000, StateChange::new_empty());
         assert!(!subroutine.has_unknown_state_change());
 
-        subroutine.add_state_change(0x8000, SubStateChange::new_unknown(UnknownReason::Unknown));
+        subroutine.add_state_change(0x8000, StateChange::new_unknown(UnknownReason::Unknown));
         assert!(subroutine.has_unknown_state_change());
     }
 }
