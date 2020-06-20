@@ -8,7 +8,9 @@ use std::str::FromStr;
 use colored::*;
 use maplit::btreemap;
 use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use rustyline::hint::{Hinter, HistoryHinter};
+use rustyline::{Context, Editor};
+use rustyline_derive::{Completer, Helper, Highlighter, Validator};
 
 use crate::analysis::Analysis;
 use crate::disassembly::Disassembly;
@@ -31,6 +33,20 @@ macro_rules! outln {
     ($out:expr, $format:literal, $($args:expr),*) => {
         writeln!($out, $format, $($args,)*).unwrap();
     };
+}
+
+/// Custom prompt helper with history hinting.
+#[derive(Completer, Helper, Highlighter, Validator)]
+struct AppHelper {
+    hinter: HistoryHinter,
+}
+impl Hinter for AppHelper {
+    fn hint(&self, line: &str, pos: usize, ctx: &Context<'_>) -> Option<String> {
+        match self.hinter.hint(line, pos, ctx) {
+            Some(hint) => Some(hint.bright_black().to_string()),
+            None => None,
+        }
+    }
 }
 
 /// Gilgamesh's interactive prompt.
@@ -99,7 +115,12 @@ impl<W: Write> App<W> {
 
     /// Start the prompt loop.
     pub fn run(&mut self) {
-        let mut rl = Editor::<()>::new();
+        // Initialize the line editor with history hints.
+        let helper = AppHelper {
+            hinter: HistoryHinter {},
+        };
+        let mut rl = Editor::new();
+        rl.set_helper(Some(helper));
 
         // Load history file if it exists.
         let history = shellexpand::tilde(HISTORY_FILE).into_owned();
@@ -112,6 +133,7 @@ impl<W: Write> App<W> {
             match readline {
                 // Command line to be parsed.
                 Ok(line) => {
+                    let line = String::from_utf8(strip_ansi_escapes::strip(line).unwrap()).unwrap();
                     if !line.is_empty() {
                         rl.add_history_entry(&line);
                         self.handle_line(line);
