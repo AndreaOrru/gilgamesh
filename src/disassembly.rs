@@ -27,6 +27,7 @@ impl Disassembly {
         for i in sub.instructions().iter() {
             s.push_str(&self.label(i.pc(), subroutine));
             s.push_str(&self.instruction(*i));
+            s.push_str(&self.asserted_state(*i, sub));
             s.push_str(&self.unknown_state(*i, sub));
         }
         s
@@ -71,6 +72,39 @@ impl Disassembly {
     fn label(&self, pc: usize, subroutine: usize) -> String {
         match self.analysis.label(pc, Some(subroutine)) {
             Some(label) => format!("{}:\n", label.red()),
+            None => String::new(),
+        }
+    }
+
+    fn asserted_state(&self, i: Instruction, sub: &Subroutine) -> String {
+        let (state_change, typ) = match self.analysis.instruction_assertion(i.pc()) {
+            Some(state_change) => (Some(state_change), "instruction"),
+            None => match self.analysis.subroutine_assertion(sub.pc(), i.pc()) {
+                Some(state_change) => (Some(state_change), "subroutine"),
+                None => (None, ""),
+            },
+        };
+
+        match state_change {
+            Some(state_change) => {
+                let mut s = Self::header("[ASSERTED STATE]", "magenta");
+
+                s.push_str(&format!(
+                    "  {} {}\n",
+                    "; Assertion type:".bright_black(),
+                    typ.magenta(),
+                ));
+
+                s.push_str(&format!(
+                    "  {} {}\n",
+                    "; Asserted state change:".bright_black(),
+                    state_change.to_string().magenta()
+                ));
+
+                s.push_str(&Self::header("", "bright_black"));
+
+                s
+            }
             None => String::new(),
         }
     }
