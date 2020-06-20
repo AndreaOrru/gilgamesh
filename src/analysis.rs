@@ -61,7 +61,7 @@ pub struct Analysis {
     instruction_assertions: RefCell<HashMap<usize, StateChange>>,
 
     /// Assertions on subroutine state changes.
-    subroutine_assertions: RefCell<HashMap<usize, StateChange>>,
+    subroutine_assertions: RefCell<HashMap<usize, HashMap<usize, StateChange>>>,
 }
 
 impl Analysis {
@@ -94,8 +94,20 @@ impl Analysis {
         }
     }
 
+    /// Clear the results of the analysis.
+    fn clear(&self) {
+        self.instructions.borrow_mut().clear();
+        self.subroutines.borrow_mut().clear();
+        self.references.borrow_mut().clear();
+        // TODO: preserve these.
+        self.subroutine_labels.borrow_mut().clear();
+        self.local_labels.borrow_mut().clear();
+        self.comments.borrow_mut().clear();
+    }
+
     /// Analyze the ROM.
     pub fn run(self: &Rc<Self>) {
+        self.clear();
         for EntryPoint { label, pc, p } in self.entry_points.iter() {
             self.add_subroutine(*pc, Some(label.clone()));
             let mut cpu = CPU::new(self, *pc, *pc, *p);
@@ -181,9 +193,32 @@ impl Analysis {
     }
 
     /// Add an assertion on a subroutine state change.
-    pub fn add_subroutine_assertion(&self, pc: usize, state_change: StateChange) {
+    pub fn add_subroutine_assertion(
+        &self,
+        subroutine: usize,
+        pc: usize,
+        state_change: StateChange,
+    ) {
         let mut assertions = self.subroutine_assertions.borrow_mut();
-        assertions.insert(pc, state_change);
+        assertions
+            .entry(subroutine)
+            .or_insert_with(HashMap::new)
+            .insert(pc, state_change);
+    }
+
+    /// Get a state change assertion for an instruction, if any.
+    pub fn instruction_assertion(&self, pc: usize) -> Option<StateChange> {
+        let assertions = self.instruction_assertions.borrow();
+        assertions.get(&pc).copied()
+    }
+
+    /// Get a state change assertion for a subroutine, if any.
+    pub fn subroutine_assertion(&self, subroutine: usize, pc: usize) -> Option<StateChange> {
+        let assertions = self.subroutine_assertions.borrow();
+        match assertions.get(&subroutine) {
+            Some(h) => h.get(&pc).copied(),
+            None => None,
+        }
     }
 
     /// Return the label associated with an address, if any.

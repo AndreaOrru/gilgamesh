@@ -246,7 +246,7 @@ impl<W: Write> App<W> {
             "list" => container!(
                 /// List various types of entities.
                 btreemap! {
-                    "subroutines"  => command_ref!(Self, list_subroutines),
+                    "subroutines" => command_ref!(Self, list_subroutines),
                 }),
             "rom" => command_ref!(Self, rom),
             "subroutine" => command_ref!(Self, subroutine),
@@ -273,7 +273,8 @@ impl<W: Write> App<W> {
         /// Define a known processor return state for a given subroutine.
         fn assert_subroutine(&mut self, pc: Integer, state_expr: String) {
             let state_change = StateChange::from_expr(state_expr).unwrap();
-            self.analysis.add_subroutine_assertion(pc, state_change);
+            self.analysis
+                .add_subroutine_assertion(self.get_subroutine()?, pc, state_change);
         }
     );
 

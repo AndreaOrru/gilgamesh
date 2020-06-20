@@ -279,22 +279,48 @@ impl CPU {
         }
 
         // Apply state change.
-        let state_change = *sub.state_changes().values().next().unwrap();
-        if let Some(m) = state_change.m() {
-            self.state.set_m(m);
-            self.state_change.set_m(m);
-        }
-        if let Some(x) = state_change.x() {
-            self.state.set_x(x);
-            self.state_change.set_x(x);
-        }
+        Self::apply_state_change(
+            &mut self.state,
+            &mut self.state_change,
+            *sub.state_changes().values().next().unwrap(),
+        );
     }
 
     /// Signal an unknown subroutine state change.
     fn unknown_state_change(&mut self, pc: usize, reason: UnknownReason) {
-        self.stop = true;
-        self.analysis
-            .add_state_change(self.subroutine, pc, StateChange::new_unknown(reason));
+        match self.analysis.instruction_assertion(pc) {
+            // Instruction assertion?
+            Some(state_change) => {
+                Self::apply_state_change(&mut self.state, &mut self.state_change, state_change);
+            }
+            None => {
+                // Subroutine assertion?
+                let state_change = match self.analysis.subroutine_assertion(self.subroutine, pc) {
+                    Some(state_change) => state_change,
+                    None => StateChange::new_unknown(reason),
+                };
+                // Unknown state.
+                self.analysis
+                    .add_state_change(self.subroutine, pc, state_change);
+                self.stop = true;
+            }
+        }
+    }
+
+    /// Apply a state change to the current CPU instance.
+    fn apply_state_change(
+        state: &mut State,
+        state_change: &mut StateChange,
+        new_state_change: StateChange,
+    ) {
+        if let Some(m) = new_state_change.m() {
+            state.set_m(m);
+            state_change.set_m(m);
+        }
+        if let Some(x) = new_state_change.x() {
+            state.set_x(x);
+            state_change.set_x(x);
+        }
     }
 
     #[cfg(test)]

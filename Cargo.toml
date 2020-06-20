@@ -21,7 +21,7 @@ inflections = ">=1.1.1"
 lazy_static = ">=1.4"
 maplit = ">=1.0.2"
 paste = ">=0.1.12"
-rustyline = { git = "https://github.com/AndreaOrru/rustyline#5c53b78" }
+rustyline = { git = "https://github.com/AndreaOrru/rustyline", rev = "5c53b78" }
 rustyline-derive = ">=0.3.1"
 shell-words = "1.0.0"
 shellexpand = ">=2.0.0"
