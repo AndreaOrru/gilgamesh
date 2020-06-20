@@ -274,4 +274,19 @@ mod test_state_change {
         assert!(!state_change.m.unwrap());
         assert!(!state_change.x.unwrap());
     }
+
+    #[test]
+    fn test_display() {
+        let unknown = StateChange::new_unknown(UnknownReason::Unknown);
+        assert_eq!(unknown.to_string(), "unknown");
+
+        let m = StateChange::new(Some(true), None);
+        assert_eq!(m.to_string(), "m=1");
+
+        let x = StateChange::new(None, Some(false));
+        assert_eq!(x.to_string(), "x=0");
+
+        let mx = StateChange::new(Some(false), Some(true));
+        assert_eq!(mx.to_string(), "m=0,x=1");
+    }
 }
