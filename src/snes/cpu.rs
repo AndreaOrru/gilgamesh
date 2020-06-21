@@ -30,6 +30,10 @@ pub struct CPU {
     /// Processor state change caused by the execution of this subroutine.
     state_change: StateChange,
 
+    /// What we know about the CPU state based on the
+    /// sequence of instructions we have executed.
+    state_inference: StateChange,
+
     /// Stack.
     stack: stack::Stack,
 
@@ -47,6 +51,7 @@ impl CPU {
             subroutine,
             state: State::new(p),
             state_change: StateChange::new_empty(),
+            state_inference: StateChange::new_empty(),
             stack: stack::Stack::new(),
             A: Register::new(true),
         }
@@ -89,6 +94,10 @@ impl CPU {
     /// Emulate an instruction.
     fn execute(&mut self, instruction: Instruction) {
         self.pc += instruction.size();
+
+        // See if we can learn something about the *required*
+        // state of the CPU based on the current instruction.
+        self.derive_state_inference(instruction);
 
         match instruction.typ() {
             InstructionType::Branch => self.branch(instruction),
@@ -217,12 +226,18 @@ impl CPU {
                 self.state.set(arg as u8);
                 self.state_change.set(arg as u8);
             }
-            // Op::REP
-            _ => {
+            Op::REP => {
                 self.state.reset(arg as u8);
                 self.state_change.reset(arg as u8);
             }
+            _ => unreachable!(),
         }
+        // Simplify the state change by applying our knowledge
+        // of the current state. I.e. if we know that the
+        // processor is operating in 8-bits accumulator mode
+        // and we switch to that same mode, effectively no
+        // state change is being performed.
+        self.state_change.apply_inference(self.state_inference)
     }
 
     /// Push a value onto the stack.
@@ -320,6 +335,23 @@ impl CPU {
         if let Some(x) = new_state_change.x() {
             state.set_x(x);
             state_change.set_x(x);
+        }
+    }
+
+    /// Derive a state inference from the current state and given instruction.
+    fn derive_state_inference(&mut self, instruction: Instruction) {
+        // If we're executing an instruction with a certain operand size,
+        // and no state change has been performed in the current subroutine,
+        // then we can infer that the state of the processor as we enter
+        // the subroutine *must* be the same in all cases.
+        match instruction.address_mode() {
+            AddressMode::ImmediateM if self.state_change.m().is_none() => {
+                self.state_inference.set_m(self.state.m());
+            }
+            AddressMode::ImmediateX if self.state_change.x().is_none() => {}
+            _ => {
+                self.state_inference.set_x(self.state.x());
+            }
         }
     }
 

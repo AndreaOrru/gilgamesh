@@ -314,6 +314,7 @@ mod tests {
     use crate::snes::opcodes::Op;
     use gilgamesh::test_rom;
 
+    test_rom!(setup_elidable_state_change, "elidable_state_change.asm");
     test_rom!(setup_infinite_loop, "infinite_loop.asm");
     test_rom!(setup_php_plp, "php_plp.asm");
     test_rom!(setup_state_change, "state_change.asm");
@@ -331,8 +332,35 @@ mod tests {
         assert!(analysis.is_visited_pc(0x8000));
     }
 
+    /**************************************************************************/
+
     #[test]
-    fn test_infinite_loop_analysis() {
+    fn test_elidable_state_change() {
+        let analysis = Analysis::new(setup_elidable_state_change());
+        analysis.run();
+
+        // Test there are two subroutines.
+        let subroutines = analysis.subroutines.borrow();
+        assert_eq!(subroutines.len(), 2);
+
+        // Test there's a `reset` sub with the correct number of instructions.
+        let reset_sub = &subroutines[&0x8000];
+        assert_eq!(reset_sub.label(), "reset");
+        assert_eq!(reset_sub.instructions().len(), 4);
+
+        // Test there's a sub with the correct number of instructions.
+        let elidable_change_sub = &subroutines[&0x800A];
+        assert_eq!(elidable_change_sub.instructions().len(), 6);
+
+        // Test that the state is preserved.
+        let state_changes = elidable_change_sub.state_changes();
+        assert_eq!(state_changes.len(), 1);
+        let state_change = state_changes.values().next().unwrap();
+        assert_eq!(state_change.to_string(), "none");
+    }
+
+    #[test]
+    fn test_infinite_loop() {
         let analysis = Analysis::new(setup_infinite_loop());
         analysis.run();
 
@@ -370,18 +398,23 @@ mod tests {
         let analysis = Analysis::new(setup_php_plp());
         analysis.run();
 
+        // Test there are two subroutines.
         let subroutines = analysis.subroutines.borrow();
         assert_eq!(subroutines.len(), 2);
 
+        // Test there's a `reset` sub with the correct number of instructions.
         let reset_sub = &subroutines[&0x8000];
         assert_eq!(reset_sub.label(), "reset");
         assert_eq!(reset_sub.instructions().len(), 4);
 
+        // Test there's a PHP/PLP sub with the correct number of instructions.
         let php_plp_sub = &subroutines[&0x800A];
         assert_eq!(php_plp_sub.instructions().len(), 5);
-        assert_eq!(php_plp_sub.state_changes().len(), 1);
 
-        let state_change = php_plp_sub.state_changes().values().next().unwrap();
+        // Test that the state is preserved.
+        let state_changes = php_plp_sub.state_changes();
+        assert_eq!(state_changes.len(), 1);
+        let state_change = state_changes.values().next().unwrap();
         assert_eq!(state_change.to_string(), "none");
     }
 

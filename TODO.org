@@ -13,8 +13,8 @@
 * Prompt
 ** DONE Show unknown subroutines in red
 ** TODO Autocompletion
-
 ** TODO Optional arguments
+
 * Tests
 ** DONE Registers
 ** DONE Stack

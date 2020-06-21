@@ -257,6 +257,18 @@ impl StateChange {
         self.m = if change.m() { Some(false) } else { self.m };
         self.x = if change.x() { Some(false) } else { self.x };
     }
+
+    /// Simplify the state change based on a state inference.
+    pub fn apply_inference(&mut self, inference: StateChange) {
+        // If we already knew that M was set, and we're currently
+        // setting M, then we are not really changing its value.
+        if self.m.is_some() && (self.m == inference.m) {
+            self.m = None;
+        }
+        if self.x.is_some() && (self.x == inference.x) {
+            self.x = None;
+        }
+    }
 }
 
 /// Display a state change in human-readable form.
@@ -322,7 +334,7 @@ mod test_state_change {
     }
 
     #[test]
-    fn from_expr() {
+    fn test_from_expr() {
         let unknown = StateChange::from_expr("unknown".to_string()).unwrap();
         assert!(unknown.unknown());
 
@@ -335,5 +347,15 @@ mod test_state_change {
         let mx = StateChange::from_expr("m=1,x=0".to_string()).unwrap();
         assert_eq!(mx.m(), Some(true));
         assert_eq!(mx.x(), Some(false));
+    }
+
+    #[test]
+    fn test_apply_inference() {
+        let mut mx = StateChange::new(Some(true), Some(false));
+        let inference = StateChange::new(Some(true), Some(false));
+        mx.apply_inference(inference);
+
+        assert!(mx.m.is_none());
+        assert!(mx.x.is_none());
     }
 }
