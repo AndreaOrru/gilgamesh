@@ -240,6 +240,12 @@ impl<W: Write> App<W> {
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
             "comment" => command_ref!(Self, comment),
+            "deassert" => container!(
+                /// Remove previously defined assertions.
+                btreemap! {
+                    "instruction" => command_ref!(Self, deassert_instruction),
+                    "subroutine"  => command_ref!(Self, deassert_subroutine),
+                }),
             "describe" => command_ref!(Self, describe),
             "disassembly" => command_ref!(Self, disassembly),
             "help" => command_ref!(Self, help),
@@ -287,6 +293,21 @@ impl<W: Write> App<W> {
             } else {
                 comments.insert(pc, comment);
             }
+        }
+    );
+
+    command!(
+        /// Remove previously defined instruction assertions.
+        fn deassert_instruction(&mut self, pc: Integer) {
+            self.analysis.del_instruction_assertion(pc);
+        }
+    );
+
+    command!(
+        /// Remove previously defined subroutine assertions.
+        fn deassert_subroutine(&mut self, pc: Integer) {
+            self.analysis
+                .del_subroutine_assertion(self.get_subroutine()?, pc);
         }
     );
 

@@ -186,7 +186,7 @@ impl Analysis {
         references.insert(source, Reference { target, subroutine });
     }
 
-    /// Add an assertion on a instruction state change.
+    /// Add an assertion on an instruction state change.
     pub fn add_instruction_assertion(&self, pc: usize, state_change: StateChange) {
         let mut assertions = self.instruction_assertions.borrow_mut();
         assertions.insert(pc, state_change);
@@ -204,6 +204,24 @@ impl Analysis {
             .entry(subroutine)
             .or_insert_with(HashMap::new)
             .insert(pc, state_change);
+    }
+
+    /// Remove an assertion on an instruction state change.
+    pub fn del_instruction_assertion(&self, pc: usize) {
+        let mut assertions = self.instruction_assertions.borrow_mut();
+        assertions.remove(&pc);
+    }
+
+    /// Remove an assertion on a subroutine state change.
+    pub fn del_subroutine_assertion(&self, subroutine: usize, pc: usize) {
+        let mut assertions = self.subroutine_assertions.borrow_mut();
+        let mut sub_assertions = assertions.get_mut(&subroutine);
+        if let Some(h) = sub_assertions {
+            h.remove(&pc);
+            if h.is_empty() {
+                assertions.remove(&subroutine);
+            }
+        };
     }
 
     /// Get a state change assertion for an instruction, if any.
