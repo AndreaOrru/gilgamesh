@@ -317,6 +317,10 @@ mod tests {
     test_rom!(setup_elidable_state_change, "elidable_state_change.asm");
     test_rom!(setup_infinite_loop, "infinite_loop.asm");
     test_rom!(setup_php_plp, "php_plp.asm");
+    test_rom!(
+        setup_simplified_state_changes,
+        "simplified_state_changes.asm"
+    );
     test_rom!(setup_state_change, "state_change.asm");
     test_rom!(setup_unknown_call_jump, "unknown_call_jump.asm");
 
@@ -416,6 +420,30 @@ mod tests {
         assert_eq!(state_changes.len(), 1);
         let state_change = state_changes.values().next().unwrap();
         assert_eq!(state_change.to_string(), "none");
+    }
+
+    #[test]
+    fn test_simplified_state_changes() {
+        let analysis = Analysis::new(setup_simplified_state_changes());
+        analysis.run();
+
+        // Test there are two subroutines.
+        let subroutines = analysis.subroutines.borrow();
+        assert_eq!(subroutines.len(), 2);
+
+        // Test there's a `reset` sub with the correct number of instructions.
+        let reset_sub = &subroutines[&0x8000];
+        assert_eq!(reset_sub.label(), "reset");
+        assert_eq!(reset_sub.instructions().len(), 5);
+
+        // Test there's a `double_state_change` with the correct number of instructions.
+        let double_state_sub = &subroutines[&0x800E];
+        assert_eq!(double_state_sub.instructions().len(), 5);
+
+        // Test that the state is simplified.
+        let state_changes = double_state_sub.state_changes();
+        assert_eq!(state_changes.len(), 2);
+        assert!(!reset_sub.has_unknown_state_change());
     }
 
     #[test]

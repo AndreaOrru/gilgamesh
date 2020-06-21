@@ -291,7 +291,7 @@ impl CPU {
         if sub.has_unknown_state_change() {
             drop(subroutines);
             return self.unknown_state_change(call_pc, UnknownReason::Unknown);
-        } else if sub.state_changes().len() != 1 {
+        } else if sub.simplified_state_changes(self.state).len() != 1 {
             // Ambiguous state change.
             drop(subroutines);
             return self.unknown_state_change(call_pc, UnknownReason::MultipleReturnStates);

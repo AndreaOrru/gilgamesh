@@ -1,9 +1,9 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use getset::{CopyGetters, Getters};
 
 use crate::snes::instruction::Instruction;
-use crate::snes::state::{StateChange, UnknownReason};
+use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// Structure representing a subroutine.
 #[derive(Debug, CopyGetters, Getters)]
@@ -60,6 +60,15 @@ impl Subroutine {
         self.unknown_state_changes
             .values()
             .any(|s| s.unknown_reason() == reason)
+    }
+
+    /// Return the state changes, simplified given the current state.
+    pub fn simplified_state_changes(&self, state: State) -> HashSet<StateChange> {
+        let mut state_changes = HashSet::new();
+        for state_change in self.state_changes.values() {
+            state_changes.insert(state_change.simplify(state));
+        }
+        state_changes
     }
 }
 

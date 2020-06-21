@@ -270,6 +270,18 @@ impl StateChange {
             self.x = None;
         }
     }
+
+    /// Simplify the state change based on a state.
+    pub fn simplify(&self, state: State) -> StateChange {
+        let mut change = self.clone();
+        if change.m.is_some() && (state.m() == change.m.unwrap()) {
+            change.m = None;
+        }
+        if change.x.is_some() && (state.x() == change.x.unwrap()) {
+            change.x = None;
+        }
+        change
+    }
 }
 
 /// Display a state change in human-readable form.
