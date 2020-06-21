@@ -288,9 +288,13 @@ impl CPU {
         let sub = &subroutines[&subroutine];
 
         // Unknown or ambiguous state change.
-        if sub.state_changes().len() != 1 || sub.has_unknown_state_change() {
+        if sub.has_unknown_state_change() {
             drop(subroutines);
             return self.unknown_state_change(call_pc, UnknownReason::Unknown);
+        } else if sub.state_changes().len() != 1 {
+            // Ambiguous state change.
+            drop(subroutines);
+            return self.unknown_state_change(call_pc, UnknownReason::MultipleReturnStates);
         }
 
         // Apply state change.

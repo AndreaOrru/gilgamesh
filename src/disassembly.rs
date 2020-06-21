@@ -122,20 +122,17 @@ impl Disassembly {
                 let mut s = Self::header("[UNKNOWN STATE]", "red");
 
                 let reason = to_sentence_case(state_change.unknown_reason().into());
-                s.push_str(
-                    &format!("  ; Reason: {}\n", reason)
-                        .bright_black()
-                        .to_string(),
-                );
+                s.push_str(&format!(
+                    "  {} {}\n",
+                    "; Reason:".bright_black(),
+                    reason.red()
+                ));
 
-                s.push_str(
-                    &format!(
-                        "  ; Last known state change: {}\n",
-                        i.state_change().to_string().green()
-                    )
-                    .bright_black()
-                    .to_string(),
-                );
+                s.push_str(&format!(
+                    "  {} {}\n",
+                    "; Last known state change:".bright_black(),
+                    i.state_change().to_string().green(),
+                ));
 
                 s.push_str(&Self::header("", "bright_black"));
 
