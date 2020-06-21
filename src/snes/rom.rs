@@ -11,6 +11,8 @@ pub enum ROMType {
     Unknown,
     LoROM,
     HiROM,
+    ExLoROM,
+    ExHiROM,
 }
 
 /// ROM's header.
@@ -65,7 +67,10 @@ impl ROM {
         self.path = path.to_owned();
         let mut file = File::open(path)?;
         file.read_to_end(&mut self.data)?;
+
         self.rom_type = self.discover_type();
+        self.rom_type = self.discover_subtype();
+
         Ok(())
     }
 
@@ -130,6 +135,20 @@ impl ROM {
         match self.rom_type {
             ROMType::LoROM => ((address & 0x7F0000) >> 1) | (address & 0x7FFF),
             ROMType::HiROM => address & 0x3FFFFF,
+            ROMType::ExLoROM => {
+                if address & 0x800000 != 0 {
+                    ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
+                } else {
+                    ((address & 0x7F0000) >> 1) | ((address & 0x7FFF) + 0x400000)
+                }
+            }
+            ROMType::ExHiROM => {
+                if (address & 0xC00000) != 0xC00000 {
+                    (address & 0x3FFFFF) | 0x400000
+                } else {
+                    address & 0x3FFFFF
+                }
+            }
             _ => unreachable!(),
         }
     }
@@ -145,6 +164,16 @@ impl ROM {
             ROMType::HiROM
         } else {
             ROMType::LoROM
+        }
+    }
+
+    /// Discover the ROM subtype.
+    fn discover_subtype(&self) -> ROMType {
+        let markup = self.read_byte(header::MARKUP);
+        match self.rom_type {
+            ROMType::LoROM if markup & 0b010 != 0 => ROMType::ExLoROM,
+            ROMType::HiROM if markup & 0b100 != 0 => ROMType::ExHiROM,
+            _ => self.rom_type,
         }
     }
 
