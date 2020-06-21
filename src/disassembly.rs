@@ -69,6 +69,13 @@ impl Disassembly {
         format!("  {:4}{:25}{}\n", i.name().green(), arg, comment)
     }
 
+    pub fn instruction_raw(i: Option<Instruction>) -> String {
+        match i {
+            Some(i) => format!("{:4}{}", i.name().green(), i.argument_string()),
+            None => "unknown".red().to_string(),
+        }
+    }
+
     fn label(&self, pc: usize, subroutine: usize) -> String {
         match self.analysis.label(pc, Some(subroutine)) {
             Some(label) => format!("{}:\n", label.red()),

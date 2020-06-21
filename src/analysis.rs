@@ -58,9 +58,11 @@ pub struct Analysis {
     comments: RefCell<HashMap<usize, String>>,
 
     /// Assertions on instruction state changes.
+    #[getset(get = "pub")]
     instruction_assertions: RefCell<HashMap<usize, StateChange>>,
 
     /// Assertions on subroutine state changes.
+    #[getset(get = "pub")]
     subroutine_assertions: RefCell<HashMap<usize, HashMap<usize, StateChange>>>,
 }
 
@@ -215,7 +217,7 @@ impl Analysis {
     /// Remove an assertion on a subroutine state change.
     pub fn del_subroutine_assertion(&self, subroutine: usize, pc: usize) {
         let mut assertions = self.subroutine_assertions.borrow_mut();
-        let mut sub_assertions = assertions.get_mut(&subroutine);
+        let sub_assertions = assertions.get_mut(&subroutine);
         if let Some(h) = sub_assertions {
             h.remove(&pc);
             if h.is_empty() {
@@ -272,6 +274,23 @@ impl Analysis {
             Some(&pc) => Some(pc),
             None => None,
         }
+    }
+
+    /// Return all the subroutines that contain the given instruction.
+    pub fn instruction_subroutines(&self, pc: usize) -> HashSet<usize> {
+        match self.instructions.borrow().get(&pc) {
+            Some(instructions) => instructions.iter().map(|i| i.subroutine()).collect(),
+            None => HashSet::new(),
+        }
+    }
+
+    /// Return any of the instructions at address PC.
+    pub fn any_instruction(&self, pc: usize) -> Option<Instruction> {
+        let instructions = self.instructions.borrow();
+        instructions
+            .get(&pc)
+            .map(|h| h.iter().next().unwrap())
+            .copied()
     }
 
     /// Generate local label names.

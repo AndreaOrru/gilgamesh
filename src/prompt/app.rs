@@ -227,6 +227,60 @@ impl<W: Write> App<W> {
         s
     }
 
+    /// Print all the active instruction assertions.
+    fn list_instruction_assertions(&mut self) {
+        let assertions = self.analysis.instruction_assertions().borrow();
+        outln!(self.out, "{}", "ASSERTED INSTRUCTION STATE CHANGES:".red());
+
+        for (pc, state_change) in assertions.iter() {
+            let subroutines = self.analysis.instruction_subroutines(*pc);
+            let instruction = self.analysis.any_instruction(*pc);
+            let disassembly = Disassembly::instruction_raw(instruction);
+
+            // Instruction information.
+            outln!(
+                self.out,
+                "  {}  {} -> {}\n",
+                format!("${:06X}", *pc).magenta(),
+                disassembly,
+                state_change.to_string().green()
+            );
+
+            // List of subroutines containing this instruction.
+            if !subroutines.is_empty() {
+                let labels: Vec<_> = subroutines
+                    .iter()
+                    .map(|pc| self.analysis.label(*pc, None).unwrap())
+                    .collect();
+                outln!(self.out, "    {}\n", labels.join(", ").bright_black());
+            }
+        }
+        outln!(self.out);
+    }
+
+    /// Print all the active subroutine assertions.
+    fn list_subroutine_assertions(&mut self) {
+        let assertions = self.analysis.subroutine_assertions().borrow();
+        outln!(self.out, "{}", "ASSERTED SUBROUTINE STATE CHANGES:".red());
+
+        for (sub_pc, state_changes) in assertions.iter() {
+            for (instr_pc, state_change) in state_changes.iter() {
+                let sub_label = self.analysis.label(*sub_pc, None).unwrap();
+                let instruction = self.analysis.any_instruction(*instr_pc);
+                let disassembly = Disassembly::instruction_raw(instruction);
+                outln!(
+                    self.out,
+                    "  {:18}${:06X}  {} -> {}",
+                    (sub_label + ":").magenta(),
+                    instr_pc,
+                    disassembly,
+                    state_change.to_string().green()
+                )
+            }
+        }
+        outln!(self.out);
+    }
+
     /**************************************************************************/
 
     /// Return the hierarchy of supported commands.
@@ -252,6 +306,7 @@ impl<W: Write> App<W> {
             "list" => container!(
                 /// List various types of entities.
                 btreemap! {
+                    "assertions" => command_ref!(Self, list_assertions),
                     "subroutines" => command_ref!(Self, list_subroutines),
                 }),
             "rom" => command_ref!(Self, rom),
@@ -338,6 +393,14 @@ impl<W: Write> App<W> {
             Self::help_command(&mut self.out, &command[..i], cmd, root);
             Self::help_list(&mut self.out, cmd, root);
             outln!(self.out);
+        }
+    );
+
+    command!(
+        /// List active assertions.
+        fn list_assertions(&mut self) {
+            self.list_subroutine_assertions();
+            self.list_instruction_assertions();
         }
     );
 
