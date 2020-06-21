@@ -38,7 +38,7 @@ impl Stack {
     pub fn new() -> Self {
         Self {
             memory: HashMap::new(),
-            pointer: 0,
+            pointer: 0x100,
             last_pointer_changer: None,
         }
     }

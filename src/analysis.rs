@@ -315,6 +315,7 @@ mod tests {
     use gilgamesh::test_rom;
 
     test_rom!(setup_infinite_loop, "infinite_loop.asm");
+    test_rom!(setup_php_plp, "php_plp.asm");
     test_rom!(setup_state_change, "state_change.asm");
     test_rom!(setup_unknown_call_jump, "unknown_call_jump.asm");
 
@@ -362,6 +363,26 @@ mod tests {
                 subroutine: 0x8000
             }
         );
+    }
+
+    #[test]
+    fn test_php_plp() {
+        let analysis = Analysis::new(setup_php_plp());
+        analysis.run();
+
+        let subroutines = analysis.subroutines.borrow();
+        assert_eq!(subroutines.len(), 2);
+
+        let reset_sub = &subroutines[&0x8000];
+        assert_eq!(reset_sub.label(), "reset");
+        assert_eq!(reset_sub.instructions().len(), 4);
+
+        let php_plp_sub = &subroutines[&0x800A];
+        assert_eq!(php_plp_sub.instructions().len(), 5);
+        assert_eq!(php_plp_sub.state_changes().len(), 1);
+
+        let state_change = php_plp_sub.state_changes().values().next().unwrap();
+        assert_eq!(state_change.to_string(), "none");
     }
 
     #[test]
