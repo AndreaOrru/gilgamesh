@@ -1,3 +1,4 @@
+use std::borrow::Cow::{self, Owned};
 use std::fs::create_dir_all;
 use std::io;
 use std::io::{stdout, Stdout, Write};
@@ -8,9 +9,10 @@ use std::str::FromStr;
 use colored::*;
 use maplit::btreemap;
 use rustyline::error::ReadlineError;
+use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::{Context, Editor};
-use rustyline_derive::{Completer, Helper, Highlighter, Validator};
+use rustyline_derive::{Completer, Helper, Validator};
 
 use crate::analysis::Analysis;
 use crate::disassembly::Disassembly;
@@ -36,16 +38,26 @@ macro_rules! outln {
 }
 
 /// Custom prompt helper with history hinting.
-#[derive(Completer, Helper, Highlighter, Validator)]
+#[derive(Completer, Helper, Validator)]
 struct AppHelper {
+    highlighter: AppHighlighter,
     hinter: HistoryHinter,
 }
 impl Hinter for AppHelper {
     fn hint(&self, line: &str, pos: usize, ctx: &Context<'_>) -> Option<String> {
-        match self.hinter.hint(line, pos, ctx) {
-            Some(hint) => Some(hint.bright_black().to_string()),
-            None => None,
-        }
+        self.hinter.hint(line, pos, ctx)
+    }
+}
+/// Highlight hints in bright black.
+struct AppHighlighter {}
+impl Highlighter for AppHighlighter {
+    fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
+        Owned(hint.bright_black().to_string())
+    }
+}
+impl Highlighter for AppHelper {
+    fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
+        self.highlighter.highlight_hint(hint)
     }
 }
 
@@ -92,6 +104,7 @@ impl<W: Write> App<W> {
     pub fn run(&mut self) {
         // Initialize the line editor with history hints.
         let helper = AppHelper {
+            highlighter: AppHighlighter {},
             hinter: HistoryHinter {},
         };
         let mut rl = Editor::new();
@@ -108,8 +121,6 @@ impl<W: Write> App<W> {
             match readline {
                 // Command line to be parsed.
                 Ok(line) => {
-                    // TODO: find a better way to handle colored hints.
-                    let line = String::from_utf8(strip_ansi_escapes::strip(line).unwrap()).unwrap();
                     if !line.is_empty() {
                         rl.add_history_entry(&line);
                         self.handle_line(line);
