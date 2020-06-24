@@ -306,6 +306,7 @@ impl<W: Write> App<W> {
                 /// Define known processor states for instructions and subroutines.
                 btreemap! {
                     "instruction" => command_ref!(Self, assert_instruction),
+                    "jump" => command_ref!(Self, assert_jump),
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
             "comment" => command_ref!(Self, comment),
@@ -342,6 +343,13 @@ impl<W: Write> App<W> {
         fn assert_instruction(&mut self, pc: Integer, state_expr: String) {
             let state_change = StateChange::from_expr(state_expr).unwrap();
             self.analysis.add_instruction_assertion(pc, state_change);
+        }
+    );
+
+    command!(
+        /// Define an indirect jump target.
+        fn assert_jump(&mut self, caller_pc: Integer, target_pc: Integer) {
+            self.analysis.add_jump_assertion(caller_pc, Some(target_pc));
         }
     );
 

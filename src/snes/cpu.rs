@@ -1,4 +1,7 @@
+use std::collections::HashSet;
 use std::rc::Rc;
+
+use maplit::hashset;
 
 use crate::analysis::Analysis;
 use crate::snes::instruction::{Instruction, InstructionType};
@@ -131,23 +134,24 @@ impl CPU {
 
     /// Call instruction emulation.
     fn call(&mut self, instruction: Instruction) {
-        match instruction.absolute_argument() {
-            Some(target) => {
-                // Create a parallel instance of the CPU to
-                // execute the subroutine that is being called.
-                let mut cpu = self.clone();
-                cpu.state_change = StateChange::new_empty();
-                cpu.subroutine = target;
-                cpu.pc = target;
+        match self.jump_targets(instruction) {
+            Some(targets) => {
+                for target in targets.iter().copied() {
+                    // Create a parallel instance of the CPU to
+                    // execute the subroutine that is being called.
+                    let mut cpu = self.clone();
+                    cpu.state_change = StateChange::new_empty();
+                    cpu.subroutine = target;
+                    cpu.pc = target;
 
-                // Emulate the called subroutine.
-                self.analysis.add_subroutine(target, None);
-                self.analysis
-                    .add_reference(instruction.pc(), target, self.subroutine);
-                cpu.run();
-
-                // Propagate called subroutine state to caller.
-                self.propagate_subroutine_state(instruction.pc(), target);
+                    // Emulate the called subroutine.
+                    self.analysis.add_subroutine(target, None);
+                    self.analysis
+                        .add_reference(instruction.pc(), target, self.subroutine);
+                    cpu.run();
+                }
+                // Propagate called subroutines state to caller.
+                self.propagate_subroutine_state(instruction.pc(), targets);
             }
             None => self.unknown_state_change(instruction.pc(), UnknownReason::IndirectJump),
         }
@@ -201,11 +205,18 @@ impl CPU {
 
     /// Jump instruction emulation.
     fn jump(&mut self, instruction: Instruction) {
-        match instruction.absolute_argument() {
-            Some(target) => {
-                self.pc = target;
-                self.analysis
-                    .add_reference(instruction.pc(), target, self.subroutine);
+        match self.jump_targets(instruction) {
+            Some(targets) => {
+                // Execute each target in a CPU instance.
+                for target in targets.iter().copied() {
+                    self.analysis
+                        .add_reference(instruction.pc(), target, self.subroutine);
+                    let mut cpu = self.clone();
+                    cpu.pc = target;
+                    cpu.run();
+                }
+                // Targets have already been executed - stop here.
+                self.stop = true;
             }
             None => self.unknown_state_change(instruction.pc(), UnknownReason::IndirectJump),
         }
@@ -281,28 +292,35 @@ impl CPU {
         }
     }
 
-    /// Take the state change of the given subroutine and
+    /// Take the state change of the given subroutines and
     /// propagate it to to the current subroutine state.
-    fn propagate_subroutine_state(&mut self, call_pc: usize, subroutine: usize) {
+    fn propagate_subroutine_state(&mut self, call_pc: usize, targets: HashSet<usize>) {
         let subroutines = self.analysis.subroutines().borrow();
-        let sub = &subroutines[&subroutine];
+        let mut state_changes = HashSet::<StateChange>::new();
 
-        // Unknown or ambiguous state change.
-        if sub.has_unknown_state_change() {
-            drop(subroutines);
-            return self.unknown_state_change(call_pc, UnknownReason::Unknown);
-        } else if sub.simplified_state_changes(self.state).len() != 1 {
-            // Ambiguous state change.
+        // Iterate through all the called subroutines.
+        for target in targets.iter().copied() {
+            let sub = &subroutines[&target];
+
+            // Unknown state change.
+            if sub.has_unknown_state_change() {
+                drop(subroutines);
+                return self.unknown_state_change(call_pc, UnknownReason::Unknown);
+            } else {
+                state_changes.extend(sub.simplified_state_changes(self.state));
+            }
+        }
+
+        // Ambiguous states.
+        if state_changes.len() != 1 {
+            // TODO: simplify all the state changes.
             drop(subroutines);
             return self.unknown_state_change(call_pc, UnknownReason::MultipleReturnStates);
         }
 
-        // Apply state change.
-        Self::apply_state_change(
-            &mut self.state,
-            &mut self.state_change,
-            *sub.state_changes().values().next().unwrap(),
-        );
+        // Single, valid state change that we can propagate.
+        let state_change = *state_changes.iter().next().unwrap();
+        Self::apply_state_change(&mut self.state, &mut self.state_change, state_change);
     }
 
     /// Signal an unknown subroutine state change.
@@ -359,6 +377,15 @@ impl CPU {
         }
     }
 
+    /// Given a jump or call instruction, return its target(s), if any.
+    fn jump_targets(&self, instruction: Instruction) -> Option<HashSet<usize>> {
+        let jump_assertions = self.analysis.jump_assertions().borrow();
+        match instruction.absolute_argument() {
+            Some(target) => Some(hashset! { target }),
+            None => jump_assertions.get(&instruction.pc()).cloned(),
+        }
+    }
+
     #[cfg(test)]
     fn setup_instruction(&self, opcode: u8, argument: usize) -> Instruction {
         Instruction::test(self.pc, self.subroutine, self.state.p(), opcode, argument)
@@ -368,6 +395,7 @@ impl CPU {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analysis::Reference;
 
     fn setup_cpu(p: u8) -> CPU {
         let analysis = Analysis::new(ROM::new());
@@ -408,9 +436,16 @@ mod tests {
     #[test]
     fn test_jump() {
         let mut cpu = setup_cpu(0b0000_0000);
+        cpu.stop = true;
+
         let jmp = cpu.setup_instruction(0x4C, 0x9000);
         cpu.execute(jmp);
-        assert_eq!(cpu.pc, 0x9000);
+
+        let references = cpu.analysis.references().borrow();
+        assert!(references[&0x8000].contains(&Reference {
+            target: 0x9000,
+            subroutine: 0x8000
+        }));
     }
 
     #[test]

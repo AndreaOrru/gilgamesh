@@ -25,7 +25,7 @@ fn main() -> io::Result<()> {
     // Clap's argument parser.
     let matches = clap_app!(
         gilgamesh =>
-            (version: "0.0.1")
+            (version: "0.1.0")
             (author: "Andrea Orru <andrea@orru.io>")
             (about: "The definitive reverse engineering toolkit for SNES.")
             (@arg ROM: +required {file_exists} "ROM file to analyze")

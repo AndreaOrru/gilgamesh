@@ -1,6 +1,6 @@
 [package]
 name = "gilgamesh"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Andrea Orru <andrea@orru.io>"]
 edition = "2018"
 

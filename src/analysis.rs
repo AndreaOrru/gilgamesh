@@ -20,10 +20,10 @@ struct EntryPoint {
 }
 
 /// Code reference.
-#[derive(Debug, Eq, PartialEq)]
-struct Reference {
-    target: usize,
-    subroutine: usize,
+#[derive(Debug, Eq, Hash, PartialEq)]
+pub struct Reference {
+    pub target: usize,
+    pub subroutine: usize,
 }
 
 /// Structure holding the state of the analysis.
@@ -43,7 +43,8 @@ pub struct Analysis {
     entry_points: HashSet<EntryPoint>,
 
     /// Instructions referenced by other instructions.
-    references: RefCell<HashMap<usize, Reference>>,
+    #[getset(get = "pub")]
+    references: RefCell<HashMap<usize, HashSet<Reference>>>,
 
     /// Subroutine labels.
     #[getset(get = "pub")]
@@ -64,6 +65,9 @@ pub struct Analysis {
     /// Assertions on subroutine state changes.
     #[getset(get = "pub")]
     subroutine_assertions: RefCell<HashMap<usize, HashMap<usize, StateChange>>>,
+
+    #[getset(get = "pub")]
+    jump_assertions: RefCell<HashMap<usize, HashSet<usize>>>,
 }
 
 impl Analysis {
@@ -81,6 +85,7 @@ impl Analysis {
             comments: RefCell::new(HashMap::new()),
             instruction_assertions: RefCell::new(HashMap::new()),
             subroutine_assertions: RefCell::new(HashMap::new()),
+            jump_assertions: RefCell::new(HashMap::new()),
         })
     }
 
@@ -185,7 +190,10 @@ impl Analysis {
     /// Add a reference from an instruction to another.
     pub fn add_reference(&self, source: usize, target: usize, subroutine: usize) {
         let mut references = self.references.borrow_mut();
-        references.insert(source, Reference { target, subroutine });
+        references
+            .entry(source)
+            .or_insert_with(HashSet::new)
+            .insert(Reference { target, subroutine });
     }
 
     /// Add an assertion on an instruction state change.
@@ -206,6 +214,14 @@ impl Analysis {
             .entry(subroutine)
             .or_insert_with(HashMap::new)
             .insert(pc, state_change);
+    }
+
+    pub fn add_jump_assertion(&self, caller_pc: usize, target_pc: Option<usize>) {
+        let mut assertions = self.jump_assertions.borrow_mut();
+        let targets = assertions.entry(caller_pc).or_insert_with(HashSet::new);
+        if let Some(target) = target_pc {
+            targets.insert(target);
+        }
     }
 
     /// Remove an assertion on an instruction state change.
@@ -295,14 +311,16 @@ impl Analysis {
 
     /// Generate local label names.
     fn generate_local_labels(&self) {
-        for Reference { target, subroutine } in self.references.borrow().values() {
-            if !self.is_subroutine(*target) {
-                let label = format!("loc_{:06X}", *target);
-                let mut local_labels = self.local_labels.borrow_mut();
-                local_labels
-                    .entry(*subroutine)
-                    .or_insert_with(BiHashMap::new)
-                    .insert(label, *target);
+        for references in self.references.borrow().values() {
+            for Reference { target, subroutine } in references {
+                if !self.is_subroutine(*target) {
+                    let label = format!("loc_{:06X}", *target);
+                    let mut local_labels = self.local_labels.borrow_mut();
+                    local_labels
+                        .entry(*subroutine)
+                        .or_insert_with(BiHashMap::new)
+                        .insert(label, *target);
+                }
             }
         }
     }
@@ -388,13 +406,10 @@ mod tests {
         // Check the instruction points to itself.
         let references = analysis.references.borrow();
         assert_eq!(references.len(), 1);
-        assert_eq!(
-            references[&0x8000],
-            Reference {
-                target: 0x8000,
-                subroutine: 0x8000
-            }
-        );
+        assert!(references[&0x8000].contains(&Reference {
+            target: 0x8000,
+            subroutine: 0x8000
+        }));
     }
 
     #[test]
