@@ -325,6 +325,7 @@ impl<W: Write> App<W> {
                     "assertions" => command_ref!(Self, list_assertions),
                     "subroutines" => command_ref!(Self, list_subroutines),
                 }),
+            "memory" => command_ref!(Self, memory),
             "rom" => command_ref!(Self, rom),
             "subroutine" => command_ref!(Self, subroutine),
             "quit" => command_ref!(Self, quit),
@@ -435,6 +436,53 @@ impl<W: Write> App<W> {
                 outln!(self.out, "{}", Self::format_subroutine(sub));
             }
             outln!(self.out);
+        }
+    );
+
+    command!(
+        /// Show an hex view of a region of the ROM.
+        fn memory(&mut self, address: Integer, size: Integer, step: Integer) {
+            let mut s = String::new();
+            let nl_threshold = (16 / step) * step;
+
+            // Table header.
+            let header = {
+                let mut s = Vec::new();
+                for n in (0..nl_threshold).step_by(step) {
+                    s.push(format!("{:02X}", n));
+                }
+                s.push("".to_string());
+                s.join(&" ".repeat((2 * step) - 1))
+            };
+            s.push_str(&format!("{:8}│ {}\n", "", header).bright_black().to_string());
+            s.push_str(
+                &format!("{}┼{}\n", "─".repeat(8), "─".repeat(header.len()))
+                    .bright_black()
+                    .to_string(),
+            );
+
+            // Table body.
+            let colors = ["white", "cyan"];
+            for (color_idx, i) in (address..address + size).step_by(step).enumerate() {
+                // Base address.
+                if (i - address) % nl_threshold == 0 {
+                    if i - address != 0 {
+                        s.push_str("\n");
+                    }
+                    s.push_str(&format!("${:06X} │ ", i).bright_black().to_string());
+                }
+                // Bytes.
+                for (j, b) in self.analysis.rom.read(i, step).iter().enumerate() {
+                    let color = match self.analysis.find_instruction(i + j) {
+                        Some(_) => "yellow",
+                        None => colors[color_idx % colors.len()],
+                    };
+                    s.push_str(&format!("{:02X}", b).color(color).to_string());
+                }
+                s.push_str(" ");
+            }
+
+            outln!(self.out, "{}", s);
         }
     );
 

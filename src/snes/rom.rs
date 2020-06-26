@@ -93,6 +93,15 @@ impl ROM {
         (hi << 16) | lo
     }
 
+    /// Read a sequence of bytes from the ROM.
+    pub fn read(&self, address: usize, n: usize) -> Vec<u8> {
+        let mut data = Vec::new();
+        for i in 0..n {
+            data.push(self.read_byte(address + i));
+        }
+        data
+    }
+
     /// Size of the ROM, as indicated by the header.
     pub fn size(&self) -> usize {
         0x400 << self.read_byte(header::SIZE)

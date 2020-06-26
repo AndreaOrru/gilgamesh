@@ -138,6 +138,22 @@ impl Analysis {
         self.instructions.borrow().contains_key(&pc)
     }
 
+    /// Find the instruction that contains the given address, if any.
+    pub fn find_instruction(&self, address: usize) -> Option<usize> {
+        let size = |pc| self.any_instruction(pc).unwrap().size();
+        if self.is_visited_pc(address) {
+            Some(address)
+        } else if self.is_visited_pc(address - 1) && size(address - 1) >= 2 {
+            Some(address - 1)
+        } else if self.is_visited_pc(address - 2) && size(address - 2) >= 3 {
+            Some(address - 2)
+        } else if self.is_visited_pc(address - 3) && size(address - 3) >= 4 {
+            Some(address - 3)
+        } else {
+            None
+        }
+    }
+
     /// Return true if the given subroutine is part of the analysis, false otherwise.
     pub fn is_subroutine(&self, pc: usize) -> bool {
         self.subroutines.borrow().contains_key(&pc)
