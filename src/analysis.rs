@@ -4,11 +4,12 @@ use std::rc::Rc;
 
 use bimap::BiHashMap;
 use getset::Getters;
+use itertools::Itertools;
 
 use crate::snes::cpu::CPU;
-use crate::snes::instruction::Instruction;
+use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::rom::{ROMType, ROM};
-use crate::snes::state::StateChange;
+use crate::snes::state::{StateChange, UnknownReason};
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
@@ -24,6 +25,11 @@ struct EntryPoint {
 pub struct Reference {
     pub target: usize,
     pub subroutine: usize,
+}
+
+enum Assertion {
+    Instruction(StateChange),
+    Subroutine(StateChange),
 }
 
 /// Structure holding the state of the analysis.
@@ -121,6 +127,33 @@ impl Analysis {
             cpu.run();
         }
         self.generate_local_labels();
+    }
+
+    pub fn auto_run(self: &Rc<Self>) {
+        let mut applied_suggestion = true;
+        while applied_suggestion {
+            self.run();
+
+            let unknown_subs = self
+                .subroutines
+                .borrow()
+                .values()
+                .filter(|s| s.is_responsible_for_unknown());
+
+            applied_suggestion = false;
+            for sub in unknown_subs {
+                let changes = sub.unknown_state_changes().iter().sorted_by_key(|t| t.1);
+
+                for (instr_pc, change) in changes {
+                    let instr = sub.instructions()[&instr_pc];
+                    let suggestions = self.suggest_assertions(instr.typ(), change.unknown_reason());
+
+                    for suggestion in suggestions.iter() {
+                        // ...
+                    }
+                }
+            }
+        }
     }
 
     /// Return true if the instruction has already been analyzed, false otherwise.
@@ -339,6 +372,36 @@ impl Analysis {
                 }
             }
         }
+    }
+
+    fn suggest_assertions(
+        &self,
+        i: Instruction,
+        sub: Subroutine,
+        reason: UnknownReason,
+    ) -> Vec<Assertion> {
+        let unified_state = || {
+
+        }
+
+        let assertion = match reason {
+            UnknownReason::IndirectJump => match i.typ() {
+                InstructionType::Call => Assertion::Instruction(StateChange::new_empty()),
+                InstructionType::Jump => {
+                    if sub.saves_state_in_incipit() {
+                        Assertion::Subroutine(StateChange::new_empty())
+                    } else {
+                        Assertion::Subroutine(unified_state())
+                    }
+                }
+                _ => {}
+            },
+            UnknownReason::StackManipulation if i.typ() == InstructionType::Return => {
+                unified_state()
+            }
+            _ => {}
+        };
+        vec![assertion]
     }
 }
 

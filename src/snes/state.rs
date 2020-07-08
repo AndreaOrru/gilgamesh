@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt;
 
 use getset::CopyGetters;
@@ -150,14 +151,14 @@ mod test_state {
 }
 
 /// Possible reasons why a state change is unknown.
-#[derive(Copy, Clone, Debug, Eq, Hash, IntoStaticStr, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, IntoStaticStr, Ord, PartialEq, PartialOrd)]
 pub enum UnknownReason {
     Known,
     Unknown,
-    IndirectJump,
-    MultipleReturnStates,
-    StackManipulation,
     SuspectInstruction,
+    MultipleReturnStates,
+    IndirectJump,
+    StackManipulation,
 }
 
 /// State change caused by the execution of a subroutine.
@@ -306,6 +307,18 @@ impl fmt::Display for StateChange {
                 write!(f, "{}", mx.join(","))
             }
         }
+    }
+}
+
+// Implement ordering traits for StateChange.
+impl PartialOrd for StateChange {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for StateChange {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.unknown_reason.cmp(&other.unknown_reason)
     }
 }
 

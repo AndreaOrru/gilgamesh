@@ -309,6 +309,7 @@ impl<W: Write> App<W> {
                     "jump" => command_ref!(Self, assert_jump),
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
+            "autoanalyze" => command_ref!(Self, autoanalyze),
             "comment" => command_ref!(Self, comment),
             "deassert" => container!(
                 /// Remove previously defined assertions.
@@ -360,6 +361,13 @@ impl<W: Write> App<W> {
             let state_change = StateChange::from_expr(state_expr).unwrap();
             self.analysis
                 .add_subroutine_assertion(self.get_subroutine()?, pc, state_change);
+        }
+    );
+
+    command!(
+        /// Analyze and apply suggested assertions as far as possible.
+        fn autoanalyze(&mut self) {
+            self.analysis.auto_run();
         }
     );
 

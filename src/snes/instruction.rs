@@ -234,6 +234,10 @@ impl Instruction {
             || typ == InstructionType::Interrupt
     }
 
+    pub fn is_sep_rep(&self) -> bool {
+        self.typ() == InstructionType::SepRep
+    }
+
     /// Return whether this instruction modifies A.
     pub fn changes_a(&self) -> bool {
         let op = self.operation();

@@ -1,8 +1,9 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use getset::{CopyGetters, Getters};
 
 use crate::snes::instruction::Instruction;
+use crate::snes::opcodes::Op;
 use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// Structure representing a subroutine.
@@ -15,7 +16,7 @@ pub struct Subroutine {
     label: String,
 
     #[getset(get = "pub")]
-    instructions: BTreeSet<Instruction>,
+    instructions: BTreeMap<usize, Instruction>,
 
     #[getset(get = "pub")]
     state_changes: HashMap<usize, StateChange>,
@@ -30,7 +31,7 @@ impl Subroutine {
         Self {
             pc,
             label,
-            instructions: BTreeSet::new(),
+            instructions: BTreeMap::new(),
             state_changes: HashMap::new(),
             unknown_state_changes: HashMap::new(),
         }
@@ -38,7 +39,7 @@ impl Subroutine {
 
     /// Add an instruction to the subroutine.
     pub fn add_instruction(&mut self, instruction: Instruction) {
-        self.instructions.insert(instruction);
+        self.instructions.insert(instruction.pc(), instruction);
     }
 
     /// Add a state change to the subroutine.
@@ -62,6 +63,14 @@ impl Subroutine {
             .any(|s| s.unknown_reason() == reason)
     }
 
+    pub fn is_responsible_for_unknown(&self) -> bool {
+        self.has_unknown_state_change()
+            && self
+                .unknown_state_changes
+                .values()
+                .all(|s| s.unknown_reason() != UnknownReason::Unknown)
+    }
+
     /// Return the state changes, simplified given the current state.
     pub fn simplified_state_changes(&self, state: State) -> HashSet<StateChange> {
         let mut state_changes = HashSet::new();
@@ -69,6 +78,17 @@ impl Subroutine {
             state_changes.insert(state_change.simplify(state));
         }
         state_changes
+    }
+
+    pub fn saves_state_in_incipit(&self) -> bool {
+        for i in self.instructions.values() {
+            if i.operation() == Op::PHP {
+                return true;
+            } else if i.is_sep_rep() || i.is_control() {
+                return false;
+            }
+        }
+        false
     }
 }
 
