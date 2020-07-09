@@ -1,5 +1,5 @@
 use std::borrow::Cow::{self, Owned};
-use std::fs::create_dir_all;
+use std::fs::{create_dir_all, File};
 use std::io;
 use std::io::{stdout, Stdout, Write};
 use std::path::Path;
@@ -327,6 +327,7 @@ impl<W: Write> App<W> {
                 }),
             "memory" => command_ref!(Self, memory),
             "rom" => command_ref!(Self, rom),
+            "save" => command_ref!(Self, save),
             "subroutine" => command_ref!(Self, subroutine),
             "quit" => command_ref!(Self, quit),
         })
@@ -498,6 +499,16 @@ impl<W: Write> App<W> {
             outln!(self.out, "  {:8}${:06X}", "RESET:".green(), rom.reset_vector());
             outln!(self.out, "  {:8}${:06X}", "NMI:".green(), rom.nmi_vector());
             outln!(self.out);
+        }
+    );
+
+    command!(
+        /// Save the state of the analysis to a JSON file.
+        fn save(&mut self) {
+            let s = self.analysis.save();
+            let json_path = self.analysis.rom.json_path();
+            let mut json_file = File::create(json_path).unwrap();
+            json_file.write_all(s.as_bytes()).unwrap();
         }
     );
 

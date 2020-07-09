@@ -1,6 +1,7 @@
 use std::fmt;
 
 use getset::CopyGetters;
+use serde::Serialize;
 use strum_macros::IntoStaticStr;
 
 use crate::prompt::error::{Error, Result};
@@ -150,7 +151,7 @@ mod test_state {
 }
 
 /// Possible reasons why a state change is unknown.
-#[derive(Copy, Clone, Debug, Eq, Hash, IntoStaticStr, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, IntoStaticStr, PartialEq, Serialize)]
 pub enum UnknownReason {
     Known,
     Unknown,
@@ -161,7 +162,7 @@ pub enum UnknownReason {
 }
 
 /// State change caused by the execution of a subroutine.
-#[derive(Copy, CopyGetters, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Copy, CopyGetters, Clone, Debug, Eq, Hash, PartialEq, Serialize)]
 pub struct StateChange {
     #[getset(get_copy = "pub")]
     m: Option<bool>,

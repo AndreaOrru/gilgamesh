@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 use getset::{CopyGetters, Getters};
 use strum_macros::AsRefStr;
@@ -36,9 +37,10 @@ mod header {
 /// Structure representing a SNES ROM.
 #[derive(Getters, CopyGetters)]
 pub struct ROM {
+    data: Vec<u8>,
+
     #[getset(get = "pub")]
     path: String,
-    data: Vec<u8>,
 
     #[getset(get_copy = "pub")]
     rom_type: ROMType,
@@ -72,6 +74,15 @@ impl ROM {
         self.rom_type = self.discover_subtype();
 
         Ok(())
+    }
+
+    /// Return the path of the JSON file containing the analysis of the ROM.
+    pub fn json_path(&self) -> String {
+        let mut path = PathBuf::from(&self.path);
+        let basename = path.file_stem().unwrap().to_str().unwrap().to_owned();
+        path.pop();
+        path.push(format!("{}.json", basename));
+        path.to_str().unwrap().to_string()
     }
 
     /// Read a byte from the ROM.
@@ -228,6 +239,13 @@ mod tests {
         assert!(!ROM::is_ram(0x002000));
         assert!(!ROM::is_ram(0x800000));
         assert!(!ROM::is_ram(0xC00000));
+    }
+
+    #[test]
+    fn test_paths() {
+        let rom = setup_lorom();
+        assert!(rom.path().ends_with("/lorom.sfc"));
+        assert!(rom.json_path().ends_with("/lorom.json"));
     }
 
     #[test]

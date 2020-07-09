@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use bimap::BiHashMap;
 use getset::Getters;
+use serde::Serialize;
 
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
@@ -12,7 +13,7 @@ use crate::snes::state::StateChange;
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Serialize)]
 struct EntryPoint {
     label: String,
     pc: usize,
@@ -27,24 +28,28 @@ pub struct Reference {
 }
 
 /// Structure holding the state of the analysis.
-#[derive(Getters)]
+#[derive(Getters, Serialize)]
 pub struct Analysis {
     /// Reference to the ROM being analyzed.
+    #[serde(skip_serializing)]
     pub rom: ROM,
 
     /// All analyzed subroutines.
     #[getset(get = "pub")]
+    #[serde(skip_serializing)]
     subroutines: RefCell<BTreeMap<usize, Subroutine>>,
 
     /// All analyzed instructions.
+    #[serde(skip_serializing)]
     instructions: RefCell<HashMap<usize, HashSet<Instruction>>>,
-
-    /// ROM's entry points.
-    entry_points: HashSet<EntryPoint>,
 
     /// Instructions referenced by other instructions.
     #[getset(get = "pub")]
+    #[serde(skip_serializing)]
     references: RefCell<HashMap<usize, HashSet<Reference>>>,
+
+    /// ROM's entry points.
+    entry_points: HashSet<EntryPoint>,
 
     /// Subroutine labels.
     #[getset(get = "pub")]
@@ -121,6 +126,11 @@ impl Analysis {
             cpu.run();
         }
         self.generate_local_labels();
+    }
+
+    /// Return the analysis serialized as JSON.
+    pub fn save(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 
     /// Return true if the instruction has already been analyzed, false otherwise.
