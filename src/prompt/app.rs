@@ -1,5 +1,5 @@
 use std::borrow::Cow::{self, Owned};
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, read_to_string, File};
 use std::io;
 use std::io::{stdout, Stdout, Write};
 use std::path::Path;
@@ -325,6 +325,7 @@ impl<W: Write> App<W> {
                     "assertions" => command_ref!(Self, list_assertions),
                     "subroutines" => command_ref!(Self, list_subroutines),
                 }),
+            "load" => command_ref!(Self, load),
             "memory" => command_ref!(Self, memory),
             "rom" => command_ref!(Self, rom),
             "save" => command_ref!(Self, save),
@@ -441,6 +442,15 @@ impl<W: Write> App<W> {
     );
 
     command!(
+        /// Load the state of the analysis from a JSON file.
+        fn load(&mut self) {
+            let json_path = self.analysis.rom.json_path();
+            let json = read_to_string(json_path).unwrap();
+            self.analysis = Analysis::from_json(json);
+        }
+    );
+
+    command!(
         /// Show an hex view of a region of the ROM.
         fn memory(&mut self, address: Integer, size: Integer, step: Integer) {
             let mut s = String::new();
@@ -505,10 +515,10 @@ impl<W: Write> App<W> {
     command!(
         /// Save the state of the analysis to a JSON file.
         fn save(&mut self) {
-            let s = self.analysis.save();
+            let json = self.analysis.to_json();
             let json_path = self.analysis.rom.json_path();
             let mut json_file = File::create(json_path).unwrap();
-            json_file.write_all(s.as_bytes()).unwrap();
+            json_file.write_all(json.as_bytes()).unwrap();
         }
     );
 

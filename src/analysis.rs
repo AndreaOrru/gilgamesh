@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use bimap::BiHashMap;
 use getset::Getters;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
@@ -13,7 +13,7 @@ use crate::snes::state::StateChange;
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
-#[derive(Eq, Hash, PartialEq, Serialize)]
+#[derive(Deserialize, Eq, Hash, PartialEq, Serialize)]
 struct EntryPoint {
     label: String,
     pc: usize,
@@ -28,24 +28,23 @@ pub struct Reference {
 }
 
 /// Structure holding the state of the analysis.
-#[derive(Getters, Serialize)]
+#[derive(Deserialize, Getters, Serialize)]
 pub struct Analysis {
     /// Reference to the ROM being analyzed.
-    #[serde(skip_serializing)]
     pub rom: ROM,
 
     /// All analyzed subroutines.
     #[getset(get = "pub")]
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     subroutines: RefCell<BTreeMap<usize, Subroutine>>,
 
     /// All analyzed instructions.
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     instructions: RefCell<HashMap<usize, HashSet<Instruction>>>,
 
     /// Instructions referenced by other instructions.
     #[getset(get = "pub")]
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     references: RefCell<HashMap<usize, HashSet<Reference>>>,
 
     /// ROM's entry points.
@@ -94,6 +93,20 @@ impl Analysis {
         })
     }
 
+    /// Instantiate a new Analysis from a serialized JSON document.
+    pub fn from_json(json: String) -> Rc<Self> {
+        let mut analysis: Analysis = serde_json::from_str(&json).unwrap();
+        analysis.rom.load(analysis.rom.path().to_owned()).unwrap();
+        let analysis = Rc::new(analysis);
+        analysis.run();
+        analysis
+    }
+
+    /// Return the analysis serialized as JSON.
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+
     /// Return the default entry points for the ROM under analysis.
     fn default_entry_points(rom: &ROM) -> HashSet<EntryPoint> {
         if rom.rom_type() == ROMType::Unknown {
@@ -126,11 +139,6 @@ impl Analysis {
             cpu.run();
         }
         self.generate_local_labels();
-    }
-
-    /// Return the analysis serialized as JSON.
-    pub fn save(&self) -> String {
-        serde_json::to_string(self).unwrap()
     }
 
     /// Return true if the instruction has already been analyzed, false otherwise.

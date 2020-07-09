@@ -4,10 +4,11 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use getset::{CopyGetters, Getters};
+use serde::{Deserialize, Serialize};
 use strum_macros::AsRefStr;
 
 /// ROM classification.
-#[derive(AsRefStr, Copy, Clone, Debug, PartialEq)]
+#[derive(AsRefStr, Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ROMType {
     Unknown,
     LoROM,
@@ -35,30 +36,37 @@ mod header {
 }
 
 /// Structure representing a SNES ROM.
-#[derive(Getters, CopyGetters)]
+#[derive(Deserialize, Getters, CopyGetters, Serialize)]
 pub struct ROM {
-    data: Vec<u8>,
-
     #[getset(get = "pub")]
     path: String,
+
+    #[serde(skip)]
+    data: Vec<u8>,
 
     #[getset(get_copy = "pub")]
     rom_type: ROMType,
 }
 
-impl ROM {
-    /// Instantiate a new empty ROM object.
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> ROM {
-        ROM {
+/// Default empty ROM.
+impl Default for ROM {
+    fn default() -> Self {
+        Self {
             path: String::new(),
             data: Vec::new(),
             rom_type: ROMType::Unknown,
         }
     }
+}
+
+impl ROM {
+    /// Instantiate a new empty ROM object.
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Instantiate a ROM from a file.
-    pub fn from(path: String) -> io::Result<ROM> {
+    pub fn from(path: String) -> io::Result<Self> {
         let mut rom = ROM::new();
         rom.load(path)?;
         Ok(rom)
