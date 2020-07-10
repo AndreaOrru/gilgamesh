@@ -114,6 +114,9 @@ impl<W: Write> App<W> {
         let history = shellexpand::tilde(HISTORY_FILE).into_owned();
         rl.load_history(&history).ok();
 
+        // Load analysis saved state if it exists;
+        self.load_analysis().ok();
+
         while !self.exit {
             let prompt = self.prompt();
             let readline = rl.readline(&prompt);
@@ -296,6 +299,14 @@ impl<W: Write> App<W> {
         outln!(self.out);
     }
 
+    /// Load the state of the analysis from a JSON file.
+    fn load_analysis(&mut self) -> Result<()> {
+        let json_path = self.analysis.rom.json_path();
+        let json = read_to_string(json_path)?;
+        self.analysis = Analysis::from_json(json)?;
+        Ok(())
+    }
+
     /***************************************************************************/
 
     /// Return the hierarchy of supported commands.
@@ -445,9 +456,7 @@ impl<W: Write> App<W> {
     command!(
         /// Load the state of the analysis from a JSON file.
         fn load(&mut self) {
-            let json_path = self.analysis.rom.json_path();
-            let json = read_to_string(json_path).unwrap();
-            self.analysis = Analysis::from_json(json)?;
+            self.load_analysis()?;
         }
     );
 
