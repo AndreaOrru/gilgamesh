@@ -130,8 +130,13 @@ impl<W: Write> App<W> {
                     }
                 }
                 Err(ReadlineError::Interrupted) => continue, // Ctrl-C.
-                Err(ReadlineError::Eof) => break,            // Ctrl-D.
+                Err(ReadlineError::Eof) => self.exit = true, // Ctrl-D.
                 _ => unreachable!(),
+            }
+
+            // Ask for confirmation before exiting.
+            if self.exit && !Self::yes_no_prompt("Are you sure you want to quit without saving?") {
+                self.exit = false;
             }
         }
 
@@ -307,6 +312,13 @@ impl<W: Write> App<W> {
         Ok(())
     }
 
+    /// Show a yes/no prompt, return true if yes, false otherwise.
+    fn yes_no_prompt(question: &str) -> bool {
+        let mut rl = Editor::<()>::new();
+        let s = rl.readline(&format!("{} (y/n) ", question).yellow().to_string());
+        s.unwrap() == "y"
+    }
+
     /***************************************************************************/
 
     /// Return the hierarchy of supported commands.
@@ -456,7 +468,9 @@ impl<W: Write> App<W> {
     command!(
         /// Load the state of the analysis from a JSON file.
         fn load(&mut self) {
-            self.load_analysis()?;
+            if Self::yes_no_prompt("Are you sure you want to load the saved analysis?") {
+                self.load_analysis()?;
+            }
         }
     );
 
@@ -535,8 +549,14 @@ impl<W: Write> App<W> {
         fn save(&mut self) {
             let json = self.analysis.to_json();
             let json_path = self.analysis.rom.json_path();
-            let mut json_file = File::create(json_path).unwrap();
-            json_file.write_all(json.as_bytes()).unwrap();
+
+            // Ask for confirmation before overwriting an existing analysis.
+            if !Path::new(&json_path).exists()
+                || Self::yes_no_prompt("Are you sure you want to overwrite the saved analysis?")
+            {
+                let mut json_file = File::create(json_path).unwrap();
+                json_file.write_all(json.as_bytes()).unwrap();
+            }
         }
     );
 
