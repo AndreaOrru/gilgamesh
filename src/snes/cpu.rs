@@ -382,7 +382,9 @@ impl CPU {
         let jump_assertions = self.analysis.jump_assertions().borrow();
         match instruction.absolute_argument() {
             Some(target) => Some(hashset! { target }),
-            None => jump_assertions.get(&instruction.pc()).cloned(),
+            None => jump_assertions
+                .get(&instruction.pc())
+                .map(|h| h.iter().map(|j| j.target).collect()),
         }
     }
 

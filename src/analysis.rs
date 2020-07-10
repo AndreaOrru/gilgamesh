@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
 use bimap::BiHashMap;
+use derive_new::new;
 use getset::Getters;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -27,6 +28,12 @@ struct EntryPoint {
 pub struct Reference {
     pub target: usize,
     pub subroutine: usize,
+}
+
+#[derive(new, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct JumpTableEntry {
+    pub x: Option<usize>,
+    pub target: usize,
 }
 
 /// Structure holding the state of the analysis.
@@ -75,7 +82,7 @@ pub struct Analysis {
     subroutine_assertions: RefCell<HashMap<usize, HashMap<usize, StateChange>>>,
 
     #[getset(get = "pub")]
-    jump_assertions: RefCell<HashMap<usize, HashSet<usize>>>,
+    jump_assertions: RefCell<HashMap<usize, HashSet<JumpTableEntry>>>,
 
     /// Instruction comments.
     #[getset(get = "pub")]
@@ -266,11 +273,23 @@ impl Analysis {
             .insert(pc, state_change);
     }
 
-    pub fn add_jump_assertion(&self, caller_pc: usize, target_pc: Option<usize>) {
+    /// Add a jump assertion: caller jumps to target when X = n (if relevant).
+    pub fn add_jump_assertion(&self, caller_pc: usize, target_pc: Option<usize>, x: Option<usize>) {
         let mut assertions = self.jump_assertions.borrow_mut();
         let targets = assertions.entry(caller_pc).or_default();
         if let Some(target) = target_pc {
-            targets.insert(target);
+            targets.insert(JumpTableEntry::new(x, target));
+        }
+    }
+
+    /// Add a jumptable assertion: caller spans a jumptable that goes from x to y (included).
+    pub fn add_jumptable_assertion(&self, caller_pc: usize, range: (usize, usize)) {
+        let caller = self.any_instruction(caller_pc).unwrap();
+        for x in ((range.0)..=(range.1)).step_by(2) {
+            let offset = caller.argument().unwrap() + x;
+            let bank = caller.pc() & 0xFF0000;
+            let target_pc = bank | (self.rom.read_word(bank | offset)) as usize;
+            self.add_jump_assertion(caller_pc, Some(target_pc), Some(x));
         }
     }
 

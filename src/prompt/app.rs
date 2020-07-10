@@ -330,6 +330,7 @@ impl<W: Write> App<W> {
                 btreemap! {
                     "instruction" => command_ref!(Self, assert_instruction),
                     "jump" => command_ref!(Self, assert_jump),
+                    "jumptable" => command_ref!(Self, assert_jumptable),
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
             "comment" => command_ref!(Self, comment),
@@ -376,7 +377,15 @@ impl<W: Write> App<W> {
     command!(
         /// Define an indirect jump target.
         fn assert_jump(&mut self, caller_pc: Integer, target_pc: Integer) {
-            self.analysis.add_jump_assertion(caller_pc, Some(target_pc));
+            self.analysis
+                .add_jump_assertion(caller_pc, Some(target_pc), None);
+        }
+    );
+
+    command!(
+        /// Define a jump table.
+        fn assert_jumptable(&mut self, caller_pc: Integer, range: Range) {
+            self.analysis.add_jumptable_assertion(caller_pc, range);
         }
     );
 
@@ -517,7 +526,7 @@ impl<W: Write> App<W> {
                 s.push_str(" ");
             }
 
-            outln!(self.out, "{}", s);
+            outln!(self.out, "{}\n", s);
         }
     );
 

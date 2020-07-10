@@ -64,18 +64,31 @@ macro_rules! fetch_arg {
     };
 }
 
+/// Parse a range in the format "x..y" where x and y are hex numbers.
+pub fn parse_range(range: String) -> (usize, usize) {
+    let p: Vec<&str> = range.splitn(2, "..").collect();
+    (
+        usize::from_str_radix(p[0], 16).unwrap(),
+        usize::from_str_radix(p[1], 16).unwrap(),
+    )
+}
+
 #[macro_export]
 macro_rules! argument {
     ($args:ident, $i:ident, $arg:ident, Args) => {
         $args
     };
 
+    ($args:ident, $i:ident, $arg:ident, Integer) => {
+        usize::from_str_radix($crate::fetch_arg!($args, $i, $arg), 16).unwrap()
+    };
+
     ($args:ident, $i:ident, $arg:ident, String) => {
         $crate::fetch_arg!($args, $i, $arg).to_string()
     };
 
-    ($args:ident, $i:ident, $arg:ident, Integer) => {
-        usize::from_str_radix($crate::fetch_arg!($args, $i, $arg), 16).unwrap()
+    ($args:ident, $i:ident, $arg:ident, Range) => {
+        $crate::prompt::command::parse_range($crate::fetch_arg!($args, $i, $arg).to_string())
     };
 }
 
