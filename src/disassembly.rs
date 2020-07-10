@@ -27,6 +27,7 @@ impl Disassembly {
         for i in sub.instructions().iter() {
             s.push_str(&self.label(i.pc(), subroutine));
             s.push_str(&self.instruction(*i));
+            s.push_str(&self.jump_table(*i, sub));
             s.push_str(&self.asserted_state(*i, sub));
             s.push_str(&self.unknown_state(*i, sub));
         }
@@ -116,6 +117,33 @@ impl Disassembly {
         }
     }
 
+    fn jump_table(&self, i: Instruction, sub: &Subroutine) -> String {
+        let jump_assertions = self.analysis.jump_assertions().borrow();
+        match jump_assertions.get(&i.pc()) {
+            Some(entries) => {
+                let mut s = Self::header("[JUMP TABLE]", "blue");
+
+                for e in entries.iter() {
+                    let x = match e.x {
+                        Some(x) => format!("{:04X}", x),
+                        None => "????".to_string(),
+                    };
+                    let target = self.analysis.label(e.target, Some(sub.pc())).unwrap();
+
+                    s.push_str(
+                        &format!("  ; x={}  ->  {}\n", x, target)
+                            .bright_black()
+                            .to_string(),
+                    );
+                }
+
+                s.push_str(&Self::header("", "bright_black"));
+                s
+            }
+            None => String::new(),
+        }
+    }
+
     fn unknown_state(&self, i: Instruction, subroutine: &Subroutine) -> String {
         match subroutine.unknown_state_changes().get(&i.pc()) {
             Some(state_change) => {
@@ -135,7 +163,6 @@ impl Disassembly {
                 ));
 
                 s.push_str(&Self::header("", "bright_black"));
-
                 s
             }
             None => String::new(),

@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 use bimap::BiHashMap;
@@ -30,10 +31,21 @@ pub struct Reference {
     pub subroutine: usize,
 }
 
+/// Jump table entry.
 #[derive(new, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct JumpTableEntry {
     pub x: Option<usize>,
     pub target: usize,
+}
+impl PartialOrd for JumpTableEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for JumpTableEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.x.cmp(&other.x)
+    }
 }
 
 /// Structure holding the state of the analysis.
@@ -82,7 +94,7 @@ pub struct Analysis {
     subroutine_assertions: RefCell<HashMap<usize, HashMap<usize, StateChange>>>,
 
     #[getset(get = "pub")]
-    jump_assertions: RefCell<HashMap<usize, HashSet<JumpTableEntry>>>,
+    jump_assertions: RefCell<HashMap<usize, BTreeSet<JumpTableEntry>>>,
 
     /// Instruction comments.
     #[getset(get = "pub")]
