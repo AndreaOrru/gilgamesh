@@ -4,8 +4,10 @@ use std::rc::Rc;
 
 use bimap::BiHashMap;
 use getset::Getters;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+use crate::prompt::error::{Error, Result};
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
 use crate::snes::rom::{ROMType, ROM};
@@ -30,37 +32,39 @@ pub struct Reference {
 /// Structure holding the state of the analysis.
 #[derive(Deserialize, Getters, Serialize)]
 pub struct Analysis {
-    /// Reference to the ROM being analyzed.
-    pub rom: ROM,
+    /// All analyzed instructions.
+    #[serde(skip)]
+    instructions: RefCell<HashMap<usize, HashSet<Instruction>>>,
 
     /// All analyzed subroutines.
     #[getset(get = "pub")]
     #[serde(skip)]
     subroutines: RefCell<BTreeMap<usize, Subroutine>>,
 
-    /// All analyzed instructions.
-    #[serde(skip)]
-    instructions: RefCell<HashMap<usize, HashSet<Instruction>>>,
-
     /// Instructions referenced by other instructions.
     #[getset(get = "pub")]
     #[serde(skip)]
     references: RefCell<HashMap<usize, HashSet<Reference>>>,
 
-    /// ROM's entry points.
-    entry_points: HashSet<EntryPoint>,
-
     /// Subroutine labels.
     #[getset(get = "pub")]
+    #[serde(skip)]
     subroutine_labels: RefCell<BiHashMap<String, usize>>,
 
     /// Subroutine local labels.
     #[getset(get = "pub")]
+    #[serde(skip)]
     local_labels: RefCell<HashMap<usize, BiHashMap<String, usize>>>,
 
-    /// Instruction comments.
-    #[getset(get = "pub")]
-    comments: RefCell<HashMap<usize, String>>,
+    /***************************************************************************/
+    /// Reference to the ROM being analyzed.
+    pub rom: ROM,
+
+    /// ROM's entry points.
+    entry_points: HashSet<EntryPoint>,
+
+    /// Labels set by the user.
+    custom_labels: RefCell<HashMap<usize, String>>,
 
     /// Assertions on instruction state changes.
     #[getset(get = "pub")]
@@ -72,6 +76,10 @@ pub struct Analysis {
 
     #[getset(get = "pub")]
     jump_assertions: RefCell<HashMap<usize, HashSet<usize>>>,
+
+    /// Instruction comments.
+    #[getset(get = "pub")]
+    comments: RefCell<HashMap<usize, String>>,
 }
 
 impl Analysis {
@@ -82,24 +90,26 @@ impl Analysis {
             rom,
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(BTreeMap::new()),
-            entry_points,
             references: RefCell::new(HashMap::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
-            comments: RefCell::new(HashMap::new()),
+            entry_points,
+            custom_labels: RefCell::new(HashMap::new()),
             instruction_assertions: RefCell::new(HashMap::new()),
             subroutine_assertions: RefCell::new(HashMap::new()),
             jump_assertions: RefCell::new(HashMap::new()),
+            comments: RefCell::new(HashMap::new()),
         })
     }
 
     /// Instantiate a new Analysis from a serialized JSON document.
-    pub fn from_json(json: String) -> Rc<Self> {
+    pub fn from_json(json: String) -> Result<Rc<Self>> {
         let mut analysis: Analysis = serde_json::from_str(&json).unwrap();
-        analysis.rom.load(analysis.rom.path().to_owned()).unwrap();
+        analysis.rom.load(analysis.rom.path().to_owned())?;
+
         let analysis = Rc::new(analysis);
         analysis.run();
-        analysis
+        Ok(analysis)
     }
 
     /// Return the analysis serialized as JSON.
@@ -124,10 +134,8 @@ impl Analysis {
         self.instructions.borrow_mut().clear();
         self.subroutines.borrow_mut().clear();
         self.references.borrow_mut().clear();
-        // TODO: preserve these.
         self.subroutine_labels.borrow_mut().clear();
         self.local_labels.borrow_mut().clear();
-        self.comments.borrow_mut().clear();
     }
 
     /// Analyze the ROM.
@@ -182,7 +190,7 @@ impl Analysis {
         let mut instructions = self.instructions.borrow_mut();
         instructions
             .entry(instruction.pc())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(instruction);
 
         let mut subroutines = self.subroutines.borrow_mut();
@@ -199,19 +207,27 @@ impl Analysis {
             return;
         }
 
-        // Register subroutine's label.
-        let mut labels = self.subroutine_labels.borrow_mut();
-        let label = match label {
-            Some(s) => s,
-            None => format!("sub_{:06X}", pc),
+        // Register subroutine's label or fetch saved one.
+        let mut custom_labels = self.custom_labels.borrow_mut();
+        let label = match custom_labels.get(&pc) {
+            Some(l) => l.to_owned(),
+            None => match label {
+                Some(l) => {
+                    custom_labels.insert(pc, l.to_owned());
+                    l
+                }
+                None => format!("sub_{:06X}", pc),
+            },
         };
-        labels.insert(label.clone(), pc);
+        self.subroutine_labels
+            .borrow_mut()
+            .insert(label.to_owned(), pc);
 
         // Create and register subroutine (unless it already exists).
-        let mut subroutines = self.subroutines.borrow_mut();
-        subroutines
+        self.subroutines
+            .borrow_mut()
             .entry(pc)
-            .or_insert_with(|| Subroutine::new(pc, label));
+            .or_insert_with(|| Subroutine::new(pc, label.to_owned()));
     }
 
     /// Add a state change to a subroutine.
@@ -226,7 +242,7 @@ impl Analysis {
         let mut references = self.references.borrow_mut();
         references
             .entry(source)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(Reference { target, subroutine });
     }
 
@@ -246,13 +262,13 @@ impl Analysis {
         let mut assertions = self.subroutine_assertions.borrow_mut();
         assertions
             .entry(subroutine)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(pc, state_change);
     }
 
     pub fn add_jump_assertion(&self, caller_pc: usize, target_pc: Option<usize>) {
         let mut assertions = self.jump_assertions.borrow_mut();
-        let targets = assertions.entry(caller_pc).or_insert_with(HashSet::new);
+        let targets = assertions.entry(caller_pc).or_default();
         if let Some(target) = target_pc {
             targets.insert(target);
         }
@@ -326,6 +342,75 @@ impl Analysis {
         }
     }
 
+    /// Rename a subroutine or local label. If renaming a local label,
+    /// the subroutine it belongs to is required as a parameter.
+    pub fn rename_label(&self, old: String, new: String, subroutine: Option<usize>) -> Result<()> {
+        if old.starts_with('.') {
+            self.rename_local_label(old, new, subroutine.ok_or(Error::NoSelectedSubroutine)?)
+        } else {
+            self.rename_subroutine(old, new)
+        }
+    }
+
+    /// Rename a local label.
+    fn rename_local_label(&self, _old: String, _new: String, subroutine: usize) -> Result<()> {
+        if !_new.starts_with('.') {
+            return Err(Error::InvalidLabelType);
+        }
+        let (old, new) = (_old[1..].to_string(), _new[1..].to_string());
+
+        let mut local_labels = self.local_labels.borrow_mut();
+        let labels = local_labels.get_mut(&subroutine).unwrap();
+        let pc = *labels.get_by_left(&old).ok_or(Error::UnknownLabel(_old))?;
+
+        self.validate_label(&labels, new.to_owned())?;
+        labels.remove_by_left(&old);
+        labels.insert(new.to_owned(), pc);
+
+        self.custom_labels.borrow_mut().insert(pc, new);
+        Ok(())
+    }
+
+    /// Rename a subroutine.
+    fn rename_subroutine(&self, old: String, new: String) -> Result<()> {
+        if new.starts_with('.') {
+            return Err(Error::InvalidLabelType);
+        }
+        let mut subroutines = self.subroutines.borrow_mut();
+        let mut labels = self.subroutine_labels.borrow_mut();
+
+        let pc = *labels
+            .get_by_left(&old)
+            .ok_or_else(|| Error::UnknownLabel(old.to_owned()))?;
+        let subroutine = subroutines.get_mut(&pc).unwrap();
+
+        self.validate_label(&labels, new.to_owned())?;
+        labels.remove_by_left(&old);
+        labels.insert(new.to_owned(), pc);
+        subroutine.set_label(new.to_owned());
+
+        self.custom_labels.borrow_mut().insert(pc, new);
+        Ok(())
+    }
+
+    /// Check that the given label is a valid label for a subroutine or local label.
+    fn validate_label(&self, labels: &BiHashMap<String, usize>, label: String) -> Result<()> {
+        if labels.contains_left(&label) {
+            return Err(Error::LabelAlreadyUsed(label));
+        }
+
+        let ident = Regex::new(r"^[_A-Za-z][_A-Za-z0-9]*$").unwrap();
+        if !ident.is_match(&label) {
+            return Err(Error::InvalidLabel(label));
+        }
+
+        if label.starts_with("sub_") || label.starts_with("loc_") {
+            return Err(Error::ReservedLabel(label));
+        }
+
+        Ok(())
+    }
+
     /// Return all the subroutines that contain the given instruction.
     pub fn instruction_subroutines(&self, pc: usize) -> HashSet<usize> {
         match self.instructions.borrow().get(&pc) {
@@ -345,15 +430,22 @@ impl Analysis {
 
     /// Generate local label names.
     fn generate_local_labels(&self) {
+        let custom_labels = self.custom_labels.borrow();
+        let mut local_labels = self.local_labels.borrow_mut();
+
         for references in self.references.borrow().values() {
             for Reference { target, subroutine } in references {
                 if !self.is_subroutine(*target) {
-                    let label = format!("loc_{:06X}", *target);
-                    let mut local_labels = self.local_labels.borrow_mut();
+                    // Get custom label or assigned default one.
+                    let label = custom_labels
+                        .get(&target)
+                        .cloned()
+                        .unwrap_or_else(|| format!("loc_{:06X}", *target));
+
                     local_labels
                         .entry(*subroutine)
-                        .or_insert_with(BiHashMap::new)
-                        .insert(label, *target);
+                        .or_default()
+                        .insert(label.to_owned(), *target);
                 }
             }
         }
@@ -388,7 +480,7 @@ mod tests {
         assert!(analysis.is_visited_pc(0x8000));
     }
 
-    /**************************************************************************/
+    /***************************************************************************/
 
     #[test]
     fn test_elidable_state_change() {
@@ -469,6 +561,28 @@ mod tests {
         assert_eq!(state_changes.len(), 1);
         let state_change = state_changes.values().next().unwrap();
         assert_eq!(state_change.to_string(), "none");
+
+        drop(subroutines);
+
+        // Check that renaming subroutine label works (even after analysis).
+        analysis
+            .rename_label("reset".to_string(), "new_reset".to_string(), None)
+            .ok();
+        analysis.run();
+        assert_eq!(
+            analysis.label(0x8000, None).unwrap(),
+            "new_reset".to_string()
+        );
+
+        // Check that renaming local labels works.
+        analysis
+            .rename_label(".loc_008007".to_string(), ".loop".to_string(), Some(0x8000))
+            .ok();
+        analysis.run();
+        assert_eq!(
+            analysis.label(0x8007, Some(0x8000)).unwrap(),
+            ".loop".to_string()
+        );
     }
 
     #[test]

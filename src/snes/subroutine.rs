@@ -1,17 +1,17 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use getset::{CopyGetters, Getters};
+use getset::{CopyGetters, Getters, Setters};
 
 use crate::snes::instruction::Instruction;
 use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// Structure representing a subroutine.
-#[derive(Debug, CopyGetters, Getters)]
+#[derive(Debug, CopyGetters, Getters, Setters)]
 pub struct Subroutine {
     #[getset(get_copy = "pub")]
     pc: usize,
 
-    #[getset(get = "pub")]
+    #[getset(get = "pub", set = "pub")]
     label: String,
 
     #[getset(get = "pub")]

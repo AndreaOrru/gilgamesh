@@ -296,7 +296,7 @@ impl<W: Write> App<W> {
         outln!(self.out);
     }
 
-    /**************************************************************************/
+    /***************************************************************************/
 
     /// Return the hierarchy of supported commands.
     fn build_commands() -> Command<Self> {
@@ -327,6 +327,7 @@ impl<W: Write> App<W> {
                 }),
             "load" => command_ref!(Self, load),
             "memory" => command_ref!(Self, memory),
+            "rename" => command_ref!(Self, rename),
             "rom" => command_ref!(Self, rom),
             "save" => command_ref!(Self, save),
             "subroutine" => command_ref!(Self, subroutine),
@@ -446,7 +447,7 @@ impl<W: Write> App<W> {
         fn load(&mut self) {
             let json_path = self.analysis.rom.json_path();
             let json = read_to_string(json_path).unwrap();
-            self.analysis = Analysis::from_json(json);
+            self.analysis = Analysis::from_json(json)?;
         }
     );
 
@@ -494,6 +495,14 @@ impl<W: Write> App<W> {
             }
 
             outln!(self.out, "{}", s);
+        }
+    );
+
+    command!(
+        /// Rename a label or subroutine.
+        fn rename(&mut self, old: String, new: String) {
+            self.analysis
+                .rename_label(old, new, self.current_subroutine)?;
         }
     );
 
