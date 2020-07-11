@@ -201,6 +201,12 @@ impl Analysis {
         self.instructions.borrow().contains_key(&pc)
     }
 
+    /// Return true if a subroutine at the given PC is an entry point.
+    pub fn is_entry_point(&self, pc: usize) -> bool {
+        let entry_points = self.entry_points.borrow();
+        entry_points.iter().any(|ep| ep.pc == pc)
+    }
+
     /// Find the instruction that contains the given address, if any.
     pub fn find_instruction(&self, address: usize) -> Option<usize> {
         let size = |pc| self.any_instruction(pc).unwrap().size();

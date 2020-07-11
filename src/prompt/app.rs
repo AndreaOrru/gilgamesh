@@ -240,8 +240,26 @@ impl<W: Write> App<W> {
     /// Return a subroutine label formatted for display inside a list.
     fn format_subroutine(&self, sub: &Subroutine) -> String {
         let mut s = String::new();
+
+        // Pick foreground color.
+        let mut fg = if sub.has_unknown_state_change() {
+            "red"
+        } else if self.analysis.is_jump_table_target(sub.pc()) {
+            "blue"
+        } else {
+            "green"
+        };
+        // Pick background color.
+        let mut bg = "black";
+        if self.analysis.is_entry_point(sub.pc()) {
+            bg = fg;
+            fg = "black";
+        }
+        // Add label.
+        s.push_str(&sub.label().color(fg).on_color(bg).to_string());
+
+        // Add state indicators.
         if sub.has_unknown_state_change() {
-            s.push_str(&sub.label().red().to_string());
             if sub.is_unknown_because_of(UnknownReason::SuspectInstruction) {
                 s.push_str(&format!(" {}", "[!]".on_bright_red()));
             } else if sub.is_unknown_because_of(UnknownReason::StackManipulation) {
@@ -251,11 +269,8 @@ impl<W: Write> App<W> {
             } else if sub.is_unknown_because_of(UnknownReason::MultipleReturnStates) {
                 s.push_str(&" [+]".red().to_string());
             }
-        } else if self.analysis.is_jump_table_target(sub.pc()) {
-            s.push_str(&sub.label().blue().to_string());
-        } else {
-            s.push_str(&sub.label().green().to_string());
         }
+
         s
     }
 
