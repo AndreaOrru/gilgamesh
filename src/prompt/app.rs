@@ -114,8 +114,10 @@ impl<W: Write> App<W> {
         let history = shellexpand::tilde(HISTORY_FILE).into_owned();
         rl.load_history(&history).ok();
 
-        // Load analysis saved state if it exists;
-        self.load_analysis().ok();
+        // Load analysis saved state if it exists.
+        if self.load_analysis().is_err() {
+            self.analysis.run();
+        }
 
         while !self.exit {
             let prompt = self.prompt();
@@ -361,6 +363,7 @@ impl<W: Write> App<W> {
             "load" => command_ref!(Self, load),
             "memory" => command_ref!(Self, memory),
             "rename" => command_ref!(Self, rename),
+            "reset" => command_ref!(Self, reset),
             "rom" => command_ref!(Self, rom),
             "save" => command_ref!(Self, save),
             "subroutine" => command_ref!(Self, subroutine),
@@ -563,6 +566,17 @@ impl<W: Write> App<W> {
         fn rename(&mut self, old: String, new: String) {
             self.analysis
                 .rename_label(old, new, self.current_subroutine)?;
+        }
+    );
+
+    command!(
+        /// Reset the analysis (start from scratch).
+        fn reset(&mut self) {
+            if Self::yes_no_prompt("Are you sure you want to reset the entire analysis?") {
+                self.analysis.reset();
+                self.analysis.run();
+                self.current_subroutine = None;
+            }
         }
     );
 

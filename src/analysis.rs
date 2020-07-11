@@ -80,7 +80,7 @@ pub struct Analysis {
     pub rom: ROM,
 
     /// ROM's entry points.
-    entry_points: HashSet<EntryPoint>,
+    entry_points: RefCell<HashSet<EntryPoint>>,
 
     /// Labels set by the user.
     custom_labels: RefCell<HashMap<usize, String>>,
@@ -117,7 +117,7 @@ impl Analysis {
             references: RefCell::new(HashMap::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
-            entry_points,
+            entry_points: RefCell::new(entry_points),
             custom_labels: RefCell::new(HashMap::new()),
             instruction_assertions: RefCell::new(HashMap::new()),
             subroutine_assertions: RefCell::new(HashMap::new()),
@@ -154,6 +154,18 @@ impl Analysis {
         }
     }
 
+    /// Reset the analysis (start from scratch).
+    pub fn reset(self: &Rc<Self>) {
+        *self.entry_points.borrow_mut() = Self::default_entry_points(&self.rom);
+        self.custom_labels.borrow_mut().clear();
+        self.instruction_assertions.borrow_mut().clear();
+        self.subroutine_assertions.borrow_mut().clear();
+        self.jump_assertions.borrow_mut().clear();
+        self.jump_table_targets.borrow_mut().clear();
+        self.comments.borrow_mut().clear();
+        self.clear();
+    }
+
     /// Clear the results of the analysis.
     fn clear(&self) {
         self.instructions.borrow_mut().clear();
@@ -166,7 +178,7 @@ impl Analysis {
     /// Analyze the ROM.
     pub fn run(self: &Rc<Self>) {
         self.clear();
-        for EntryPoint { label, pc, p } in self.entry_points.iter() {
+        for EntryPoint { label, pc, p } in self.entry_points.borrow().iter() {
             self.add_subroutine(*pc, Some(label.clone()));
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
