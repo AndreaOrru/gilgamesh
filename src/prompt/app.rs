@@ -504,6 +504,10 @@ impl<W: Write> App<W> {
     command!(
         /// Show an hex view of a region of the ROM.
         fn memory(&mut self, address: Integer, size: Integer, step: Integer) {
+            if step > 16 {
+                return Err(Error::InvalidStepSize);
+            }
+
             let mut s = String::new();
             let nl_threshold = (16 / step) * step;
 

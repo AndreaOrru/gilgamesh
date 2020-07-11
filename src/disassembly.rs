@@ -6,6 +6,7 @@ use inflections::case::to_sentence_case;
 
 use crate::analysis::Analysis;
 use crate::snes::instruction::Instruction;
+use crate::snes::opcodes::Op;
 use crate::snes::subroutine::Subroutine;
 
 const SEPARATOR_WIDTH: usize = 38;
@@ -34,13 +35,33 @@ impl Disassembly {
         s
     }
 
-    fn comment(&self, pc: usize) -> String {
+    fn comment(&self, i: Instruction) -> String {
         let comments = self.analysis.comments().borrow();
-        let comment = match comments.get(&pc) {
+        let comment = match comments.get(&i.pc()) {
             Some(s) => s.to_owned(),
-            None => String::new(),
+            None => {
+                if i.is_sep_rep() {
+                    Self::sep_rep_comment(i)
+                } else {
+                    String::new()
+                }
+            }
         };
-        format!("; ${:06X} | {}", pc, comment)
+        format!("; ${:06X} | {}", i.pc(), comment)
+    }
+
+    fn sep_rep_comment(i: Instruction) -> String {
+        let size = if i.operation() == Op::SEP { 8 } else { 16 };
+        let arg = i.argument().unwrap();
+        if arg & 0x30 == 0x30 {
+            format!("A: {}-bits, X: {}-bits", size, size)
+        } else if arg & 0x20 == 0x20 {
+            format!("A: {}-bits", size)
+        } else if arg & 0x10 == 0x10 {
+            format!("X: {}-bits", size)
+        } else {
+            String::new()
+        }
     }
 
     fn header(title: &str, color: &str) -> String {
@@ -66,7 +87,7 @@ impl Disassembly {
             None => i.argument_string().normal(),
         };
 
-        let comment = self.comment(i.pc()).bright_black();
+        let comment = self.comment(i).bright_black();
         format!("  {:4}{:25}{}\n", i.name().green(), arg, comment)
     }
 
