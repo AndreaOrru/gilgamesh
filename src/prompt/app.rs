@@ -340,6 +340,8 @@ impl<W: Write> App<W> {
                 /// Remove previously defined assertions.
                 btreemap! {
                     "instruction" => command_ref!(Self, deassert_instruction),
+                    "jump" => command_ref!(Self, deassert_jump),
+                    "jumptable" => command_ref!(Self, deassert_jumptable),
                     "subroutine"  => command_ref!(Self, deassert_subroutine),
                 }),
             "describe" => command_ref!(Self, describe),
@@ -416,6 +418,20 @@ impl<W: Write> App<W> {
         /// Remove previously defined instruction assertions.
         fn deassert_instruction(&mut self, pc: Integer) {
             self.analysis.del_instruction_assertion(pc);
+        }
+    );
+
+    command!(
+        /// Remove previously defined jump assertion.
+        fn deassert_jump(&mut self, caller_pc: Integer, ?target_pc: Integer) {
+            self.analysis.del_jump_assertion(caller_pc, target_pc);
+        }
+    );
+
+    command!(
+        /// Remove previously defined jump table assertion.
+        fn deassert_jumptable(&mut self, caller_pc: Integer, range: Range) {
+            self.analysis.del_jumptable_assertion(caller_pc, range);
         }
     );
 

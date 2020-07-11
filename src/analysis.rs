@@ -32,7 +32,7 @@ pub struct Reference {
 }
 
 /// Jump table entry.
-#[derive(new, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(new, Copy, Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct JumpTableEntry {
     pub x: Option<usize>,
     pub target: usize,
@@ -99,7 +99,7 @@ pub struct Analysis {
 
     /// Addresses that are targets for jump tables.
     #[getset(get = "pub")]
-    jump_table_targets: RefCell<HashSet<usize>>,
+    jump_table_targets: RefCell<HashMap<usize, usize>>,
 
     /// Instruction comments.
     #[getset(get = "pub")]
@@ -122,7 +122,7 @@ impl Analysis {
             instruction_assertions: RefCell::new(HashMap::new()),
             subroutine_assertions: RefCell::new(HashMap::new()),
             jump_assertions: RefCell::new(HashMap::new()),
-            jump_table_targets: RefCell::new(HashSet::new()),
+            jump_table_targets: RefCell::new(HashMap::new()),
             comments: RefCell::new(HashMap::new()),
         })
     }
@@ -212,7 +212,7 @@ impl Analysis {
 
     /// Return true if the given address is the target of a jump table, false otherwise.
     pub fn is_jump_table_target(&self, pc: usize) -> bool {
-        self.jump_table_targets.borrow().contains(&pc)
+        self.jump_table_targets.borrow().contains_key(&pc)
     }
 
     /// Add an instruction to the analysis.
@@ -303,7 +303,7 @@ impl Analysis {
         let entries = assertions.entry(caller_pc).or_default();
         if let Some(target) = target_pc {
             entries.insert(JumpTableEntry::new(x, target));
-            targets.insert(target);
+            *targets.entry(target).or_default() += 1;
         }
     }
 
@@ -334,6 +334,68 @@ impl Analysis {
                 assertions.remove(&subroutine);
             }
         };
+    }
+
+    /// Remove a jump assertion. If no target is specified, removes all the targets.
+    pub fn del_jump_assertion(&self, caller_pc: usize, target_pc: Option<usize>) {
+        let mut assertions = self.jump_assertions.borrow_mut();
+        let mut jt_targets = self.jump_table_targets.borrow_mut();
+
+        // Decrement target count by diff.
+        let mut decr_target_count = |target, diff: usize| {
+            let jt_target = jt_targets.get_mut(&target).unwrap();
+            *jt_target -= diff;
+            if *jt_target == 0 {
+                jt_targets.remove(&target);
+            }
+        };
+
+        match target_pc {
+            Some(target) => {
+                // Remove all entries that match target_pc.
+                let orig_set = assertions.get(&caller_pc).unwrap();
+                let new_set: BTreeSet<_> = orig_set
+                    .iter()
+                    .copied()
+                    .filter(|jt| jt.target != target)
+                    .collect();
+                let diff = orig_set.len() - new_set.len();
+
+                // Store the new entry set.
+                if new_set.is_empty() {
+                    assertions.remove(&caller_pc);
+                } else {
+                    assertions.insert(caller_pc, new_set);
+                }
+
+                // Update the jump table targets.
+                decr_target_count(target, diff);
+            }
+            None => {
+                // Remove all entries.
+                let entries = assertions.get(&caller_pc).unwrap();
+                for entry in entries.iter() {
+                    decr_target_count(entry.target, 1);
+                }
+                assertions.remove(&caller_pc);
+            }
+        }
+    }
+
+    /// Remove a jumptable assertion (in the specified range).
+    pub fn del_jumptable_assertion(&self, caller_pc: usize, range: (usize, usize)) {
+        let assertions = self.jump_assertions.borrow();
+        let entries = assertions.get(&caller_pc).unwrap();
+        let filtered_entries = entries.iter().filter(|e| match e.x {
+            Some(x) => (x >= range.0) && (x <= range.1),
+            None => false,
+        });
+        let targets: HashSet<_> = filtered_entries.map(|e| e.target).collect();
+
+        drop(assertions);
+        for target in targets {
+            self.del_jump_assertion(caller_pc, Some(target));
+        }
     }
 
     /// Get a state change assertion for an instruction, if any.
@@ -610,7 +672,17 @@ mod tests {
             assert_eq!(subroutines.len(), 3);
             assert!(analysis.is_subroutine(0x8100));
             assert!(analysis.is_subroutine(0x8200));
+            assert!(analysis.is_jump_table_target(0x8100));
+            assert!(analysis.is_jump_table_target(0x8200));
         }
+
+        // Verify that, after deleting the assertions, the targets
+        // are not considered to be part of a jump table anymore.
+        analysis.del_jumptable_assertion(0x8000, (0, 0));
+        assert!(!analysis.is_jump_table_target(0x8100));
+
+        analysis.del_jump_assertion(0x8000, None);
+        assert!(!analysis.is_jump_table_target(0x8200));
     }
 
     #[test]
