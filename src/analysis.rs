@@ -487,10 +487,12 @@ impl Analysis {
 mod tests {
     use super::*;
     use crate::snes::opcodes::Op;
+    use crate::snes::state::UnknownReason;
     use gilgamesh::test_rom;
 
     test_rom!(setup_elidable_state_change, "elidable_state_change.asm");
     test_rom!(setup_infinite_loop, "infinite_loop.asm");
+    test_rom!(setup_jump_tables, "jump_tables.asm");
     test_rom!(setup_php_plp, "php_plp.asm");
     test_rom!(
         setup_simplified_state_changes,
@@ -567,6 +569,35 @@ mod tests {
             target: 0x8000,
             subroutine: 0x8000
         }));
+    }
+
+    #[test]
+    fn test_jump_tables() {
+        let analysis = Analysis::new(setup_jump_tables());
+        analysis.run();
+
+        // Test that there's a single subroutine, which is unknown
+        // because of an unexplored indirect jump instruction.
+        {
+            let subroutines = analysis.subroutines.borrow();
+            let reset_sub = &subroutines[&0x8000];
+            assert_eq!(reset_sub.label(), "reset");
+            assert_eq!(reset_sub.instructions().len(), 1);
+            assert!(reset_sub.is_unknown_because_of(UnknownReason::IndirectJump));
+        }
+
+        // Specify the limits of the jumptable.
+        analysis.add_jumptable_assertion(0x8000, (0, 2));
+        analysis.run();
+
+        // Verify that the subroutines pointed by
+        // the jumptable have been explored.
+        {
+            let subroutines = analysis.subroutines.borrow();
+            assert_eq!(subroutines.len(), 3);
+            assert!(analysis.is_subroutine(0x8100));
+            assert!(analysis.is_subroutine(0x8200));
+        }
     }
 
     #[test]
