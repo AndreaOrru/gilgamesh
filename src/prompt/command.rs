@@ -90,6 +90,14 @@ macro_rules! argument {
     ($args:ident, $i:ident, $arg:ident, Range) => {
         $crate::prompt::command::parse_range($crate::fetch_arg!($args, $i, $arg).to_string())
     };
+
+    ($args:ident, $i:ident, $arg:ident, Option<$typ:ident>) => {
+        if $i >= $args.len() {
+            None
+        } else {
+            Some($crate::argument!($args, $i, $arg, $typ))
+        }
+    };
 }
 
 /// Define a command for the interactive prompt.
@@ -97,12 +105,16 @@ macro_rules! argument {
 macro_rules! command {
     (
         #[doc = $help:expr]
-        fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)*) $body:expr
+        fn $name:ident(&mut $self:ident $(, $arg:ident : $type:ident)* $(, ?$opt_arg:ident : $opt_type:ident)*) $body:expr
     ) => {
         fn $name(&mut $self, _args: &[String]) -> $crate::prompt::error::Result<()> {
             let mut _i = 0;
             $(
                 let $arg = $crate::argument!(_args, _i, $arg, $type);
+                _i += 1;
+            )*
+            $(
+                let $opt_arg = $crate::argument!(_args, _i, $opt_arg, Option<$opt_type>);
                 _i += 1;
             )*
             $body
