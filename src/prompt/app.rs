@@ -215,6 +215,11 @@ impl<W: Write> App<W> {
                 outln!(out, "\n{}", "Subcommands:".yellow());
             }
             for (name, subcommand) in command.subcommands.iter() {
+                let name = if subcommand.subcommands.is_empty() {
+                    name.to_string()
+                } else {
+                    format!("{}...", name)
+                };
                 outln!(
                     out,
                     "  {:15}{}",
@@ -359,6 +364,7 @@ impl<W: Write> App<W> {
             "rom" => command_ref!(Self, rom),
             "save" => command_ref!(Self, save),
             "subroutine" => command_ref!(Self, subroutine),
+            "translate" => command_ref!(Self, translate),
             "quit" => command_ref!(Self, quit),
         })
     }
@@ -598,6 +604,15 @@ impl<W: Write> App<W> {
             if let Some(pc) = sub {
                 self.current_subroutine = Some(pc);
             }
+        }
+    );
+
+    command!(
+        /// Translate a SNES address to a PC address.
+        fn translate(&mut self, address: Integer) {
+            let translated = self.analysis.rom.translate(address);
+            outln!(self.out, "{} ${:06X}", "SNES:".green(), address);
+            outln!(self.out, "{} ${:06X}", "PC:  ".green(), translated);
         }
     );
 
