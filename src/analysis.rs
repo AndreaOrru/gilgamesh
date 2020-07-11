@@ -93,8 +93,13 @@ pub struct Analysis {
     #[getset(get = "pub")]
     subroutine_assertions: RefCell<HashMap<usize, HashMap<usize, StateChange>>>,
 
+    /// Assertions on jump table targets.
     #[getset(get = "pub")]
     jump_assertions: RefCell<HashMap<usize, BTreeSet<JumpTableEntry>>>,
+
+    /// Addresses that are targets for jump tables.
+    #[getset(get = "pub")]
+    jump_table_targets: RefCell<HashSet<usize>>,
 
     /// Instruction comments.
     #[getset(get = "pub")]
@@ -117,6 +122,7 @@ impl Analysis {
             instruction_assertions: RefCell::new(HashMap::new()),
             subroutine_assertions: RefCell::new(HashMap::new()),
             jump_assertions: RefCell::new(HashMap::new()),
+            jump_table_targets: RefCell::new(HashSet::new()),
             comments: RefCell::new(HashMap::new()),
         })
     }
@@ -204,6 +210,11 @@ impl Analysis {
         self.subroutines.borrow().contains_key(&pc)
     }
 
+    /// Return true if the given address is the target of a jump table, false otherwise.
+    pub fn is_jump_table_target(&self, pc: usize) -> bool {
+        self.jump_table_targets.borrow().contains(&pc)
+    }
+
     /// Add an instruction to the analysis.
     pub fn add_instruction(&self, instruction: Instruction) -> Instruction {
         let mut instructions = self.instructions.borrow_mut();
@@ -288,9 +299,11 @@ impl Analysis {
     /// Add a jump assertion: caller jumps to target when X = n (if relevant).
     pub fn add_jump_assertion(&self, caller_pc: usize, target_pc: Option<usize>, x: Option<usize>) {
         let mut assertions = self.jump_assertions.borrow_mut();
-        let targets = assertions.entry(caller_pc).or_default();
+        let mut targets = self.jump_table_targets.borrow_mut();
+        let entries = assertions.entry(caller_pc).or_default();
         if let Some(target) = target_pc {
-            targets.insert(JumpTableEntry::new(x, target));
+            entries.insert(JumpTableEntry::new(x, target));
+            targets.insert(target);
         }
     }
 

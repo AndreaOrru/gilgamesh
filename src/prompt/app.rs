@@ -231,7 +231,7 @@ impl<W: Write> App<W> {
     }
 
     /// Return a subroutine label formatted for display inside a list.
-    fn format_subroutine(sub: &Subroutine) -> String {
+    fn format_subroutine(&self, sub: &Subroutine) -> String {
         let mut s = String::new();
         if sub.has_unknown_state_change() {
             s.push_str(&sub.label().red().to_string());
@@ -244,6 +244,8 @@ impl<W: Write> App<W> {
             } else if sub.is_unknown_because_of(UnknownReason::MultipleReturnStates) {
                 s.push_str(&" [+]".red().to_string());
             }
+        } else if self.analysis.is_jump_table_target(sub.pc()) {
+            s.push_str(&sub.label().blue().to_string());
         } else {
             s.push_str(&sub.label().green().to_string());
         }
@@ -468,7 +470,7 @@ impl<W: Write> App<W> {
         fn list_subroutines(&mut self) {
             let subroutines = self.analysis.subroutines().borrow();
             for sub in subroutines.values() {
-                outln!(self.out, "{}", Self::format_subroutine(sub));
+                outln!(self.out, "{}", self.format_subroutine(sub));
             }
             outln!(self.out);
         }

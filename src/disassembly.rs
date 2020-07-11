@@ -79,7 +79,13 @@ impl Disassembly {
 
     fn label(&self, pc: usize, subroutine: usize) -> String {
         match self.analysis.label(pc, Some(subroutine)) {
-            Some(label) => format!("{}:\n", label.red()),
+            Some(label) => {
+                if self.analysis.is_jump_table_target(pc) {
+                    format!("{}:\n", label.blue())
+                } else {
+                    format!("{}:\n", label.red())
+                }
+            }
             None => String::new(),
         }
     }
