@@ -593,17 +593,6 @@ mod tests {
     use crate::snes::state::UnknownReason;
     use gilgamesh::test_rom;
 
-    test_rom!(setup_elidable_state_change, "elidable_state_change.asm");
-    test_rom!(setup_infinite_loop, "infinite_loop.asm");
-    test_rom!(setup_jump_tables, "jump_tables.asm");
-    test_rom!(setup_php_plp, "php_plp.asm");
-    test_rom!(
-        setup_simplified_state_changes,
-        "simplified_state_changes.asm"
-    );
-    test_rom!(setup_state_change, "state_change.asm");
-    test_rom!(setup_unknown_call_jump, "unknown_call_jump.asm");
-
     #[test]
     fn test_instruction_subroutine_references() {
         let analysis = Analysis::new(ROM::new());
@@ -618,6 +607,7 @@ mod tests {
 
     /***************************************************************************/
 
+    test_rom!(setup_elidable_state_change, "elidable_state_change.asm");
     #[test]
     fn test_elidable_state_change() {
         let analysis = Analysis::new(setup_elidable_state_change());
@@ -643,6 +633,7 @@ mod tests {
         assert_eq!(state_change.to_string(), "none");
     }
 
+    test_rom!(setup_infinite_loop, "infinite_loop.asm");
     #[test]
     fn test_infinite_loop() {
         let analysis = Analysis::new(setup_infinite_loop());
@@ -674,6 +665,7 @@ mod tests {
         }));
     }
 
+    test_rom!(setup_jump_tables, "jump_tables.asm");
     #[test]
     fn test_jump_tables() {
         let analysis = Analysis::new(setup_jump_tables());
@@ -713,6 +705,7 @@ mod tests {
         assert!(!analysis.is_jump_table_target(0x8200));
     }
 
+    test_rom!(setup_php_plp, "php_plp.asm");
     #[test]
     fn test_php_plp() {
         let analysis = Analysis::new(setup_php_plp());
@@ -762,6 +755,10 @@ mod tests {
         );
     }
 
+    test_rom!(
+        setup_simplified_state_changes,
+        "simplified_state_changes.asm"
+    );
     #[test]
     fn test_simplified_state_changes() {
         let analysis = Analysis::new(setup_simplified_state_changes());
@@ -786,6 +783,7 @@ mod tests {
         assert!(!reset_sub.has_unknown_state_change());
     }
 
+    test_rom!(setup_state_change, "state_change.asm");
     #[test]
     fn test_state_change() {
         let analysis = Analysis::new(setup_state_change());
@@ -819,6 +817,7 @@ mod tests {
         assert_eq!(ldx.argument().unwrap(), 0x1234);
     }
 
+    test_rom!(setup_unknown_call_jump, "unknown_call_jump.asm");
     #[test]
     fn test_unknown_call_jump() {
         let analysis = Analysis::new(setup_unknown_call_jump());
@@ -849,5 +848,21 @@ mod tests {
         let loop_sub = &subroutines[&0x9002];
         assert_eq!(loop_sub.label(), "loop");
         assert_eq!(loop_sub.instructions().len(), 1);
+    }
+
+    test_rom!(setup_unknown_responsibility, "unknown_responsibility.asm");
+    #[test]
+    fn test_unknown_responsibility() {
+        let analysis = Analysis::new(setup_unknown_responsibility());
+        analysis.run();
+        let subroutines = analysis.subroutines.borrow();
+
+        let reset_sub = &subroutines[&0x8000];
+        assert!(reset_sub.has_unknown_state_change());
+        assert!(!reset_sub.is_responsible_for_unknown());
+
+        let unknown_sub = &subroutines[&0x8006];
+        assert!(unknown_sub.has_unknown_state_change());
+        assert!(unknown_sub.is_responsible_for_unknown());
     }
 }

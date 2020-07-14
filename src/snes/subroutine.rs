@@ -72,7 +72,7 @@ impl Subroutine {
         state_changes
     }
 
-    /// Return true if the subroutine saves the processor state at the beginning.
+    /// Return true if the subroutine saves the processor state at the beginning, false otherwise.
     pub fn saves_state_in_incipit(&self) -> bool {
         for i in self.instructions.iter() {
             if i.operation() == Op::PHP {
@@ -82,6 +82,16 @@ impl Subroutine {
             }
         }
         false
+    }
+
+    /// Return true if the subroutine is responsible for the unknown state, false
+    /// if the responsible subroutine is one of the ones it calls.
+    pub fn is_responsible_for_unknown(&self) -> bool {
+        self.has_unknown_state_change()
+            && self
+                .unknown_state_changes
+                .values()
+                .all(|s| s.unknown_reason() != UnknownReason::Unknown)
     }
 }
 
