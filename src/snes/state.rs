@@ -31,6 +31,26 @@ impl State {
         }
     }
 
+    /// Instantiate a state object from a human-readable expression.
+    pub fn from_expr(expr: String) -> Result<Self> {
+        let expressions: Vec<&str> = expr.split(',').collect();
+        if expressions.len() != 2 {
+            return Err(Error::InvalidStateExpr);
+        }
+
+        let (mut m, mut x) = (false, false);
+        for expression in expressions.iter() {
+            let parts: Vec<&str> = expression.split('=').collect();
+            let (register, value) = (parts[0], parts[1]);
+            match register {
+                "m" => m = value.parse::<u8>()? != 0,
+                "x" => x = value.parse::<u8>()? != 0,
+                _ => return Err(Error::InvalidStateExpr),
+            }
+        }
+        Ok(Self::from_mx(m, x))
+    }
+
     /// Return the value of M.
     pub fn m(&self) -> bool {
         (self.p & (1 << M_BIT)) != 0
@@ -99,6 +119,17 @@ mod test_state {
         let state = State::from_mx(true, false);
         assert!(state.m());
         assert!(!state.x());
+    }
+
+    #[test]
+    fn test_from_expr() {
+        let state = State::from_expr("m=0,x=1".to_string()).unwrap();
+        assert_eq!(state.m(), false);
+        assert_eq!(state.x(), true);
+
+        let state = State::from_expr("x=0,m=1".to_string()).unwrap();
+        assert_eq!(state.m(), true);
+        assert_eq!(state.x(), false);
     }
 
     #[test]
