@@ -25,7 +25,7 @@ impl Disassembly {
         let sub = &subroutines[&subroutine];
         let mut s = String::new();
 
-        for i in sub.instructions().iter() {
+        for i in sub.instructions().values() {
             s.push_str(&self.label(i.pc(), subroutine));
             s.push_str(&self.instruction(*i));
             s.push_str(&self.jump_table(*i, sub));

@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use getset::{CopyGetters, Getters, Setters};
 
@@ -16,7 +16,7 @@ pub struct Subroutine {
     label: String,
 
     #[getset(get = "pub")]
-    instructions: BTreeSet<Instruction>,
+    instructions: BTreeMap<usize, Instruction>,
 
     #[getset(get = "pub")]
     state_changes: HashMap<usize, StateChange>,
@@ -31,7 +31,7 @@ impl Subroutine {
         Self {
             pc,
             label,
-            instructions: BTreeSet::new(),
+            instructions: BTreeMap::new(),
             state_changes: HashMap::new(),
             unknown_state_changes: HashMap::new(),
         }
@@ -39,7 +39,7 @@ impl Subroutine {
 
     /// Add an instruction to the subroutine.
     pub fn add_instruction(&mut self, instruction: Instruction) {
-        self.instructions.insert(instruction);
+        self.instructions.insert(instruction.pc(), instruction);
     }
 
     /// Add a state change to the subroutine.
@@ -74,7 +74,7 @@ impl Subroutine {
 
     /// Return true if the subroutine saves the processor state at the beginning, false otherwise.
     pub fn saves_state_in_incipit(&self) -> bool {
-        for i in self.instructions.iter() {
+        for i in self.instructions.values() {
             if i.operation() == Op::PHP {
                 return true;
             } else if i.is_sep_rep() || i.is_control() {
