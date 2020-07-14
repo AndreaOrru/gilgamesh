@@ -20,7 +20,7 @@ use crate::prompt::command::Command;
 use crate::prompt::error::{Error, Result};
 use crate::snes::opcodes::Op;
 use crate::snes::rom::ROM;
-use crate::snes::state::{StateChange, UnknownReason};
+use crate::snes::state::{State, StateChange, UnknownReason};
 use crate::snes::subroutine::Subroutine;
 use crate::{command, command_ref, container};
 
@@ -352,6 +352,7 @@ impl<W: Write> App<W> {
             "assert" => container!(
                 /// Define known processor states for instructions and subroutines.
                 btreemap! {
+                    "entrypoint" => command_ref!(Self, assert_entrypoint),
                     "instruction" => command_ref!(Self, assert_instruction),
                     "jump" => command_ref!(Self, assert_jump),
                     "jumptable" => command_ref!(Self, assert_jumptable),
@@ -391,6 +392,14 @@ impl<W: Write> App<W> {
         /// Run the analysis on the ROM.
         fn analyze(&mut self) {
             self.analysis.run();
+        }
+    );
+
+    command!(
+        /// Add an entry point to the analysis.
+        fn assert_entrypoint(&mut self, pc: Integer, name: String, state_expr: String) {
+            let state = State::from_expr(state_expr).unwrap();
+            self.analysis.add_entry_point(pc, name, state)?;
         }
     );
 
@@ -510,7 +519,12 @@ impl<W: Write> App<W> {
         fn list_subroutines(&mut self) {
             let subroutines = self.analysis.subroutines().borrow();
             for sub in subroutines.values() {
-                outln!(self.out, "{}", self.format_subroutine(sub));
+                outln!(
+                    self.out,
+                    "${:06X}  {}",
+                    sub.pc(),
+                    self.format_subroutine(sub)
+                );
             }
             outln!(self.out);
         }

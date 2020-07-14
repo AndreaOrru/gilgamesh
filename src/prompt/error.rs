@@ -6,6 +6,7 @@ use std::num::ParseIntError;
 /// Gilgamesh error type.
 #[derive(Debug)]
 pub enum Error {
+    AlreadyAnalyzed,
     InvalidLabel(String),
     InvalidLabelType,
     InvalidStateExpr,
@@ -24,6 +25,7 @@ impl error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Error::AlreadyAnalyzed => write!(f, "Address has already been analyzed."),
             Error::InvalidLabel(l) => write!(f, "Invalid label \"{}\".", l),
             Error::InvalidLabelType => write!(f, "Invalid label type."),
             Error::InvalidStateExpr => write!(f, "Invalid state expression."),

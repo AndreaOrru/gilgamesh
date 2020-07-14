@@ -13,11 +13,11 @@ use crate::prompt::error::{Error, Result};
 use crate::snes::cpu::CPU;
 use crate::snes::instruction::Instruction;
 use crate::snes::rom::{ROMType, ROM};
-use crate::snes::state::StateChange;
+use crate::snes::state::{State, StateChange};
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
-#[derive(Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(new, Deserialize, Eq, Hash, PartialEq, Serialize)]
 struct EntryPoint {
     label: String,
     pc: usize,
@@ -334,6 +334,16 @@ impl Analysis {
             let target_pc = bank | (self.rom.read_word(bank | offset)) as usize;
             self.add_jump_assertion(caller_pc, Some(target_pc), Some(x));
         }
+    }
+
+    /// Add an entry point to the analysis.
+    pub fn add_entry_point(&self, pc: usize, name: String, state: State) -> Result<()> {
+        if self.is_entry_point(pc) || self.is_visited_pc(pc) {
+            return Err(Error::AlreadyAnalyzed);
+        }
+        let mut entry_points = self.entry_points.borrow_mut();
+        entry_points.insert(EntryPoint::new(name, pc, state.p()));
+        Ok(())
     }
 
     /// Remove an assertion on an instruction state change.
@@ -812,17 +822,28 @@ mod tests {
         let analysis = Analysis::new(setup_unknown_call_jump());
         analysis.run();
 
+        {
+            let subroutines = analysis.subroutines.borrow();
+            assert_eq!(subroutines.len(), 2);
+
+            let reset_sub = &subroutines[&0x8000];
+            assert_eq!(reset_sub.label(), "reset");
+            assert_eq!(reset_sub.instructions().len(), 1);
+            let nmi_sub = &subroutines[&0x8003];
+            assert_eq!(nmi_sub.label(), "nmi");
+            assert_eq!(nmi_sub.instructions().len(), 2);
+
+            assert!(reset_sub.has_unknown_state_change());
+            assert!(nmi_sub.has_unknown_state_change());
+        }
+
+        // Test adding a custom entry point.
+        analysis.add_entry_point(0x9002, "loop".to_string(), State::from_mx(true, true));
+        analysis.run();
+
         let subroutines = analysis.subroutines.borrow();
-        assert_eq!(subroutines.len(), 2);
-
-        let reset_sub = &subroutines[&0x8000];
-        assert_eq!(reset_sub.label(), "reset");
-        assert_eq!(reset_sub.instructions().len(), 1);
-        let nmi_sub = &subroutines[&0x8003];
-        assert_eq!(nmi_sub.label(), "nmi");
-        assert_eq!(nmi_sub.instructions().len(), 2);
-
-        assert!(reset_sub.has_unknown_state_change());
-        assert!(nmi_sub.has_unknown_state_change());
+        let loop_sub = &subroutines[&0x9002];
+        assert_eq!(loop_sub.label(), "loop");
+        assert_eq!(loop_sub.instructions().len(), 1);
     }
 }
