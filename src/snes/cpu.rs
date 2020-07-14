@@ -8,7 +8,7 @@ use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::{AddressMode, Op};
 use crate::snes::register::Register;
 use crate::snes::rom::ROM;
-use crate::snes::stack;
+use crate::snes::stack::{Data, Stack};
 use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// SNES CPU emulation.
@@ -38,7 +38,7 @@ pub struct CPU {
     state_inference: StateChange,
 
     /// Stack.
-    stack: stack::Stack,
+    stack: Stack,
 
     /// Registers.
     A: Register,
@@ -55,7 +55,7 @@ impl CPU {
             state: State::new(p),
             state_change: StateChange::new_empty(),
             state_inference: StateChange::new_empty(),
-            stack: stack::Stack::new(),
+            stack: Stack::new(),
             A: Register::new(true),
         }
     }
@@ -252,14 +252,20 @@ impl CPU {
     }
 
     /// Push a value onto the stack.
-    fn push(&mut self, instruction: Instruction) {
-        match instruction.operation() {
-            Op::PHP => self.stack.push_one(
-                instruction,
-                stack::Data::State(self.state, self.state_change),
-            ),
-            // TODO: emulate other push instructions.
-            _ => {}
+    fn push(&mut self, i: Instruction) {
+        match i.operation() {
+            Op::PHP => self
+                .stack
+                .push_one(i, Data::State(self.state, self.state_change)),
+            Op::PHA => {
+                self.stack.push(i, Data::None, self.state.a_size());
+            }
+            Op::PHX | Op::PHY => {
+                self.stack.push(i, Data::None, self.state.x_size());
+            }
+            Op::PHB | Op::PHK => self.stack.push_one(i, Data::None),
+            Op::PHD | Op::PEA | Op::PER => self.stack.push(i, Data::None, 2),
+            _ => unreachable!(),
         }
     }
 
@@ -271,7 +277,7 @@ impl CPU {
                 match entry.instruction {
                     // Regular state restore.
                     Some(i) if i.operation() == Op::PHP => match entry.data {
-                        stack::Data::State(state, state_change) => {
+                        Data::State(state, state_change) => {
                             self.state = state;
                             self.state_change = state_change;
                         }
@@ -283,12 +289,22 @@ impl CPU {
                             instruction.pc(),
                             UnknownReason::StackManipulation,
                         );
-                        self.stop = true;
                     }
                 }
             }
-            // TODO: emulate other pop instructions.
-            _ => {}
+            Op::PLA => {
+                self.stack.pop(self.state.a_size());
+            }
+            Op::PLX | Op::PLY => {
+                self.stack.pop(self.state.x_size());
+            }
+            Op::PLB => {
+                self.stack.pop_one();
+            }
+            Op::PLD => {
+                self.stack.pop(2);
+            }
+            _ => unreachable!(),
         }
     }
 

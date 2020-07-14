@@ -6,14 +6,16 @@ use std::rc::Rc;
 use bimap::BiHashMap;
 use derive_new::new;
 use getset::Getters;
+use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::prompt::error::{Error, Result};
 use crate::snes::cpu::CPU;
-use crate::snes::instruction::Instruction;
+use crate::snes::instruction::{Instruction, InstructionType};
+use crate::snes::opcodes::Op;
 use crate::snes::rom::{ROMType, ROM};
-use crate::snes::state::{State, StateChange};
+use crate::snes::state::{State, StateChange, UnknownReason};
 use crate::snes::subroutine::Subroutine;
 
 /// ROM's entry point.
@@ -48,6 +50,13 @@ impl Ord for JumpTableEntry {
     }
 }
 
+/// Suggested assertions.
+#[derive(Debug)]
+pub enum Assertion {
+    Instruction(StateChange),
+    Subroutine(StateChange),
+}
+
 /// Structure holding the state of the analysis.
 #[derive(Deserialize, Getters, Serialize)]
 pub struct Analysis {
@@ -59,6 +68,11 @@ pub struct Analysis {
     #[getset(get = "pub")]
     #[serde(skip)]
     subroutines: RefCell<BTreeMap<usize, Subroutine>>,
+
+    /// Subroutines containing assertions.
+    #[getset(get = "pub")]
+    #[serde(skip)]
+    asserted_subroutines: RefCell<HashSet<usize>>,
 
     /// Instructions referenced by other instructions.
     #[getset(get = "pub")]
@@ -114,6 +128,7 @@ impl Analysis {
             rom,
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(BTreeMap::new()),
+            asserted_subroutines: RefCell::new(HashSet::new()),
             references: RefCell::new(HashMap::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
@@ -184,6 +199,47 @@ impl Analysis {
             cpu.run();
         }
         self.generate_local_labels();
+    }
+
+    /// Analyze and apply suggested assertions as far as possible.
+    pub fn auto_run(self: &Rc<Self>) {
+        let mut applied_suggestion = true;
+
+        // Continue until we don't have any more assertions to apply.
+        while applied_suggestion {
+            self.run();
+
+            // Gather unknown subroutines.
+            let subroutines = self.subroutines.borrow();
+            let unknown_subs = subroutines
+                .values()
+                .filter(|s| s.is_responsible_for_unknown());
+
+            applied_suggestion = false;
+            for sub in unknown_subs {
+                // Get unknown states (ordered by priority).
+                let changes = sub.unknown_state_changes().iter().sorted_by_key(|t| t.1);
+
+                for (instr_pc, _) in changes {
+                    let instr = sub.instructions()[&instr_pc];
+                    let assertions = self.suggest_assertions(instr, sub);
+
+                    // Apply suggested assertions.
+                    for assertion in assertions.iter() {
+                        match assertion {
+                            Assertion::Instruction(s) => {
+                                self.add_instruction_assertion(*instr_pc, *s)
+                            }
+                            Assertion::Subroutine(s) => {
+                                self.add_subroutine_assertion(sub.pc(), *instr_pc, *s)
+                            }
+                        }
+                        applied_suggestion = true;
+                    }
+                }
+            }
+            drop(subroutines);
+        }
     }
 
     /// Return true if the instruction has already been analyzed, false otherwise.
@@ -298,20 +354,23 @@ impl Analysis {
     pub fn add_instruction_assertion(&self, pc: usize, state_change: StateChange) {
         let mut assertions = self.instruction_assertions.borrow_mut();
         assertions.insert(pc, state_change);
+
+        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
+        for sub_pc in self.instruction_subroutines(pc) {
+            asserted_subroutines.insert(sub_pc);
+        }
     }
 
     /// Add an assertion on a subroutine state change.
-    pub fn add_subroutine_assertion(
-        &self,
-        subroutine: usize,
-        pc: usize,
-        state_change: StateChange,
-    ) {
+    pub fn add_subroutine_assertion(&self, sub_pc: usize, pc: usize, state_change: StateChange) {
         let mut assertions = self.subroutine_assertions.borrow_mut();
         assertions
-            .entry(subroutine)
+            .entry(sub_pc)
             .or_default()
             .insert(pc, state_change);
+
+        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
+        asserted_subroutines.insert(sub_pc);
     }
 
     /// Add a jump assertion: caller jumps to target when X = n (if relevant).
@@ -426,6 +485,67 @@ impl Analysis {
         }
     }
 
+    /// Return a list of suggested assertions to be applied against the given instruction.
+    pub fn suggest_assertions(&self, i: Instruction, sub: &Subroutine) -> Vec<Assertion> {
+        let mut assertions = Vec::new();
+
+        let mut assert_combined_state = || match sub.combined_state_change() {
+            Some(combined_state) => assertions.push(Assertion::Subroutine(combined_state)),
+            None if sub.saves_state_in_incipit() => {
+                assertions.push(Assertion::Subroutine(StateChange::new_empty()))
+            }
+            _ => {}
+        };
+
+        // No suggested assertions if some assertions were already declared.
+        if self.instruction_assertion(i.pc()).is_some()
+            || self.subroutine_assertion(sub.pc(), i.pc()).is_some()
+        {
+            return assertions;
+        }
+
+        // If the state change for this instruction is known, no assertion is necessary.
+        let reason = match sub.unknown_state_changes().get(&i.pc()) {
+            Some(state_change) => state_change.unknown_reason(),
+            None => return assertions,
+        };
+
+        match i.typ() {
+            // Indirect JSR/JSL typically don't rely on a specific state being set.
+            InstructionType::Call if reason == UnknownReason::IndirectJump => {
+                assertions.push(Assertion::Instruction(StateChange::new_empty()));
+            }
+
+            // Indirect JMP/JML.
+            InstructionType::Jump if reason == UnknownReason::IndirectJump => {
+                if sub.saves_state_in_incipit() {
+                    // Typically, if there's a PHP in the incipit, the state will
+                    // be restored before returning, so we assume the subroutine
+                    // does not change the state.
+                    assertions.push(Assertion::Subroutine(StateChange::new_empty()));
+                } else {
+                    // Otherwise, we will use our knowledge of other
+                    // return states to inform the decision.
+                    assert_combined_state();
+                }
+            }
+
+            // RTS/RTL to manipulated address.
+            InstructionType::Return if reason == UnknownReason::StackManipulation => {
+                assert_combined_state();
+            }
+
+            // PLP from manipulated stack.
+            _ if i.operation() == Op::PLP && reason == UnknownReason::StackManipulation => {
+                assertions.push(Assertion::Instruction(StateChange::new_empty()));
+            }
+
+            _ => {}
+        };
+
+        assertions
+    }
+
     /// Get a state change assertion for an instruction, if any.
     pub fn instruction_assertion(&self, pc: usize) -> Option<StateChange> {
         let assertions = self.instruction_assertions.borrow();
@@ -439,6 +559,13 @@ impl Analysis {
             Some(h) => h.get(&pc).copied(),
             None => None,
         }
+    }
+
+    /// Return true if the given subroutine contains an assertion
+    /// (either of the instruction or subroutine kind).
+    pub fn subroutine_contains_assertions(&self, subroutine: usize) -> bool {
+        let asserted_subroutines = self.asserted_subroutines.borrow();
+        asserted_subroutines.contains(&subroutine)
     }
 
     /// Return the label associated with an address, if any.

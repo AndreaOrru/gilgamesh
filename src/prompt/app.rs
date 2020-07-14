@@ -244,19 +244,25 @@ impl<W: Write> App<W> {
         // Pick foreground color.
         let mut fg = if sub.has_unknown_state_change() {
             "red"
+        } else if self.analysis.subroutine_contains_assertions(sub.pc()) {
+            "magenta"
         } else if self.analysis.is_jump_table_target(sub.pc()) {
             "blue"
         } else {
             "green"
         };
         // Pick background color.
-        let mut bg = "black";
+        let mut bg = None;
         if self.analysis.is_entry_point(sub.pc()) {
-            bg = fg;
+            bg = Some(fg);
             fg = "black";
         }
         // Add label.
-        s.push_str(&sub.label().color(fg).on_color(bg).to_string());
+        if let Some(bg) = bg {
+            s.push_str(&sub.label().color(fg).on_color(bg).to_string());
+        } else {
+            s.push_str(&sub.label().color(fg).to_string());
+        }
 
         // Add state indicators.
         if sub.has_unknown_state_change() {
@@ -269,6 +275,9 @@ impl<W: Write> App<W> {
             } else if sub.is_unknown_because_of(UnknownReason::MultipleReturnStates) {
                 s.push_str(&" [+]".red().to_string());
             }
+        }
+        if sub.state_changes().len() > 1 {
+            s.push_str(&" [+]".yellow().to_string());
         }
 
         s
@@ -287,7 +296,7 @@ impl<W: Write> App<W> {
             // Instruction information.
             outln!(
                 self.out,
-                "  {}  {} -> {}\n",
+                "  {}  {} -> {}",
                 format!("${:06X}", *pc).magenta(),
                 disassembly,
                 state_change.to_string().green()
@@ -299,7 +308,7 @@ impl<W: Write> App<W> {
                     .iter()
                     .map(|pc| self.analysis.label(*pc, None).unwrap())
                     .collect();
-                outln!(self.out, "    {}\n", labels.join(", ").bright_black());
+                outln!(self.out, "    {}", labels.join(", ").bright_black());
             }
         }
         outln!(self.out);
@@ -358,6 +367,7 @@ impl<W: Write> App<W> {
                     "jumptable" => command_ref!(Self, assert_jumptable),
                     "subroutine"  => command_ref!(Self, assert_subroutine),
                 }),
+            "autoanalyze" => command_ref!(Self, autoanalyze),
             "comment" => command_ref!(Self, comment),
             "deassert" => container!(
                 /// Remove previously defined assertions.
@@ -432,6 +442,13 @@ impl<W: Write> App<W> {
             let state_change = StateChange::from_expr(state_expr).unwrap();
             self.analysis
                 .add_subroutine_assertion(self.get_subroutine()?, pc, state_change);
+        }
+    );
+
+    command!(
+        /// Analyze and apply suggested assertions as far as possible.
+        fn autoanalyze(&mut self) {
+            self.analysis.auto_run();
         }
     );
 

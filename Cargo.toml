@@ -13,7 +13,7 @@ test = false
 [dependencies]
 bimap = { version = ">=0.4", features = ["serde"] }
 clap = ">=3.0.0-beta.1"
-colored = ">=1.9"
+colored = ">=2.0"
 derive-new = ">=0.5"
 enum-map = ">=0.6.2"
 getset = ">=0.1.1"

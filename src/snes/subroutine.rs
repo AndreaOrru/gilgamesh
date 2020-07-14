@@ -72,6 +72,31 @@ impl Subroutine {
         state_changes
     }
 
+    /// Return a state change formed by combining all the possible state changes,
+    /// if it's possible to do so without any contradictions.
+    pub fn combined_state_change(&self) -> Option<StateChange> {
+        if self.state_changes.is_empty() || self.unknown_state_changes.len() > 1 {
+            return None;
+        }
+
+        let mut combined = StateChange::new_empty();
+        for state_change in self.state_changes.values() {
+            if let Some(m) = state_change.m() {
+                match combined.m() {
+                    Some(combined_m) if m != combined_m => return None,
+                    _ => combined.set_m(m),
+                }
+            }
+            if let Some(x) = state_change.x() {
+                match combined.x() {
+                    Some(combined_x) if x != combined_x => return None,
+                    _ => combined.set_x(x),
+                }
+            }
+        }
+        Some(combined)
+    }
+
     /// Return true if the subroutine saves the processor state at the beginning, false otherwise.
     pub fn saves_state_in_incipit(&self) -> bool {
         for i in self.instructions.values() {
