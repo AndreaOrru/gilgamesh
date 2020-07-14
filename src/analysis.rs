@@ -726,10 +726,12 @@ mod tests {
         let reset_sub = &subroutines[&0x8000];
         assert_eq!(reset_sub.label(), "reset");
         assert_eq!(reset_sub.instructions().len(), 4);
+        assert!(!reset_sub.saves_state_in_incipit());
 
         // Test there's a PHP/PLP sub with the correct number of instructions.
         let php_plp_sub = &subroutines[&0x800A];
         assert_eq!(php_plp_sub.instructions().len(), 5);
+        assert!(php_plp_sub.saves_state_in_incipit());
 
         // Test that the state is preserved.
         let state_changes = php_plp_sub.state_changes();
@@ -739,7 +741,7 @@ mod tests {
 
         drop(subroutines);
 
-        // Check that renaming subroutine label works (even after analysis).
+        // Test that renaming subroutine label works (even after analysis).
         analysis
             .rename_label("reset".to_string(), "new_reset".to_string(), None)
             .ok();
@@ -749,7 +751,7 @@ mod tests {
             "new_reset".to_string()
         );
 
-        // Check that renaming local labels works.
+        // Test that renaming local labels works.
         analysis
             .rename_label(".loc_008007".to_string(), ".loop".to_string(), Some(0x8000))
             .ok();
@@ -838,7 +840,9 @@ mod tests {
         }
 
         // Test adding a custom entry point.
-        analysis.add_entry_point(0x9002, "loop".to_string(), State::from_mx(true, true));
+        analysis
+            .add_entry_point(0x9002, "loop".to_string(), State::from_mx(true, true))
+            .unwrap();
         analysis.run();
 
         let subroutines = analysis.subroutines.borrow();

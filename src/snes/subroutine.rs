@@ -3,6 +3,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use getset::{CopyGetters, Getters, Setters};
 
 use crate::snes::instruction::Instruction;
+use crate::snes::opcodes::Op;
 use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// Structure representing a subroutine.
@@ -69,6 +70,18 @@ impl Subroutine {
             state_changes.insert(state_change.simplify(state));
         }
         state_changes
+    }
+
+    /// Return true if the subroutine saves the processor state at the beginning.
+    pub fn saves_state_in_incipit(&self) -> bool {
+        for i in self.instructions.iter() {
+            if i.operation() == Op::PHP {
+                return true;
+            } else if i.is_sep_rep() || i.is_control() {
+                return false;
+            }
+        }
+        false
     }
 }
 
