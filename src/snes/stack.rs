@@ -49,6 +49,11 @@ impl Stack {
         self.pointer = pointer;
     }
 
+    /// Push one value onto the stack.
+    pub fn push_one(&mut self, instruction: Instruction, data: Data) {
+        self.push(instruction, data, 1);
+    }
+
     /// Push one or more values onto the stack.
     pub fn push(&mut self, instruction: Instruction, data: Data, size: usize) {
         for i in (0..size).rev() {
@@ -63,9 +68,13 @@ impl Stack {
         }
     }
 
-    /// Push one value onto the stack.
-    pub fn push_one(&mut self, instruction: Instruction, data: Data) {
-        self.push(instruction, data, 1);
+    /// Pop one value from the stack.
+    pub fn pop_one(&mut self) -> Entry {
+        self.pointer += 1;
+        match self.memory.get(&self.pointer) {
+            Some(entry) => *entry,
+            None => Entry::new(self.last_pointer_changer, Data::None),
+        }
     }
 
     /// Pop one or more values from the stack.
@@ -77,13 +86,28 @@ impl Stack {
         v
     }
 
-    /// Pop one value from the stack.
-    pub fn pop_one(&mut self) -> Entry {
-        self.pointer += 1;
-        match self.memory.get(&self.pointer) {
-            Some(entry) => *entry,
-            None => Entry::new(self.last_pointer_changer, Data::None),
+    /// Return values from the top of the stack without popping.
+    pub fn peek(&self, size: usize) -> Option<Vec<Entry>> {
+        let mut v = Vec::new();
+        for i in 1..=(size as u16) {
+            v.push(*self.memory.get(&(self.pointer + i))?);
         }
+        Some(v)
+    }
+
+    /// Compare the value at the top of the stack with a given value.
+    pub fn match_value(&self, value: usize, size: usize) -> bool {
+        match self.peek(size) {
+            Some(peek) => {
+                for i in 0..size {
+                    if peek[i].data != Data::Value((value >> (i * 8)) & 0xFF) {
+                        return false;
+                    }
+                }
+            }
+            None => return false,
+        }
+        true
     }
 }
 
@@ -98,23 +122,41 @@ mod tests {
         stack
     }
 
+    fn setup_pha() -> Instruction {
+        Instruction::test(0x8001, 0x8000, 0b0011_0000, 0x48, 0x00)
+    }
+
     #[test]
     fn test_push_pop_one() {
         let mut stack = setup_stack();
-
-        let pha = Instruction::test(0x8001, 0x8000, 0b0011_0000, 0x48, 0x00);
-        stack.push_one(pha, Data::Value(0xFF));
+        stack.push_one(setup_pha(), Data::Value(0xFF));
         assert_eq!(stack.pop_one().data, Data::Value(0xFF));
     }
 
     #[test]
     fn test_push_pop() {
         let mut stack = setup_stack();
-
-        let pha = Instruction::test(0x8001, 0x8000, 0b0000_0000, 0x48, 0x00);
-        stack.push(pha, Data::Value(0x1234), 2);
+        stack.push(setup_pha(), Data::Value(0x1234), 2);
 
         let values: Vec<_> = stack.pop(2).iter().map(|e| e.data).collect();
         assert_eq!(values, vec![Data::Value(0x34), Data::Value(0x12)]);
+    }
+
+    #[test]
+    fn test_peek() {
+        let mut stack = setup_stack();
+        stack.push(setup_pha(), Data::Value(0x1234), 2);
+
+        let values: Vec<_> = stack.pop(2).iter().map(|e| e.data).collect();
+        assert_eq!(values, vec![Data::Value(0x34), Data::Value(0x12)]);
+    }
+
+    #[test]
+    fn test_match_value() {
+        let mut stack = setup_stack();
+        stack.push(setup_pha(), Data::Value(0x1234), 2);
+        assert!(stack.match_value(0x1234, 2));
+        assert!(!stack.match_value(0x1235, 2));
+        assert!(!stack.match_value(0x123456, 3));
     }
 }

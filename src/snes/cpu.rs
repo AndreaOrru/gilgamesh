@@ -8,7 +8,7 @@ use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::{AddressMode, Op};
 use crate::snes::register::Register;
 use crate::snes::rom::ROM;
-use crate::snes::stack::{Data, Stack};
+use crate::snes::stack::{Data, Entry as StackEntry, Stack};
 use crate::snes::state::{State, StateChange, UnknownReason};
 
 /// SNES CPU emulation.
@@ -117,6 +117,8 @@ impl CPU {
         }
     }
 
+    /**************************************************************************/
+
     /// Branch instruction emulation.
     fn branch(&mut self, instruction: Instruction) {
         // Run a parallel instance of the CPU to cover
@@ -133,8 +135,8 @@ impl CPU {
     }
 
     /// Call instruction emulation.
-    fn call(&mut self, instruction: Instruction) {
-        match self.jump_targets(instruction) {
+    fn call(&mut self, i: Instruction) {
+        match self.jump_targets(i) {
             Some(targets) => {
                 for target in targets.iter().copied() {
                     // Create a parallel instance of the CPU to
@@ -143,17 +145,22 @@ impl CPU {
                     cpu.state_change = StateChange::new_empty();
                     cpu.subroutine = target;
                     cpu.pc = target;
+                    // Push the return address on the stack.
+                    match i.operation() {
+                        Op::JSR | Op::RTS => cpu.stack.push(i, Data::Value(i.pc()), 2),
+                        Op::JSL | Op::RTL => cpu.stack.push(i, Data::Value(i.pc()), 3),
+                        _ => unreachable!(),
+                    }
 
                     // Emulate the called subroutine.
                     self.analysis.add_subroutine(target, None);
-                    self.analysis
-                        .add_reference(instruction.pc(), target, self.subroutine);
+                    self.analysis.add_reference(i.pc(), target, self.subroutine);
                     cpu.run();
                 }
                 // Propagate called subroutines state to caller.
-                self.propagate_subroutine_state(instruction.pc(), targets);
+                self.propagate_subroutine_state(i.pc(), targets);
             }
-            None => self.unknown_state_change(instruction.pc(), UnknownReason::IndirectJump),
+            None => self.unknown_state_change(i.pc(), UnknownReason::IndirectJump),
         }
     }
 
@@ -224,9 +231,26 @@ impl CPU {
 
     /// Return instruction emulation.
     fn ret(&mut self, i: Instruction) {
-        self.stop = true;
-        self.analysis
-            .add_state_change(self.subroutine, i.pc(), self.state_change);
+        let ret_size = match i.operation() {
+            Op::RTS => 2,
+            Op::RTL => 3,
+            _ => return self.standard_ret(i),
+        };
+
+        // No manipulation.
+        let stack_entries = self.stack.pop(ret_size);
+        if Self::check_return_manipulation(i, stack_entries).is_none() {
+            return self.standard_ret(i);
+        }
+
+        // Stack constructed in such a way that we would return to
+        // the next instruction, effectively a subroutine call.
+        if self.stack.match_value(i.pc(), ret_size) {
+            self.stack.pop(ret_size);
+            self.call(i);
+        } else {
+            self.unknown_state_change(i.pc(), UnknownReason::StackManipulation);
+        }
     }
 
     /// SEP/REP instruction emulation.
@@ -258,7 +282,11 @@ impl CPU {
                 .stack
                 .push_one(i, Data::State(self.state, self.state_change)),
             Op::PHA => {
-                self.stack.push(i, Data::None, self.state.a_size());
+                let value = match self.A.get(self.state) {
+                    Some(v) => Data::Value(v as usize),
+                    None => Data::None,
+                };
+                self.stack.push(i, value, self.state.a_size());
             }
             Op::PHX | Op::PHY => {
                 self.stack.push(i, Data::None, self.state.x_size());
@@ -306,6 +334,31 @@ impl CPU {
             }
             _ => unreachable!(),
         }
+    }
+
+    /**************************************************************************/
+
+    /// Emulate a simple return.
+    fn standard_ret(&mut self, i: Instruction) {
+        self.stop = true;
+        self.analysis
+            .add_state_change(self.subroutine, i.pc(), self.state_change);
+    }
+
+    /// Check whether the return instruction is operating on a manipulated stack,
+    /// and if that's the case, return the first instruction that is performing
+    /// the manipulation.
+    fn check_return_manipulation(i: Instruction, entries: Vec<StackEntry>) -> Option<Instruction> {
+        for entry in entries.iter() {
+            if let Some(caller) = entry.instruction {
+                match caller.operation() {
+                    Op::JSR | Op::RTS if i.operation() == Op::RTS => {}
+                    Op::JSL | Op::RTL if i.operation() == Op::RTL => {}
+                    _ => return Some(caller),
+                }
+            }
+        }
+        None
     }
 
     /// Take the state change of the given subroutines and

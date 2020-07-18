@@ -531,9 +531,13 @@ impl Analysis {
             }
 
             // RTS/RTL to manipulated address.
-            InstructionType::Return if reason == UnknownReason::StackManipulation => {
-                assert_combined_state();
-            }
+            InstructionType::Return => match reason {
+                UnknownReason::StackManipulation => assert_combined_state(),
+                UnknownReason::IndirectJump => {
+                    assertions.push(Assertion::Instruction(StateChange::new_empty()))
+                }
+                _ => {}
+            },
 
             // PLP from manipulated stack.
             _ if i.operation() == Op::PLP && reason == UnknownReason::StackManipulation => {
