@@ -57,6 +57,12 @@ pub enum Assertion {
     Subroutine(StateChange),
 }
 
+/// Types of special returns.
+pub enum SpecialReturn {
+    Call,
+    Jump,
+}
+
 /// Structure holding the state of the analysis.
 #[derive(Deserialize, Getters, Serialize)]
 pub struct Analysis {
@@ -78,6 +84,16 @@ pub struct Analysis {
     #[getset(get = "pub")]
     #[serde(skip)]
     references: RefCell<HashMap<usize, HashSet<Reference>>>,
+
+    /// Returns that act like jumps or subroutine calls.
+    #[getset(get = "pub")]
+    #[serde(skip)]
+    special_returns: RefCell<HashMap<usize, SpecialReturn>>,
+
+    /// Instructions that manipulate the stack in tricky ways.
+    #[getset(get = "pub")]
+    #[serde(skip)]
+    stack_manipulations: RefCell<HashSet<usize>>,
 
     /// Subroutine labels.
     #[getset(get = "pub")]
@@ -130,6 +146,8 @@ impl Analysis {
             subroutines: RefCell::new(BTreeMap::new()),
             asserted_subroutines: RefCell::new(HashSet::new()),
             references: RefCell::new(HashMap::new()),
+            stack_manipulations: RefCell::new(HashSet::new()),
+            special_returns: RefCell::new(HashMap::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
             entry_points: RefCell::new(entry_points),
@@ -405,6 +423,18 @@ impl Analysis {
         Ok(())
     }
 
+    /// Add a stack manipulating instruction to the analysis.
+    pub fn add_stack_manipulation(&self, pc: usize) {
+        let mut stack_manipulations = self.stack_manipulations.borrow_mut();
+        stack_manipulations.insert(pc);
+    }
+
+    /// Add a special return instruction (acting as jump or call) to the analysis.
+    pub fn add_special_return(&self, pc: usize, return_type: SpecialReturn) {
+        let mut special_returns = self.special_returns.borrow_mut();
+        special_returns.insert(pc, return_type);
+    }
+
     /// Remove an assertion on an instruction state change.
     pub fn del_instruction_assertion(&self, pc: usize) {
         let mut assertions = self.instruction_assertions.borrow_mut();
@@ -488,6 +518,7 @@ impl Analysis {
     /// Return a list of suggested assertions to be applied against the given instruction.
     pub fn suggest_assertions(&self, i: Instruction, sub: &Subroutine) -> Vec<Assertion> {
         let mut assertions = Vec::new();
+        let special_returns = self.special_returns.borrow();
 
         let mut assert_combined_state = || match sub.combined_state_change() {
             Some(combined_state) => assertions.push(Assertion::Subroutine(combined_state)),
@@ -533,9 +564,12 @@ impl Analysis {
             // RTS/RTL to manipulated address.
             InstructionType::Return => match reason {
                 UnknownReason::StackManipulation => assert_combined_state(),
-                UnknownReason::IndirectJump => {
-                    assertions.push(Assertion::Instruction(StateChange::new_empty()))
-                }
+                UnknownReason::IndirectJump => match special_returns[&i.pc()] {
+                    SpecialReturn::Call => {
+                        assertions.push(Assertion::Instruction(StateChange::new_empty()))
+                    }
+                    SpecialReturn::Jump => {}
+                },
                 _ => {}
             },
 

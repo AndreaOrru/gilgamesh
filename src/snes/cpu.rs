@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use maplit::hashset;
 
-use crate::analysis::Analysis;
+use crate::analysis::{Analysis, SpecialReturn};
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::{AddressMode, Op};
 use crate::snes::register::Register;
@@ -246,7 +246,13 @@ impl CPU {
         // Stack constructed in such a way that we would return to
         // the next instruction, effectively a subroutine call.
         if self.stack.match_value(i.pc(), ret_size) {
-            self.stack.pop(ret_size);
+            for entry in self.stack.pop(ret_size).iter() {
+                if let Some(manipulator) = entry.instruction {
+                    self.analysis.add_stack_manipulation(manipulator.pc());
+                }
+            }
+            self.analysis
+                .add_special_return(i.pc(), SpecialReturn::Call);
             self.call(i);
         } else {
             self.unknown_state_change(i.pc(), UnknownReason::StackManipulation);

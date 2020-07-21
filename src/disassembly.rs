@@ -4,12 +4,12 @@ use std::rc::Rc;
 use colored::*;
 use inflections::case::to_sentence_case;
 
-use crate::analysis::Analysis;
-use crate::snes::instruction::Instruction;
+use crate::analysis::{Analysis, SpecialReturn};
+use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
 use crate::snes::subroutine::Subroutine;
 
-const SEPARATOR_WIDTH: usize = 38;
+const SEPARATOR_WIDTH: usize = 39;
 
 pub struct Disassembly {
     analysis: Rc<Analysis>,
@@ -27,6 +27,7 @@ impl Disassembly {
 
         for i in sub.instructions().values() {
             s.push_str(&self.label(i.pc(), subroutine));
+            s.push_str(&self.stack_manipulation(*i));
             s.push_str(&self.instruction(*i));
             s.push_str(&self.jump_table(*i, sub));
             s.push_str(&self.asserted_state(*i, sub));
@@ -39,15 +40,22 @@ impl Disassembly {
         let comments = self.analysis.comments().borrow();
         let comment = match comments.get(&i.pc()) {
             Some(s) => s.to_owned(),
-            None => {
-                if i.is_sep_rep() {
-                    Self::sep_rep_comment(i)
-                } else {
-                    String::new()
-                }
-            }
+            None => match i.typ() {
+                InstructionType::Return => self.return_comment(i),
+                InstructionType::SepRep => Self::sep_rep_comment(i),
+                _ => String::new(),
+            },
         };
         format!("; ${:06X} | {}", i.pc(), comment)
+    }
+
+    fn return_comment(&self, i: Instruction) -> String {
+        let special_returns = self.analysis.special_returns().borrow();
+        match special_returns.get(&i.pc()) {
+            Some(SpecialReturn::Call) => "Call.".to_string(),
+            Some(SpecialReturn::Jump) => "Jump.".to_string(),
+            None => String::new(),
+        }
     }
 
     fn sep_rep_comment(i: Instruction) -> String {
@@ -168,6 +176,15 @@ impl Disassembly {
                 s
             }
             None => String::new(),
+        }
+    }
+
+    fn stack_manipulation(&self, i: Instruction) -> String {
+        let stack_manipulations = self.analysis.stack_manipulations().borrow();
+        if stack_manipulations.contains(&i.pc()) {
+            Self::header("[STACK MANIPULATION]", "bright black")
+        } else {
+            String::new()
         }
     }
 
