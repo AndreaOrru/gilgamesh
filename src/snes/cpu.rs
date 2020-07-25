@@ -40,6 +40,9 @@ pub struct CPU {
     /// Stack.
     stack: Stack,
 
+    /// The stack of calls that brought us to the current subroutine.
+    stack_trace: Vec<usize>,
+
     /// Registers.
     A: Register,
 }
@@ -56,6 +59,7 @@ impl CPU {
             state_change: StateChange::new_empty(),
             state_inference: StateChange::new_empty(),
             stack: Stack::new(),
+            stack_trace: Vec::new(),
             A: Register::new(true),
         }
     }
@@ -142,6 +146,7 @@ impl CPU {
                     // Create a parallel instance of the CPU to
                     // execute the subroutine that is being called.
                     let mut cpu = self.clone();
+                    cpu.stack_trace.push(self.subroutine);
                     cpu.state_change = StateChange::new_empty();
                     cpu.subroutine = target;
                     cpu.pc = target;
@@ -153,7 +158,8 @@ impl CPU {
                     }
 
                     // Emulate the called subroutine.
-                    self.analysis.add_subroutine(target, None);
+                    self.analysis
+                        .add_subroutine(target, None, cpu.stack_trace.to_owned());
                     self.analysis.add_reference(i.pc(), target, self.subroutine);
                     cpu.run();
                 }
@@ -476,7 +482,7 @@ mod tests {
 
     fn setup_cpu(p: u8) -> CPU {
         let analysis = Analysis::new(ROM::new());
-        analysis.add_subroutine(0x8000, None);
+        analysis.add_subroutine(0x8000, None, Vec::new());
         CPU::new(&analysis, 0x8000, 0x8000, p)
     }
 

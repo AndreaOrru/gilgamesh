@@ -212,7 +212,7 @@ impl Analysis {
     pub fn run(self: &Rc<Self>) {
         self.clear();
         for EntryPoint { label, pc, p } in self.entry_points.borrow().iter() {
-            self.add_subroutine(*pc, Some(label.clone()));
+            self.add_subroutine(*pc, Some(label.clone()), Vec::new());
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
         }
@@ -323,7 +323,7 @@ impl Analysis {
     }
 
     /// Add a subroutine to the analysis.
-    pub fn add_subroutine(&self, pc: usize, label: Option<String>) {
+    pub fn add_subroutine(&self, pc: usize, label: Option<String>, stack_trace: Vec<usize>) {
         // Do not log subroutines in RAM.
         if ROM::is_ram(pc) {
             return;
@@ -346,10 +346,13 @@ impl Analysis {
             .insert(label.to_owned(), pc);
 
         // Create and register subroutine (unless it already exists).
-        self.subroutines
-            .borrow_mut()
+        let mut subroutines = self.subroutines.borrow_mut();
+        let subroutine = subroutines
             .entry(pc)
             .or_insert_with(|| Subroutine::new(pc, label.to_owned()));
+
+        // Add stack trace to the subroutine.
+        subroutine.add_stack_trace(stack_trace);
     }
 
     /// Add a state change to a subroutine.
@@ -762,7 +765,7 @@ mod tests {
     fn test_instruction_subroutine_references() {
         let analysis = Analysis::new(ROM::new());
 
-        analysis.add_subroutine(0x8000, None);
+        analysis.add_subroutine(0x8000, None, Vec::new());
         assert!(analysis.is_subroutine(0x8000));
 
         let nop = Instruction::test(0x8000, 0x8000, 0b0011_0000, 0xEA, 0x00);

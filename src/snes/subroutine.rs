@@ -23,6 +23,9 @@ pub struct Subroutine {
 
     #[getset(get = "pub")]
     unknown_state_changes: HashMap<usize, StateChange>,
+
+    #[getset(get = "pub")]
+    stack_traces: HashSet<Vec<usize>>,
 }
 
 impl Subroutine {
@@ -34,6 +37,7 @@ impl Subroutine {
             instructions: BTreeMap::new(),
             state_changes: HashMap::new(),
             unknown_state_changes: HashMap::new(),
+            stack_traces: HashSet::new(),
         }
     }
 
@@ -49,6 +53,11 @@ impl Subroutine {
         } else {
             self.state_changes.insert(pc, state_change);
         }
+    }
+
+    /// Add a stack trace to the subroutine.
+    pub fn add_stack_trace(&mut self, stack_trace: Vec<usize>) {
+        self.stack_traces.insert(stack_trace);
     }
 
     /// Return true if the subroutine has an unknown state change, false otherwise.
