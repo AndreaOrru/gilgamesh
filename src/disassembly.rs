@@ -31,6 +31,7 @@ impl Disassembly {
             s.push_str(&self.instruction(*i));
             s.push_str(&self.jump_table(*i, sub));
             s.push_str(&self.asserted_state(*i, sub));
+            s.push_str(&self.known_state(*i, sub));
             s.push_str(&self.unknown_state(*i, sub));
         }
         s
@@ -185,6 +186,24 @@ impl Disassembly {
             Self::header("[STACK MANIPULATION]", "bright black")
         } else {
             String::new()
+        }
+    }
+
+    fn known_state(&self, i: Instruction, subroutine: &Subroutine) -> String {
+        match subroutine.state_changes().get(&i.pc()) {
+            Some(state_change) => {
+                let mut s = Self::header("[KNOWN STATE]", "green");
+
+                s.push_str(&format!(
+                    "  {} {}\n",
+                    "; Known state change:".bright_black(),
+                    state_change.to_string().green(),
+                ));
+
+                s.push_str(&Self::header("", "bright_black"));
+                s
+            }
+            None => String::new(),
         }
     }
 
