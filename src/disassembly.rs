@@ -221,6 +221,12 @@ impl Disassembly {
 
                 s.push_str(&format!(
                     "  {} {}\n",
+                    "; Last known state:".bright_black(),
+                    i.state().to_string().green(),
+                ));
+
+                s.push_str(&format!(
+                    "  {} {}\n",
                     "; Last known state change:".bright_black(),
                     i.state_change().to_string().green(),
                 ));

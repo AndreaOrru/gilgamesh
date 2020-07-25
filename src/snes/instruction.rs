@@ -34,6 +34,7 @@ pub struct Instruction {
     subroutine: usize,
 
     /// Processor state in which the instruction is executed.
+    #[getset(get_copy = "pub")]
     state: State,
 
     /// Subroutine state change before the execution of the instruction.

@@ -111,6 +111,13 @@ impl State {
     }
 }
 
+/// Display a state in human-readable form.
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "m={},x={}", self.m() as u8, self.x() as u8)
+    }
+}
+
 #[cfg(test)]
 mod test_state {
     use super::*;
@@ -179,6 +186,12 @@ mod test_state {
         state.set_x(false);
         assert!(!state.m());
         assert!(!state.x());
+    }
+
+    #[test]
+    fn test_display() {
+        let state = State::new(0b0011_0000);
+        assert_eq!(state.to_string(), "m=1,x=1");
     }
 }
 
