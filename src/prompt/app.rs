@@ -1,4 +1,5 @@
 use std::borrow::Cow::{self, Owned};
+use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, read_to_string, File};
 use std::io;
 use std::io::{stdout, Stdout, Write};
@@ -345,6 +346,53 @@ impl<W: Write> App<W> {
         Ok(())
     }
 
+    /// Print a stacks of subroutine calls.
+    fn print_stack_traces(&mut self, stack_traces: HashSet<Vec<usize>>) {
+        outln!(self.out, "{}", "STACK TRACES:".red());
+
+        let subroutines = self.analysis.subroutines().borrow();
+        if stack_traces.is_empty() {
+            outln!(self.out, "{}", "  Entry point.");
+        } else {
+            for stack_trace in stack_traces.iter() {
+                for caller_pc in stack_trace.iter() {
+                    let caller = subroutines.get(caller_pc).unwrap();
+                    outln!(
+                        self.out,
+                        "  ${:06X}  {}",
+                        caller.pc(),
+                        self.format_subroutine(caller)
+                    );
+                }
+                outln!(self.out);
+            }
+        }
+    }
+
+    /// Show the changes in processor state caused by the execution of a subroutine.
+    fn print_state_changes(
+        &mut self,
+        known: HashMap<usize, StateChange>,
+        unknown: HashMap<usize, StateChange>,
+    ) {
+        outln!(self.out, "{}", "STATE CHANGES:".red());
+
+        let mut state_changes: Vec<(usize, StateChange)> =
+            known.into_iter().chain(unknown).collect();
+        state_changes.sort();
+
+        for (instr_pc, change) in state_changes.iter() {
+            let s = change.to_string();
+            outln!(
+                self.out,
+                "  ${:06X}  {}",
+                instr_pc,
+                if change.unknown() { s.red() } else { s.green() }
+            );
+        }
+        outln!(self.out);
+    }
+
     /// Show a yes/no prompt, return true if yes, false otherwise.
     fn yes_no_prompt(question: &str) -> bool {
         let mut rl = Editor::<()>::new();
@@ -393,6 +441,11 @@ impl<W: Write> App<W> {
             "rom" => command_ref!(Self, rom),
             "save" => command_ref!(Self, save),
             "subroutine" => command_ref!(Self, subroutine),
+            "query" => container!(
+                /// Query the analysis log in various ways.
+                btreemap! {
+                    "subroutine" => command_ref!(Self, query_subroutine),
+                }),
             "translate" => command_ref!(Self, translate),
             "quit" => command_ref!(Self, quit),
         })
@@ -664,6 +717,23 @@ impl<W: Write> App<W> {
             if let Some(pc) = sub {
                 self.current_subroutine = Some(pc);
             }
+        }
+    );
+
+    command!(
+        /// Show information on a subroutine (such as state and stack trace).
+        fn query_subroutine(&mut self, ?label: String) {
+            let (stack_traces, known_changes, unknown_changes) = {
+                let sub_pc = match label {
+                    Some(label) => self.analysis.label_value(label).unwrap(),
+                    None => self.get_subroutine()?,
+                };
+                let subs = self.analysis.subroutines().borrow();
+                let sub = subs.get(&sub_pc).unwrap();
+                (sub.stack_traces().to_owned(), sub.state_changes().to_owned(), sub.unknown_state_changes().to_owned())
+            };
+            self.print_stack_traces(stack_traces);
+            self.print_state_changes(known_changes, unknown_changes);
         }
     );
 
