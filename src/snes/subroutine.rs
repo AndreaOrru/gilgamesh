@@ -127,6 +127,11 @@ impl Subroutine {
                 .values()
                 .all(|s| s.unknown_reason() != UnknownReason::Unknown)
     }
+
+    /// Return true if the subroutine is recursive.
+    pub fn is_recursive(&self) -> bool {
+        self.state_changes.is_empty() && self.unknown_state_changes().is_empty()
+    }
 }
 
 #[cfg(test)]

@@ -581,6 +581,9 @@ impl Analysis {
                 assertions.push(Assertion::Instruction(StateChange::new_empty()));
             }
 
+            // Recursive functions.
+            _ if reason == UnknownReason::Recursion => assert_combined_state(),
+
             _ => {}
         };
 

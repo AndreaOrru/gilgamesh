@@ -206,6 +206,7 @@ pub enum UnknownReason {
     MultipleReturnStates,
     IndirectJump,
     StackManipulation,
+    Recursion,
 }
 
 /// State change caused by the execution of a subroutine.

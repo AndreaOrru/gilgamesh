@@ -203,12 +203,14 @@ impl CPU {
     /// Emulate instructions that modify the stack pointer.
     fn change_stack(&mut self, i: Instruction) {
         match i.operation() {
-            Op::TCS => match self.A.get_whole() {
-                Some(a) => self.stack.set_pointer(i, a),
-                None => self.unknown_state_change(i.pc(), UnknownReason::StackManipulation),
-            },
+            Op::TCS => {
+                if let Some(a) = self.A.get_whole() {
+                    self.stack.set_pointer(i, a);
+                }
+            }
             _ => {}
         }
+        self.analysis.add_stack_manipulation(i.pc());
     }
 
     /// Interrupt instruction emulation.
@@ -384,7 +386,10 @@ impl CPU {
             let sub = &subroutines[&target];
 
             // Unknown state change.
-            if sub.has_unknown_state_change() {
+            if sub.is_recursive() {
+                drop(subroutines);
+                return self.unknown_state_change(call_pc, UnknownReason::Recursion);
+            } else if sub.has_unknown_state_change() {
                 drop(subroutines);
                 return self.unknown_state_change(call_pc, UnknownReason::Unknown);
             } else {
