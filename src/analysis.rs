@@ -371,15 +371,19 @@ impl Analysis {
             .insert(Reference { target, subroutine });
     }
 
-    /// Add an assertion on an instruction state change.
-    pub fn add_instruction_assertion(&self, pc: usize, state_change: StateChange) {
-        let mut assertions = self.instruction_assertions.borrow_mut();
-        assertions.insert(pc, state_change);
-
+    /// Flag a given subroutine as containing an assertion.
+    fn flag_asserted_subroutine(&self, pc: usize) {
         let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
         for sub_pc in self.instruction_subroutines(pc) {
             asserted_subroutines.insert(sub_pc);
         }
+    }
+
+    /// Add an assertion on an instruction state change.
+    pub fn add_instruction_assertion(&self, pc: usize, state_change: StateChange) {
+        let mut assertions = self.instruction_assertions.borrow_mut();
+        assertions.insert(pc, state_change);
+        self.flag_asserted_subroutine(pc);
     }
 
     /// Add an assertion on a subroutine state change.
@@ -403,6 +407,7 @@ impl Analysis {
             entries.insert(JumpTableEntry::new(x, target));
             *targets.entry(target).or_default() += 1;
         }
+        self.flag_asserted_subroutine(caller_pc);
     }
 
     /// Add a jumptable assertion: caller spans a jumptable that goes from x to y (included).
@@ -414,6 +419,7 @@ impl Analysis {
             let target_pc = bank | (self.rom.read_word(bank | offset)) as usize;
             self.add_jump_assertion(caller_pc, Some(target_pc), Some(x));
         }
+        self.flag_asserted_subroutine(caller_pc);
     }
 
     /// Add an entry point to the analysis.
