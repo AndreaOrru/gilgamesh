@@ -768,7 +768,7 @@ mod tests {
     use super::*;
     use crate::snes::opcodes::Op;
     use crate::snes::state::UnknownReason;
-    use gilgamesh::test_rom;
+    use crate::test_rom;
 
     #[test]
     fn test_instruction_subroutine_references() {
