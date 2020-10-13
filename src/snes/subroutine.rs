@@ -72,6 +72,15 @@ impl Subroutine {
             .any(|s| s.unknown_reason() == reason)
     }
 
+    /// Return the set of unique state changes.
+    pub fn unique_state_changes(&self) -> HashSet<StateChange> {
+        let mut state_changes = HashSet::new();
+        for state_change in self.state_changes.values() {
+            state_changes.insert(*state_change);
+        }
+        state_changes
+    }
+
     /// Return the state changes, simplified given the current state.
     pub fn simplified_state_changes(&self, state: State) -> HashSet<StateChange> {
         let mut state_changes = HashSet::new();

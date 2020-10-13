@@ -280,7 +280,7 @@ impl<W: Write> App<W> {
                 s.push_str(&" [∞]".red().to_string());
             }
         }
-        if sub.state_changes().len() > 1 {
+        if sub.unique_state_changes().len() > 1 {
             s.push_str(&" [+]".yellow().to_string());
         }
 
