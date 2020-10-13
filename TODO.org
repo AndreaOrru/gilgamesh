@@ -1,3 +1,6 @@
+* TODO [#A] Support empty jumptable assertions for special returns
+** Actually empty
+** One unknown element
 * TODO [#B] Comment disassembly.rs
 * TODO [#C] Dirty state
 * TODO [#C] Support prompt completion
