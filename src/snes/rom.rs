@@ -231,7 +231,7 @@ impl ROM {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gilgamesh::test_rom;
+    use crate::test_rom;
 
     test_rom!(setup_lorom, "lorom.asm");
     test_rom!(setup_hirom, "hirom.asm");

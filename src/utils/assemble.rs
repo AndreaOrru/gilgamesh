@@ -41,10 +41,10 @@ lazy_static! {
 macro_rules! test_rom {
     ($setup_fn:ident, $filename:literal) => {
         fn $setup_fn() -> ROM {
-            let mut roms = gilgamesh::utils::assemble::ASSEMBLED_ROMS.lock().unwrap();
+            let mut roms = crate::utils::assemble::ASSEMBLED_ROMS.lock().unwrap();
             let rom_path = roms
                 .entry($filename)
-                .or_insert_with(|| gilgamesh::utils::assemble::assemble($filename))
+                .or_insert_with(|| crate::utils::assemble::assemble($filename))
                 .to_string();
             ROM::from(rom_path).unwrap()
         }

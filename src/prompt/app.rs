@@ -644,7 +644,7 @@ impl<W: Write> App<W> {
                 // Base address.
                 if (i - address) % nl_threshold == 0 {
                     if i - address != 0 {
-                        s.push_str("\n");
+                        s.push('\n');
                     }
                     s.push_str(&format!("${:06X} │ ", i).bright_black().to_string());
                 }
@@ -656,7 +656,7 @@ impl<W: Write> App<W> {
                     };
                     s.push_str(&format!("{:02X}", b).color(color).to_string());
                 }
-                s.push_str(" ");
+                s.push(' ');
             }
 
             outln!(self.out, "{}\n", s);
