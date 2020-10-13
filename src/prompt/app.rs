@@ -45,6 +45,7 @@ struct AppHelper {
     hinter: HistoryHinter,
 }
 impl Hinter for AppHelper {
+    type Hint = String;
     fn hint(&self, line: &str, pos: usize, ctx: &Context<'_>) -> Option<String> {
         self.hinter.hint(line, pos, ctx)
     }
