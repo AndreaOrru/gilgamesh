@@ -30,9 +30,14 @@ impl Disassembly {
             s.push_str(&self.stack_manipulation(*i));
             s.push_str(&self.instruction(*i));
             s.push_str(&self.jump_table(*i, sub));
-            s.push_str(&self.asserted_state(*i, sub));
-            s.push_str(&self.known_state(*i, sub));
-            s.push_str(&self.unknown_state(*i, sub));
+
+            let asserted_state = self.asserted_state(*i, sub);
+            if !asserted_state.is_empty() {
+                s.push_str(&asserted_state);
+            } else {
+                s.push_str(&self.unknown_state(*i, sub));
+                s.push_str(&self.known_state(*i, sub));
+            }
         }
         s
     }
