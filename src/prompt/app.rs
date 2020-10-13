@@ -405,7 +405,7 @@ impl<W: Write> App<W> {
     fn yes_no_prompt(question: &str) -> bool {
         let mut rl = Editor::<()>::new();
         let s = rl.readline(&format!("{} (y/n) ", question).yellow().to_string());
-        s.unwrap() == "y"
+        s.unwrap_or("n".to_string()) == "y"
     }
 
     /***************************************************************************/
