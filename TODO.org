@@ -4,6 +4,7 @@
 * TODO [#B] Distinguish between harmless and harmful stack manipulations
 ** Show subroutines containing harmful stack manipulations in list?
 *** In magenta? [?]
+* TODO [#B] Handle ParseIntError etc. when passing arguments of wrong type
 * TODO [#B] Comment disassembly.rs
 * TODO [#C] Dirty state
 * TODO [#C] Support prompt completion
