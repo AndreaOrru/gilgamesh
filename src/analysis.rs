@@ -146,10 +146,11 @@ impl Analysis {
             subroutines: RefCell::new(BTreeMap::new()),
             asserted_subroutines: RefCell::new(HashSet::new()),
             references: RefCell::new(HashMap::new()),
-            stack_manipulations: RefCell::new(HashSet::new()),
             special_returns: RefCell::new(HashMap::new()),
+            stack_manipulations: RefCell::new(HashSet::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
+            /******************************************************************/
             entry_points: RefCell::new(entry_points),
             custom_labels: RefCell::new(HashMap::new()),
             instruction_assertions: RefCell::new(HashMap::new()),
@@ -189,6 +190,7 @@ impl Analysis {
 
     /// Reset the analysis (start from scratch).
     pub fn reset(self: &Rc<Self>) {
+        // Clear serializable attributes.
         *self.entry_points.borrow_mut() = Self::default_entry_points(&self.rom);
         self.custom_labels.borrow_mut().clear();
         self.instruction_assertions.borrow_mut().clear();
@@ -196,14 +198,19 @@ impl Analysis {
         self.jump_assertions.borrow_mut().clear();
         self.jump_table_targets.borrow_mut().clear();
         self.comments.borrow_mut().clear();
+        // Clear everything else.
         self.clear();
     }
 
     /// Clear the results of the analysis.
     fn clear(&self) {
+        // Clear non-serializable attributes.
         self.instructions.borrow_mut().clear();
         self.subroutines.borrow_mut().clear();
+        self.asserted_subroutines.borrow_mut().clear();
         self.references.borrow_mut().clear();
+        self.special_returns.borrow_mut().clear();
+        self.stack_manipulations.borrow_mut().clear();
         self.subroutine_labels.borrow_mut().clear();
         self.local_labels.borrow_mut().clear();
     }
@@ -872,6 +879,10 @@ mod tests {
             assert!(analysis.is_jump_table_target(0x8100));
             assert!(analysis.is_jump_table_target(0x8200));
         }
+
+        // Verify that the subroutines that contains the jumptable
+        // has been flagged as containing assertions.
+        assert!(analysis.subroutine_contains_assertions(0x8000));
 
         // Verify that, after deleting the assertions, the targets
         // are not considered to be part of a jump table anymore.
