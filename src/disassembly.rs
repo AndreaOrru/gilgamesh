@@ -164,6 +164,7 @@ impl Disassembly {
                         Some(x) => format!("{:04X}", x),
                         None => "????".to_string(),
                     };
+                    // TODO: fix case in which the label does not exist.
                     let target = self.analysis.label(e.target, Some(sub.pc())).unwrap();
 
                     s.push_str(

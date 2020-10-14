@@ -218,12 +218,15 @@ impl Analysis {
     /// Analyze the ROM.
     pub fn run(self: &Rc<Self>) {
         self.clear();
+
         for EntryPoint { label, pc, p } in self.entry_points.borrow().iter() {
             self.add_subroutine(*pc, Some(label.clone()), Vec::new());
             let mut cpu = CPU::new(self, *pc, *pc, *p);
             cpu.run();
         }
+
         self.generate_local_labels();
+        self.generate_asserted_subroutines();
     }
 
     /// Analyze and apply suggested assertions as far as possible.
@@ -378,19 +381,10 @@ impl Analysis {
             .insert(Reference { target, subroutine });
     }
 
-    /// Flag a given subroutine as containing an assertion.
-    fn flag_asserted_subroutine(&self, pc: usize) {
-        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
-        for sub_pc in self.instruction_subroutines(pc) {
-            asserted_subroutines.insert(sub_pc);
-        }
-    }
-
     /// Add an assertion on an instruction state change.
     pub fn add_instruction_assertion(&self, pc: usize, state_change: StateChange) {
         let mut assertions = self.instruction_assertions.borrow_mut();
         assertions.insert(pc, state_change);
-        self.flag_asserted_subroutine(pc);
     }
 
     /// Add an assertion on a subroutine state change.
@@ -400,9 +394,6 @@ impl Analysis {
             .entry(sub_pc)
             .or_default()
             .insert(pc, state_change);
-
-        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
-        asserted_subroutines.insert(sub_pc);
     }
 
     /// Add a jump assertion: caller jumps to target when X = n (if relevant).
@@ -414,7 +405,6 @@ impl Analysis {
             entries.insert(JumpTableEntry::new(x, target));
             *targets.entry(target).or_default() += 1;
         }
-        self.flag_asserted_subroutine(caller_pc);
     }
 
     /// Add a jumptable assertion: caller spans a jumptable that goes from x to y (included).
@@ -426,7 +416,6 @@ impl Analysis {
             let target_pc = bank | (self.rom.read_word(bank | offset)) as usize;
             self.add_jump_assertion(caller_pc, Some(target_pc), Some(x));
         }
-        self.flag_asserted_subroutine(caller_pc);
     }
 
     /// Add an entry point to the analysis.
@@ -768,6 +757,33 @@ impl Analysis {
             }
         }
     }
+
+    /// Generate the list of subroutines containing assertions.
+    fn generate_asserted_subroutines(&self) {
+        for instr_pc in self.instruction_assertions.borrow().keys() {
+            self.flag_asserted_subroutines(*instr_pc);
+        }
+        for sub_pc in self.subroutine_assertions.borrow().keys() {
+            self.flag_asserted_subroutine(*sub_pc);
+        }
+        for caller_pc in self.jump_assertions.borrow().keys() {
+            self.flag_asserted_subroutines(*caller_pc)
+        }
+    }
+
+    /// Flag a given subroutine as containing an assertion.
+    fn flag_asserted_subroutine(&self, sub_pc: usize) {
+        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
+        asserted_subroutines.insert(sub_pc);
+    }
+
+    /// Flag all the subroutines associated with the given instruction as asserted.
+    fn flag_asserted_subroutines(&self, instr_pc: usize) {
+        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
+        for sub_pc in self.instruction_subroutines(instr_pc) {
+            asserted_subroutines.insert(sub_pc);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -869,6 +885,10 @@ mod tests {
         analysis.add_jumptable_assertion(0x8000, (0, 2));
         analysis.run();
 
+        // Verify that the subroutines that contains the jumptable
+        // has been flagged as containing assertions.
+        assert!(analysis.subroutine_contains_assertions(0x8000));
+
         // Verify that the subroutines pointed by
         // the jumptable have been explored.
         {
@@ -879,10 +899,6 @@ mod tests {
             assert!(analysis.is_jump_table_target(0x8100));
             assert!(analysis.is_jump_table_target(0x8200));
         }
-
-        // Verify that the subroutines that contains the jumptable
-        // has been flagged as containing assertions.
-        assert!(analysis.subroutine_contains_assertions(0x8000));
 
         // Verify that, after deleting the assertions, the targets
         // are not considered to be part of a jump table anymore.
