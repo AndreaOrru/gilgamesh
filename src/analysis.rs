@@ -580,6 +580,7 @@ impl Analysis {
                     SpecialReturn::Call => {
                         assertions.push(Assertion::Instruction(StateChange::new_empty()))
                     }
+                    // TODO: find concrete cases for this.
                     SpecialReturn::Jump => {}
                 },
                 _ => {}
