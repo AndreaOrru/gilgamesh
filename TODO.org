@@ -1,3 +1,4 @@
+* TODO [#A] List jumptables
 * TODO [#A] Support empty jumptable assertions for special returns
 ** Actually empty
 ** One unknown element
