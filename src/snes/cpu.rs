@@ -306,7 +306,7 @@ impl CPU {
                 self.stack.push(i, Data::None, self.state.x_size());
             }
             Op::PHB | Op::PHK => self.stack.push_one(i, Data::None),
-            Op::PHD | Op::PEA | Op::PER => self.stack.push(i, Data::None, 2),
+            Op::PHD | Op::PEA | Op::PER | Op::PEI => self.stack.push(i, Data::None, 2),
             _ => unreachable!(),
         }
     }
