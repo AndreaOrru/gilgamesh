@@ -278,6 +278,8 @@ impl<W: Write> App<W> {
                 s.push_str(&" [+]".red().to_string());
             } else if sub.is_unknown_because_of(UnknownReason::Recursion) {
                 s.push_str(&" [∞]".red().to_string());
+            } else if sub.is_unknown_because_of(UnknownReason::MutableCode) {
+                s.push_str(&" [$]".red().to_string());
             }
         }
         // Asserted jumptable.

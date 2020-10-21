@@ -75,7 +75,7 @@ impl CPU {
     fn step(&mut self) {
         // Stop if we have jumped into RAM.
         if ROM::is_ram(self.pc) {
-            return self.stop = true;
+            return self.unknown_state_change(self.pc, UnknownReason::MutableCode);
         }
 
         let opcode = self.analysis.rom.read_byte(self.pc);
