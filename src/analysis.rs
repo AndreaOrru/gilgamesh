@@ -341,11 +341,6 @@ impl Analysis {
 
     /// Add a subroutine to the analysis.
     pub fn add_subroutine(&self, pc: usize, label: Option<String>, stack_trace: Vec<usize>) {
-        // Do not log subroutines in RAM.
-        if ROM::is_ram(pc) {
-            return;
-        }
-
         // Register subroutine's label or fetch saved one.
         let mut custom_labels = self.custom_labels.borrow_mut();
         let label = match custom_labels.get(&pc) {
