@@ -256,7 +256,10 @@ impl Analysis {
                 let changes = sub.unknown_state_changes().iter().sorted_by_key(|t| t.1);
 
                 for (instr_pc, _) in changes {
-                    let instr = sub.instructions()[&instr_pc];
+                    let instr = match sub.instructions().get(instr_pc) {
+                        Some(instr) => *instr,
+                        None => continue, // Code in RAM.
+                    };
                     let assertions = self.suggest_assertions(instr, sub);
 
                     // Apply suggested assertions.
