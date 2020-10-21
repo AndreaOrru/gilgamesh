@@ -829,9 +829,9 @@ mod tests {
         let analysis = Analysis::new(setup_elidable_state_change());
         analysis.run();
 
-        // Test there are two subroutines.
+        // Test there are two subroutines (+ NMI).
         let subroutines = analysis.subroutines.borrow();
-        assert_eq!(subroutines.len(), 2);
+        assert_eq!(subroutines.len(), 3);
 
         // Test there's a `reset` sub with the correct number of instructions.
         let reset_sub = &subroutines[&0x8000];
@@ -857,7 +857,7 @@ mod tests {
 
         // Check there is a single subroutine with one instruction.
         let subroutines = analysis.subroutines.borrow();
-        assert_eq!(subroutines.len(), 1);
+        assert_eq!(subroutines.len() - 1, 1);
         assert_eq!(subroutines[&0x8000].pc(), 0x8000);
         assert_eq!(subroutines[&0x8000].instructions().len(), 1);
 
@@ -909,7 +909,7 @@ mod tests {
         // the jumptable have been explored.
         {
             let subroutines = analysis.subroutines.borrow();
-            assert_eq!(subroutines.len(), 3);
+            assert_eq!(subroutines.len() - 1, 3);
             assert!(analysis.is_subroutine(0x8100));
             assert!(analysis.is_subroutine(0x8200));
             assert!(analysis.is_jump_table_target(0x8100));
@@ -931,9 +931,9 @@ mod tests {
         let analysis = Analysis::new(setup_php_plp());
         analysis.run();
 
-        // Test there are two subroutines.
+        // Test there are two subroutines (+ NMI).
         let subroutines = analysis.subroutines.borrow();
-        assert_eq!(subroutines.len(), 2);
+        assert_eq!(subroutines.len() - 1, 2);
 
         // Test there's a `reset` sub with the correct number of instructions.
         let reset_sub = &subroutines[&0x8000];
@@ -984,9 +984,9 @@ mod tests {
         let analysis = Analysis::new(setup_simplified_state_changes());
         analysis.run();
 
-        // Test there are two subroutines.
+        // Test there are two subroutines (+ NMI).
         let subroutines = analysis.subroutines.borrow();
-        assert_eq!(subroutines.len(), 2);
+        assert_eq!(subroutines.len() - 1, 2);
 
         // Test there's a `reset` sub with the correct number of instructions.
         let reset_sub = &subroutines[&0x8000];
@@ -1009,9 +1009,9 @@ mod tests {
         let analysis = Analysis::new(setup_state_change());
         analysis.run();
 
-        // Check there are two subroutines.
+        // Check there are two subroutines (+ NMI).
         let subroutines = analysis.subroutines.borrow();
-        assert_eq!(subroutines.len(), 2);
+        assert_eq!(subroutines.len() - 1, 2);
 
         // Check the subroutines have the right name and number of instructions.
         let reset_sub = &subroutines[&0x8000];
