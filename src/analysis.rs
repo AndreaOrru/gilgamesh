@@ -57,10 +57,12 @@ pub enum Assertion {
     Subroutine(StateChange),
 }
 
-/// Types of special returns.
-pub enum SpecialReturn {
+/// Types of indirect jumps.
+pub enum IndirectJump {
     Call,
     Jump,
+    ReturnCall,
+    ReturnJump,
 }
 
 /// Structure holding the state of the analysis.
@@ -90,10 +92,10 @@ pub struct Analysis {
     #[serde(skip)]
     references: RefCell<HashMap<usize, HashSet<Reference>>>,
 
-    /// Returns that act like jumps or subroutine calls.
+    /// Instructions acting like indirect jumps.
     #[getset(get = "pub")]
     #[serde(skip)]
-    special_returns: RefCell<HashMap<usize, SpecialReturn>>,
+    indirect_jumps: RefCell<HashMap<usize, IndirectJump>>,
 
     /// Instructions that manipulate the stack in tricky ways.
     #[getset(get = "pub")]
@@ -152,7 +154,7 @@ impl Analysis {
             asserted_subroutines: RefCell::new(HashSet::new()),
             subroutines_with_jumptables: RefCell::new(HashSet::new()),
             references: RefCell::new(HashMap::new()),
-            special_returns: RefCell::new(HashMap::new()),
+            indirect_jumps: RefCell::new(HashMap::new()),
             stack_manipulations: RefCell::new(HashSet::new()),
             subroutine_labels: RefCell::new(BiHashMap::new()),
             local_labels: RefCell::new(HashMap::new()),
@@ -216,7 +218,7 @@ impl Analysis {
         self.asserted_subroutines.borrow_mut().clear();
         self.subroutines_with_jumptables.borrow_mut().clear();
         self.references.borrow_mut().clear();
-        self.special_returns.borrow_mut().clear();
+        self.indirect_jumps.borrow_mut().clear();
         self.stack_manipulations.borrow_mut().clear();
         self.subroutine_labels.borrow_mut().clear();
         self.local_labels.borrow_mut().clear();
@@ -439,10 +441,10 @@ impl Analysis {
         stack_manipulations.insert(pc);
     }
 
-    /// Add a special return instruction (acting as jump or call) to the analysis.
-    pub fn add_special_return(&self, pc: usize, return_type: SpecialReturn) {
-        let mut special_returns = self.special_returns.borrow_mut();
-        special_returns.insert(pc, return_type);
+    /// Add an indirect jump instruction to the analysis.
+    pub fn add_indirect_jump(&self, pc: usize, kind: IndirectJump) {
+        let mut indirect_jumps = self.indirect_jumps.borrow_mut();
+        indirect_jumps.insert(pc, kind);
     }
 
     /// Remove an assertion on an instruction state change.
@@ -528,7 +530,7 @@ impl Analysis {
     /// Return a list of suggested assertions to be applied against the given instruction.
     pub fn suggest_assertions(&self, i: Instruction, sub: &Subroutine) -> Vec<Assertion> {
         let mut assertions = Vec::new();
-        let special_returns = self.special_returns.borrow();
+        let indirect_jumps = self.indirect_jumps.borrow();
 
         let mut assert_combined_state = || match sub.combined_state_change() {
             Some(combined_state) => assertions.push(Assertion::Subroutine(combined_state)),
@@ -574,12 +576,13 @@ impl Analysis {
             // RTS/RTL to manipulated address.
             InstructionType::Return => match reason {
                 UnknownReason::StackManipulation => assert_combined_state(),
-                UnknownReason::IndirectJump => match special_returns[&i.pc()] {
-                    SpecialReturn::Call => {
+                UnknownReason::IndirectJump => match indirect_jumps[&i.pc()] {
+                    IndirectJump::ReturnCall => {
                         assertions.push(Assertion::Instruction(StateChange::new_empty()))
                     }
                     // TODO: find concrete cases for this.
-                    SpecialReturn::Jump => {}
+                    IndirectJump::ReturnJump => {}
+                    _ => {}
                 },
                 _ => {}
             },
@@ -736,6 +739,16 @@ impl Analysis {
             Some(instructions) => instructions.iter().map(|i| i.subroutine()).collect(),
             None => HashSet::new(),
         }
+    }
+
+    /// Return list of subroutine labels containing the given instruction.
+    pub fn instruction_subroutine_labels(&self, instr_pc: usize) -> Vec<String> {
+        let subroutines = self.instruction_subroutines(instr_pc);
+        let labels: Vec<_> = subroutines
+            .iter()
+            .map(|pc| self.label(*pc, None).unwrap())
+            .collect();
+        labels
     }
 
     /// Return any of the instructions at address PC.

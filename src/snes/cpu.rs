@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use maplit::hashset;
 
-use crate::analysis::{Analysis, SpecialReturn};
+use crate::analysis::{Analysis, IndirectJump};
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::{AddressMode, Op};
 use crate::snes::register::Register;
@@ -168,6 +168,8 @@ impl CPU {
             }
             None => self.unknown_state_change(i.pc(), UnknownReason::IndirectJump),
         }
+
+        self.track_indirect_jumps(i, true);
     }
 
     /// Emulate instructions that modify the value of A.
@@ -219,13 +221,12 @@ impl CPU {
     }
 
     /// Jump instruction emulation.
-    fn jump(&mut self, instruction: Instruction) {
-        match self.jump_targets(instruction) {
+    fn jump(&mut self, i: Instruction) {
+        match self.jump_targets(i) {
             Some(targets) => {
                 // Execute each target in a CPU instance.
                 for target in targets.iter().copied() {
-                    self.analysis
-                        .add_reference(instruction.pc(), target, self.subroutine);
+                    self.analysis.add_reference(i.pc(), target, self.subroutine);
                     let mut cpu = self.clone();
                     cpu.pc = target;
                     cpu.run();
@@ -233,8 +234,10 @@ impl CPU {
                 // Targets have already been executed - stop here.
                 self.stop = true;
             }
-            None => self.unknown_state_change(instruction.pc(), UnknownReason::IndirectJump),
+            None => self.unknown_state_change(i.pc(), UnknownReason::IndirectJump),
         }
+
+        self.track_indirect_jumps(i, false);
     }
 
     /// Return instruction emulation.
@@ -259,8 +262,6 @@ impl CPU {
                     self.analysis.add_stack_manipulation(manipulator.pc());
                 }
             }
-            self.analysis
-                .add_special_return(i.pc(), SpecialReturn::Call);
             self.call(i);
         } else {
             self.unknown_state_change(i.pc(), UnknownReason::StackManipulation);
@@ -471,6 +472,29 @@ impl CPU {
             None => jump_assertions
                 .get(&instruction.pc())
                 .map(|h| h.iter().map(|j| j.target).collect()),
+        }
+    }
+
+    /// Keep track of indirect jump instructions in the analysis.
+    fn track_indirect_jumps(&mut self, i: Instruction, call: bool) {
+        if i.absolute_argument().is_none() {
+            match i.typ() {
+                InstructionType::Call => {
+                    self.analysis.add_indirect_jump(i.pc(), IndirectJump::Call);
+                }
+                InstructionType::Jump => {
+                    self.analysis.add_indirect_jump(i.pc(), IndirectJump::Jump);
+                }
+                InstructionType::Return if call => {
+                    self.analysis
+                        .add_indirect_jump(i.pc(), IndirectJump::ReturnCall);
+                }
+                InstructionType::Return if !call => {
+                    self.analysis
+                        .add_indirect_jump(i.pc(), IndirectJump::ReturnJump);
+                }
+                _ => {}
+            }
         }
     }
 

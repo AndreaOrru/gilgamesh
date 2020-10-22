@@ -4,7 +4,7 @@ use std::rc::Rc;
 use colored::*;
 use inflections::case::to_sentence_case;
 
-use crate::analysis::{Analysis, SpecialReturn};
+use crate::analysis::{Analysis, IndirectJump};
 use crate::snes::instruction::{Instruction, InstructionType};
 use crate::snes::opcodes::Op;
 use crate::snes::subroutine::Subroutine;
@@ -28,13 +28,18 @@ impl Disassembly {
         for i in sub.instructions().values() {
             s.push_str(&self.label(i.pc(), subroutine));
             s.push_str(&self.stack_manipulation(*i));
+
+            let jump_table = self.jump_table(*i, sub);
+            if jump_table.is_empty() {
+                s.push_str(&self.indirect_jump(*i));
+            }
+
             s.push_str(&self.instruction(*i));
-            s.push_str(&self.jump_table(*i, sub));
+            s.push_str(&jump_table);
 
             let asserted_state = self.asserted_state(*i, sub);
-            if !asserted_state.is_empty() {
-                s.push_str(&asserted_state);
-            } else {
+            s.push_str(&asserted_state);
+            if asserted_state.is_empty() {
                 s.push_str(&self.unknown_state(*i, sub));
                 s.push_str(&self.known_state(*i, sub));
             }
@@ -47,21 +52,11 @@ impl Disassembly {
         let comment = match comments.get(&i.pc()) {
             Some(s) => s.to_owned(),
             None => match i.typ() {
-                InstructionType::Return => self.return_comment(i),
                 InstructionType::SepRep => Self::sep_rep_comment(i),
                 _ => String::new(),
             },
         };
         format!("; ${:06X} | {}", i.pc(), comment)
-    }
-
-    fn return_comment(&self, i: Instruction) -> String {
-        let special_returns = self.analysis.special_returns().borrow();
-        match special_returns.get(&i.pc()) {
-            Some(SpecialReturn::Call) => "Call.".to_string(),
-            Some(SpecialReturn::Jump) => "Jump.".to_string(),
-            None => String::new(),
-        }
     }
 
     fn sep_rep_comment(i: Instruction) -> String {
@@ -182,6 +177,21 @@ impl Disassembly {
                 s.push_str(&Self::header("", "bright_black"));
                 s
             }
+            None => String::new(),
+        }
+    }
+
+    fn indirect_jump(&self, i: Instruction) -> String {
+        let indirect_jumps = self.analysis.indirect_jumps().borrow();
+        match indirect_jumps.get(&i.pc()) {
+            Some(indirect_jump) => match indirect_jump {
+                IndirectJump::Call | IndirectJump::ReturnCall => {
+                    Self::header("[INDIRECT CALL]", "red")
+                }
+                IndirectJump::Jump | IndirectJump::ReturnJump => {
+                    Self::header("[INDIRECT JUMP]", "red")
+                }
+            },
             None => String::new(),
         }
     }

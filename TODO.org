@@ -1,7 +1,8 @@
-* TODO [#A] List jumptables
-* TODO [#A] Support empty jumptable assertions for special returns
-** Actually empty
-** One unknown element
+* TODO [#A] subroutines_with_jumptables -> subroutine_jump_states
+** At least one unknown indirect jump => red
+** All indirect jumps with asserted jumptables => magenta
+** All indirect jumps with complete jumptables => blue
+* TODO [#A] list jumptables shows all jumps
 * TODO [#B] Distinguish between harmless and harmful stack manipulations
 ** Show subroutines containing harmful stack manipulations in list?
 *** In magenta? [?]

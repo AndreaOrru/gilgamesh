@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use colored::*;
+use itertools::sorted;
 use maplit::btreemap;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
@@ -300,11 +301,8 @@ impl<W: Write> App<W> {
         outln!(self.out, "{}", "ASSERTED INSTRUCTION STATE CHANGES:".red());
 
         for (pc, state_change) in assertions.iter() {
-            let subroutines = self.analysis.instruction_subroutines(*pc);
             let instruction = self.analysis.any_instruction(*pc);
             let disassembly = Disassembly::instruction_raw(instruction);
-
-            // Instruction information.
             outln!(
                 self.out,
                 "  {}  {} -> {}",
@@ -313,13 +311,9 @@ impl<W: Write> App<W> {
                 state_change.to_string().green()
             );
 
-            // List of subroutines containing this instruction.
-            if !subroutines.is_empty() {
-                let labels: Vec<_> = subroutines
-                    .iter()
-                    .map(|pc| self.analysis.label(*pc, None).unwrap())
-                    .collect();
-                outln!(self.out, "    {}", labels.join(", ").bright_black());
+            let sub_labels = self.analysis.instruction_subroutine_labels(*pc);
+            if !sub_labels.is_empty() {
+                outln!(self.out, "    {}", sub_labels.join(", ").bright_black());
             }
         }
         outln!(self.out);
@@ -407,7 +401,7 @@ impl<W: Write> App<W> {
     fn yes_no_prompt(question: &str) -> bool {
         let mut rl = Editor::<()>::new();
         let s = rl.readline(&format!("{} (y/n) ", question).yellow().to_string());
-        s.unwrap_or("n".to_string()) == "y"
+        s.unwrap_or_else(|_| "n".to_string()) == "y"
     }
 
     /***************************************************************************/
@@ -442,6 +436,7 @@ impl<W: Write> App<W> {
                 /// List various types of entities.
                 btreemap! {
                     "assertions" => command_ref!(Self, list_assertions),
+                    "jumps" => command_ref!(Self, list_jumps),
                     "subroutines" => command_ref!(Self, list_subroutines),
                 }),
             "load" => command_ref!(Self, load),
@@ -591,6 +586,38 @@ impl<W: Write> App<W> {
         fn list_assertions(&mut self) {
             self.list_subroutine_assertions();
             self.list_instruction_assertions();
+        }
+    );
+
+    command!(
+        /// List indirect jumps.
+        fn list_jumps(&mut self) {
+            let assertions = self.analysis.jump_assertions().borrow();
+            let jumps = self.analysis.indirect_jumps().borrow();
+            let jump_pcs = sorted(jumps.keys().copied());
+
+            for pc in jump_pcs {
+                let instruction = self.analysis.any_instruction(pc);
+                let disassembly = Disassembly::instruction_raw(instruction);
+                let color = if assertions.contains_key(&pc) {
+                    "magenta"
+                } else {
+                    "red"
+                };
+
+                outln!(
+                    self.out,
+                    "{}  {}",
+                    format!("${:06X}", pc).color(color),
+                    disassembly
+                );
+
+                let sub_labels = self.analysis.instruction_subroutine_labels(pc);
+                if !sub_labels.is_empty() {
+                    outln!(self.out, "  {}", sub_labels.join(", ").bright_black());
+                }
+            }
+            outln!(self.out);
         }
     );
 
