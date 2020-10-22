@@ -137,6 +137,9 @@ macro_rules! command {
                         $(
                             + " " + &stringify!($arg).to_uppercase()
                         )*
+                        $(
+                            + " [" + &stringify!($opt_arg).to_uppercase() + "]"
+                        )*
                     };
                 }
                 &[<USAGE_ $name:upper>]

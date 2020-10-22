@@ -699,9 +699,17 @@ impl<W: Write> App<W> {
 
     command!(
         /// Rename a label or subroutine.
-        fn rename(&mut self, old: String, new: String) {
-            self.analysis
-                .rename_label(old, new, self.current_subroutine)?;
+        fn rename(&mut self, old_or_new: String, ?new: String) {
+            if let Some(new) = new {
+                // Rename a label or subroutine.
+                let old = old_or_new;
+                self.analysis.rename_label(old, new, self.current_subroutine)?;
+            } else {
+                // Rename current subroutine.
+                let new = old_or_new;
+                let old = self.analysis.label(self.get_subroutine()?, None).unwrap();
+                self.analysis.rename_label(old, new, None)?;
+            };
         }
     );
 
