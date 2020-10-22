@@ -457,10 +457,10 @@ impl CPU {
             AddressMode::ImmediateM if self.state_change.m().is_none() => {
                 self.state_inference.set_m(self.state.m());
             }
-            AddressMode::ImmediateX if self.state_change.x().is_none() => {}
-            _ => {
+            AddressMode::ImmediateX if self.state_change.x().is_none() => {
                 self.state_inference.set_x(self.state.x());
             }
+            _ => {}
         }
     }
 
