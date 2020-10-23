@@ -268,25 +268,29 @@ impl<W: Write> App<W> {
         }
 
         // Add state indicators.
-        if sub.has_unknown_state_change() {
-            if sub.is_unknown_because_of(UnknownReason::SuspectInstruction) {
-                s.push_str(&format!(" {}", "[!]".on_bright_red()));
-            } else if sub.is_unknown_because_of(UnknownReason::StackManipulation) {
-                s.push_str(&" [?]".red().to_string());
-            } else if sub.is_unknown_because_of(UnknownReason::IndirectJump) {
-                s.push_str(&" [*]".red().to_string());
-            } else if sub.is_unknown_because_of(UnknownReason::MultipleReturnStates) {
-                s.push_str(&" [+]".red().to_string());
-            } else if sub.is_unknown_because_of(UnknownReason::Recursion) {
-                s.push_str(&" [∞]".red().to_string());
-            } else if sub.is_unknown_because_of(UnknownReason::MutableCode) {
-                s.push_str(&" [$]".red().to_string());
-            }
+        if sub.is_unknown_because_of(UnknownReason::SuspectInstruction) {
+            s.push_str(&format!(" {}", "[!]".on_bright_red()));
         }
+        if sub.is_unknown_because_of(UnknownReason::MutableCode) {
+            s.push_str(&" [$]".red().to_string());
+        }
+        if sub.is_unknown_because_of(UnknownReason::StackManipulation) {
+            s.push_str(&" [?]".red().to_string());
+        }
+        if sub.is_unknown_because_of(UnknownReason::Recursion) {
+            s.push_str(&" [∞]".red().to_string());
+        }
+        if sub.is_unknown_because_of(UnknownReason::MultipleReturnStates) {
+            s.push_str(&" [+]".red().to_string());
+        }
+
         // Asserted jumptable.
-        if self.analysis.subroutine_contains_jumptable(sub.pc()) {
+        if sub.is_unknown_because_of(UnknownReason::IndirectJump) {
+            s.push_str(&" [*]".red().to_string());
+        } else if self.analysis.subroutine_contains_indirect_jump(sub.pc()) {
             s.push_str(&" [*]".magenta().to_string());
         }
+
         // Multiple known return states.
         if sub.unique_state_changes().len() > 1 {
             s.push_str(&" [+]".yellow().to_string());

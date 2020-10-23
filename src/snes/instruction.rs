@@ -41,6 +41,11 @@ pub struct Instruction {
     #[getset(get_copy = "pub")]
     state_change: StateChange,
 
+    /// What we know about the CPU state based on the
+    /// sequence of instructions we have executed before.
+    #[getset(get_copy = "pub")]
+    state_inference: StateChange,
+
     /// The instruction's opcode byte.
     opcode: u8,
 
@@ -54,6 +59,8 @@ impl Hash for Instruction {
         self.pc.hash(state);
         self.subroutine.hash(state);
         self.state.p().hash(state);
+        self.state_change.hash(state);
+        self.state_inference.hash(state);
     }
 }
 impl PartialEq for Instruction {
@@ -61,6 +68,8 @@ impl PartialEq for Instruction {
         self.pc == other.pc
             && self.subroutine == other.subroutine
             && self.state.p() == other.state.p()
+            && self.state_change == other.state_change
+            && self.state_inference == other.state_inference
     }
 }
 impl PartialOrd for Instruction {
@@ -83,6 +92,7 @@ impl Instruction {
         opcode: u8,
         argument: usize,
         state_change: StateChange,
+        state_inference: StateChange,
     ) -> Self {
         Self {
             pc,
@@ -91,6 +101,7 @@ impl Instruction {
             opcode,
             _argument: argument,
             state_change,
+            state_inference,
         }
     }
 
