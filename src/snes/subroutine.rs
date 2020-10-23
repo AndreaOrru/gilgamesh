@@ -134,7 +134,7 @@ impl Subroutine {
             && self
                 .unknown_state_changes
                 .values()
-                .all(|s| s.unknown_reason() != UnknownReason::Unknown)
+                .any(|s| s.unknown_reason() != UnknownReason::Unknown)
     }
 
     /// Return true if the subroutine is recursive.

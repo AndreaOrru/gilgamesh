@@ -82,10 +82,10 @@ pub struct Analysis {
     #[serde(skip)]
     asserted_subroutines: RefCell<HashSet<usize>>,
 
-    /// Subroutines containing jump tables.
+    /// Subroutines containing indirect jumps.
     #[getset(get = "pub")]
     #[serde(skip)]
-    subroutines_with_jumptables: RefCell<HashSet<usize>>,
+    subroutines_with_indirect_jumps: RefCell<HashSet<usize>>,
 
     /// Instructions referenced by other instructions.
     #[getset(get = "pub")]
@@ -152,7 +152,7 @@ impl Analysis {
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(BTreeMap::new()),
             asserted_subroutines: RefCell::new(HashSet::new()),
-            subroutines_with_jumptables: RefCell::new(HashSet::new()),
+            subroutines_with_indirect_jumps: RefCell::new(HashSet::new()),
             references: RefCell::new(HashMap::new()),
             indirect_jumps: RefCell::new(HashMap::new()),
             stack_manipulations: RefCell::new(HashSet::new()),
@@ -216,7 +216,7 @@ impl Analysis {
         self.instructions.borrow_mut().clear();
         self.subroutines.borrow_mut().clear();
         self.asserted_subroutines.borrow_mut().clear();
-        self.subroutines_with_jumptables.borrow_mut().clear();
+        self.subroutines_with_indirect_jumps.borrow_mut().clear();
         self.references.borrow_mut().clear();
         self.indirect_jumps.borrow_mut().clear();
         self.stack_manipulations.borrow_mut().clear();
@@ -442,9 +442,11 @@ impl Analysis {
     }
 
     /// Add an indirect jump instruction to the analysis.
-    pub fn add_indirect_jump(&self, pc: usize, kind: IndirectJump) {
+    pub fn add_indirect_jump(&self, sub_pc: usize, pc: usize, kind: IndirectJump) {
         let mut indirect_jumps = self.indirect_jumps.borrow_mut();
+        let mut subs_with_indirect_jumps = self.subroutines_with_indirect_jumps.borrow_mut();
         indirect_jumps.insert(pc, kind);
+        subs_with_indirect_jumps.insert(sub_pc);
     }
 
     /// Remove an assertion on an instruction state change.
@@ -537,7 +539,10 @@ impl Analysis {
             None if sub.saves_state_in_incipit() => {
                 assertions.push(Assertion::Subroutine(StateChange::new_empty()))
             }
-            _ => {}
+            _ => {
+                // TODO: this should only run when the unsafe flag is set.
+                assertions.push(Assertion::Subroutine(i.state_change()));
+            }
         };
 
         // No suggested assertions if some assertions were already declared.
@@ -623,10 +628,10 @@ impl Analysis {
         asserted_subroutines.contains(&subroutine)
     }
 
-    /// Return true if the given subroutine contains a jump table.
-    pub fn subroutine_contains_jumptable(&self, subroutine: usize) -> bool {
-        let subroutines_with_jumptables = self.subroutines_with_jumptables.borrow();
-        subroutines_with_jumptables.contains(&subroutine)
+    /// Return true if the given subroutine contains an indirect jump.
+    pub fn subroutine_contains_indirect_jump(&self, subroutine: usize) -> bool {
+        let subroutines = self.subroutines_with_indirect_jumps.borrow();
+        subroutines.contains(&subroutine)
     }
 
     /// Return the label associated with an address, if any.
@@ -786,13 +791,13 @@ impl Analysis {
     /// Generate the list of subroutines containing assertions.
     fn generate_asserted_subroutines(&self) {
         for instr_pc in self.instruction_assertions.borrow().keys() {
-            self.flag_asserted_subroutines(*instr_pc, false);
+            self.flag_asserted_subroutines(*instr_pc);
         }
         for sub_pc in self.subroutine_assertions.borrow().keys() {
             self.flag_asserted_subroutine(*sub_pc);
         }
         for caller_pc in self.jump_assertions.borrow().keys() {
-            self.flag_asserted_subroutines(*caller_pc, true);
+            self.flag_asserted_subroutines(*caller_pc);
         }
     }
 
@@ -803,14 +808,10 @@ impl Analysis {
     }
 
     /// Flag all the subroutines associated with the given instruction as asserted.
-    fn flag_asserted_subroutines(&self, instr_pc: usize, jump: bool) {
+    fn flag_asserted_subroutines(&self, instr_pc: usize) {
         let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
-        let mut subroutines_with_jumptables = self.subroutines_with_jumptables.borrow_mut();
         for sub_pc in self.instruction_subroutines(instr_pc) {
             asserted_subroutines.insert(sub_pc);
-            if jump {
-                subroutines_with_jumptables.insert(sub_pc);
-            }
         }
     }
 }

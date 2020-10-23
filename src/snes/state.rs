@@ -334,7 +334,6 @@ impl StateChange {
     }
 }
 
-// Implement ordering traits for StateChange.
 impl PartialOrd for StateChange {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
