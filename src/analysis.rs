@@ -560,9 +560,16 @@ impl Analysis {
 
         match i.typ() {
             // Indirect JSR/JSL typically don't rely on a specific state being set.
-            InstructionType::Call if reason == UnknownReason::IndirectJump => {
-                assertions.push(Assertion::Instruction(StateChange::new_empty()));
-            }
+            InstructionType::Call => match reason {
+                UnknownReason::IndirectJump => {
+                    assertions.push(Assertion::Instruction(StateChange::new_empty()))
+                }
+                // TODO: this should only run when the unsafe flag is set.
+                UnknownReason::MultipleReturnStates => {
+                    assertions.push(Assertion::Instruction(StateChange::new_empty()))
+                }
+                _ => {}
+            },
 
             // Indirect JMP/JML.
             InstructionType::Jump if reason == UnknownReason::IndirectJump => {
