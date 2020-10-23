@@ -15,6 +15,7 @@ pub enum ROMType {
     HiROM,
     ExLoROM,
     ExHiROM,
+    SDD1,
 }
 
 /// ROM's header.
@@ -123,7 +124,7 @@ impl ROM {
 
     /// Size of the ROM, as indicated by the header.
     pub fn size(&self) -> usize {
-        0x400 << self.read_byte(header::SIZE)
+        0x400 << self.read_byte(self.translate_header(header::SIZE))
     }
 
     /// Size of the ROM, as measured by the size of the file.
@@ -135,7 +136,7 @@ impl ROM {
     pub fn title(&self) -> String {
         let mut title = String::new();
         for i in 0..header::TITLE_LEN {
-            match self.read_byte(header::TITLE + i) {
+            match self.read_byte(self.translate_header(header::TITLE + i)) {
                 0x00 => break,
                 c => title.push(char::from(c)),
             }
@@ -145,17 +146,25 @@ impl ROM {
 
     /// Return the reset vector (ROM's entry point).
     pub fn reset_vector(&self) -> usize {
-        self.read_word(header::RESET) as usize
+        self.read_word(self.translate_header(header::RESET)) as usize
     }
 
     /// Return the NMI vector (VBLANK handler).
     pub fn nmi_vector(&self) -> usize {
-        self.read_word(header::NMI) as usize
+        self.read_word(self.translate_header(header::NMI)) as usize
     }
 
     /// Return true if the address is in RAM, false otherwise.
     pub fn is_ram(address: usize) -> bool {
         (address <= 0x001FFF) || (0x7E0000 <= address && address <= 0x7FFFFF)
+    }
+
+    /// Translate address inside the header.
+    fn translate_header(&self, address: usize) -> usize {
+        match self.rom_type {
+            ROMType::ExLoROM | ROMType::SDD1 => 0x800000 + address,
+            _ => address,
+        }
     }
 
     /// Translate an address from SNES to PC.
@@ -167,7 +176,14 @@ impl ROM {
                 if address & 0x800000 != 0 {
                     ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
                 } else {
-                    ((address & 0x7F0000) >> 1) | ((address & 0x7FFF) + 0x400000)
+                    (((address & 0x7F0000) >> 1) | (address & 0x7FFF)) + 0x400000
+                }
+            }
+            ROMType::SDD1 => {
+                if address >= 0xC00000 {
+                    address & 0x3FFFFF
+                } else {
+                    ((address & 0x7F0000) >> 1) | (address & 0x7FFF)
                 }
             }
             ROMType::ExHiROM => {
@@ -199,6 +215,7 @@ impl ROM {
     fn discover_subtype(&self) -> ROMType {
         let markup = self.read_byte(header::MARKUP);
         match self.rom_type {
+            ROMType::LoROM if markup == 0x32 => ROMType::SDD1,
             ROMType::LoROM if markup & 0b010 != 0 => ROMType::ExLoROM,
             ROMType::HiROM if markup & 0b100 != 0 => ROMType::ExHiROM,
             _ => self.rom_type,

@@ -735,7 +735,7 @@ impl<W: Write> App<W> {
             let rom = &self.analysis.rom;
             outln!(self.out, "{:10}{}", "Title:".green(), rom.title());
             outln!(self.out, "{:10}{}", "Type:".green(), rom.rom_type().as_ref());
-            outln!(self.out, "{:10}{}", "Size:".green(), rom.size() / 1024);
+            outln!(self.out, "{:10}{} KiB", "Size:".green(), rom.size() / 1024);
             outln!(self.out, "{:10}",   "Vectors:".green());
             outln!(self.out, "  {:8}${:06X}", "RESET:".green(), rom.reset_vector());
             outln!(self.out, "  {:8}${:06X}", "NMI:".green(), rom.nmi_vector());
