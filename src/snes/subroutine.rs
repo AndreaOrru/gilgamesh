@@ -26,6 +26,12 @@ pub struct Subroutine {
 
     #[getset(get = "pub")]
     stack_traces: HashSet<Vec<usize>>,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    contains_assertions: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    contains_indirect_jumps: bool,
 }
 
 impl Subroutine {
@@ -38,6 +44,8 @@ impl Subroutine {
             state_changes: HashMap::new(),
             unknown_state_changes: HashMap::new(),
             stack_traces: HashSet::new(),
+            contains_assertions: false,
+            contains_indirect_jumps: false,
         }
     }
 

@@ -247,7 +247,7 @@ impl<W: Write> App<W> {
         // Pick foreground color.
         let mut fg = if sub.has_unknown_state_change() {
             "red"
-        } else if self.analysis.subroutine_contains_assertions(sub.pc()) {
+        } else if sub.contains_assertions() {
             "magenta"
         } else if self.analysis.is_jump_table_target(sub.pc()) {
             "blue"
@@ -287,7 +287,7 @@ impl<W: Write> App<W> {
         // Asserted jumptable.
         if sub.is_unknown_because_of(UnknownReason::IndirectJump) {
             s.push_str(&" [*]".red().to_string());
-        } else if self.analysis.subroutine_contains_indirect_jump(sub.pc()) {
+        } else if sub.contains_indirect_jumps() {
             s.push_str(&" [*]".magenta().to_string());
         }
 
