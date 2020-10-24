@@ -77,16 +77,6 @@ pub struct Analysis {
     #[serde(skip)]
     subroutines: RefCell<BTreeMap<usize, Subroutine>>,
 
-    /// Subroutines containing assertions.
-    #[getset(get = "pub")]
-    #[serde(skip)]
-    asserted_subroutines: RefCell<HashSet<usize>>,
-
-    /// Subroutines containing indirect jumps.
-    #[getset(get = "pub")]
-    #[serde(skip)]
-    subroutines_with_indirect_jumps: RefCell<HashSet<usize>>,
-
     /// Instructions referenced by other instructions.
     #[getset(get = "pub")]
     #[serde(skip)]
@@ -151,8 +141,6 @@ impl Analysis {
             rom,
             instructions: RefCell::new(HashMap::new()),
             subroutines: RefCell::new(BTreeMap::new()),
-            asserted_subroutines: RefCell::new(HashSet::new()),
-            subroutines_with_indirect_jumps: RefCell::new(HashSet::new()),
             references: RefCell::new(HashMap::new()),
             indirect_jumps: RefCell::new(HashMap::new()),
             stack_manipulations: RefCell::new(HashSet::new()),
@@ -215,8 +203,6 @@ impl Analysis {
         // Clear non-serializable attributes.
         self.instructions.borrow_mut().clear();
         self.subroutines.borrow_mut().clear();
-        self.asserted_subroutines.borrow_mut().clear();
-        self.subroutines_with_indirect_jumps.borrow_mut().clear();
         self.references.borrow_mut().clear();
         self.indirect_jumps.borrow_mut().clear();
         self.stack_manipulations.borrow_mut().clear();
@@ -444,9 +430,11 @@ impl Analysis {
     /// Add an indirect jump instruction to the analysis.
     pub fn add_indirect_jump(&self, sub_pc: usize, pc: usize, kind: IndirectJump) {
         let mut indirect_jumps = self.indirect_jumps.borrow_mut();
-        let mut subs_with_indirect_jumps = self.subroutines_with_indirect_jumps.borrow_mut();
         indirect_jumps.insert(pc, kind);
-        subs_with_indirect_jumps.insert(sub_pc);
+
+        let mut subroutines = self.subroutines.borrow_mut();
+        let subroutine = subroutines.get_mut(&sub_pc).unwrap();
+        subroutine.set_contains_indirect_jumps(true);
     }
 
     /// Remove an assertion on an instruction state change.
@@ -628,19 +616,6 @@ impl Analysis {
         }
     }
 
-    /// Return true if the given subroutine contains an assertion
-    /// (either of the instruction or subroutine kind).
-    pub fn subroutine_contains_assertions(&self, subroutine: usize) -> bool {
-        let asserted_subroutines = self.asserted_subroutines.borrow();
-        asserted_subroutines.contains(&subroutine)
-    }
-
-    /// Return true if the given subroutine contains an indirect jump.
-    pub fn subroutine_contains_indirect_jump(&self, subroutine: usize) -> bool {
-        let subroutines = self.subroutines_with_indirect_jumps.borrow();
-        subroutines.contains(&subroutine)
-    }
-
     /// Return the label associated with an address, if any.
     pub fn label(&self, pc: usize, subroutine: Option<usize>) -> Option<String> {
         let sub_labels = self.subroutine_labels.borrow();
@@ -810,15 +785,17 @@ impl Analysis {
 
     /// Flag a given subroutine as containing an assertion.
     fn flag_asserted_subroutine(&self, sub_pc: usize) {
-        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
-        asserted_subroutines.insert(sub_pc);
+        let mut subroutines = self.subroutines.borrow_mut();
+        let subroutine = subroutines.get_mut(&sub_pc).unwrap();
+        subroutine.set_contains_assertions(true);
     }
 
     /// Flag all the subroutines associated with the given instruction as asserted.
     fn flag_asserted_subroutines(&self, instr_pc: usize) {
-        let mut asserted_subroutines = self.asserted_subroutines.borrow_mut();
+        let mut subroutines = self.subroutines.borrow_mut();
         for sub_pc in self.instruction_subroutines(instr_pc) {
-            asserted_subroutines.insert(sub_pc);
+            let subroutine = subroutines.get_mut(&sub_pc).unwrap();
+            subroutine.set_contains_assertions(true);
         }
     }
 }
@@ -924,7 +901,8 @@ mod tests {
 
         // Verify that the subroutines that contains the jumptable
         // has been flagged as containing assertions.
-        assert!(analysis.subroutine_contains_assertions(0x8000));
+        let reset_sub = analysis.subroutines.borrow()[&0x8000];
+        assert!(reset_sub.contains_assertions());
 
         // Verify that the subroutines pointed by
         // the jumptable have been explored.

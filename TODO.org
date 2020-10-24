@@ -4,7 +4,6 @@
 ** At least one unknown indirect jump => red
 ** All indirect jumps with asserted jumptables => magenta
 ** All indirect jumps with complete jumptables => blue
-
 * TODO [#B] Distinguish between harmless and harmful stack manipulations
 ** Show subroutines containing harmful stack manipulations in list?
 *** In magenta? [?]
