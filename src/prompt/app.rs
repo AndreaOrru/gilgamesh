@@ -285,10 +285,12 @@ impl<W: Write> App<W> {
         }
 
         // Asserted jumptable.
-        if sub.is_unknown_because_of(UnknownReason::IndirectJump) {
-            s.push_str(&" [*]".red().to_string());
-        } else if sub.contains_indirect_jumps() {
-            s.push_str(&" [*]".magenta().to_string());
+        if !sub.indirect_jumps().is_empty() {
+            if sub.indirect_jumps().values().all(|s| *s) {
+                s.push_str(&" [*]".magenta().to_string());
+            } else {
+                s.push_str(&" [*]".red().to_string());
+            }
         }
 
         // Multiple known return states.

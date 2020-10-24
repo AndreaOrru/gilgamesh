@@ -428,13 +428,9 @@ impl Analysis {
     }
 
     /// Add an indirect jump instruction to the analysis.
-    pub fn add_indirect_jump(&self, sub_pc: usize, pc: usize, kind: IndirectJump) {
+    pub fn add_indirect_jump(&self, pc: usize, kind: IndirectJump) {
         let mut indirect_jumps = self.indirect_jumps.borrow_mut();
         indirect_jumps.insert(pc, kind);
-
-        let mut subroutines = self.subroutines.borrow_mut();
-        let subroutine = subroutines.get_mut(&sub_pc).unwrap();
-        subroutine.set_contains_indirect_jumps(true);
     }
 
     /// Remove an assertion on an instruction state change.
@@ -773,13 +769,17 @@ impl Analysis {
     /// Generate the list of subroutines containing assertions.
     fn generate_asserted_subroutines(&self) {
         for instr_pc in self.instruction_assertions.borrow().keys() {
-            self.flag_asserted_subroutines(*instr_pc);
+            self.flag_asserted_subroutines(*instr_pc, None);
         }
         for sub_pc in self.subroutine_assertions.borrow().keys() {
             self.flag_asserted_subroutine(*sub_pc);
         }
+
+        for caller_pc in self.indirect_jumps().borrow().keys() {
+            self.flag_asserted_subroutines(*caller_pc, Some(false));
+        }
         for caller_pc in self.jump_assertions.borrow().keys() {
-            self.flag_asserted_subroutines(*caller_pc);
+            self.flag_asserted_subroutines(*caller_pc, Some(true));
         }
     }
 
@@ -791,11 +791,15 @@ impl Analysis {
     }
 
     /// Flag all the subroutines associated with the given instruction as asserted.
-    fn flag_asserted_subroutines(&self, instr_pc: usize) {
+    fn flag_asserted_subroutines(&self, instr_pc: usize, asserted_jump: Option<bool>) {
         let mut subroutines = self.subroutines.borrow_mut();
         for sub_pc in self.instruction_subroutines(instr_pc) {
             let subroutine = subroutines.get_mut(&sub_pc).unwrap();
             subroutine.set_contains_assertions(true);
+
+            if let Some(asserted) = asserted_jump {
+                subroutine.add_indirect_jump(instr_pc, asserted);
+            }
         }
     }
 }

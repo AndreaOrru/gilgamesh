@@ -30,8 +30,8 @@ pub struct Subroutine {
     #[getset(get_copy = "pub", set = "pub")]
     contains_assertions: bool,
 
-    #[getset(get_copy = "pub", set = "pub")]
-    contains_indirect_jumps: bool,
+    #[getset(get = "pub")]
+    indirect_jumps: HashMap<usize, bool>,
 }
 
 impl Subroutine {
@@ -45,7 +45,7 @@ impl Subroutine {
             unknown_state_changes: HashMap::new(),
             stack_traces: HashSet::new(),
             contains_assertions: false,
-            contains_indirect_jumps: false,
+            indirect_jumps: HashMap::new(),
         }
     }
 
@@ -66,6 +66,13 @@ impl Subroutine {
     /// Add a stack trace to the subroutine.
     pub fn add_stack_trace(&mut self, stack_trace: Vec<usize>) {
         self.stack_traces.insert(stack_trace);
+    }
+
+    pub fn add_indirect_jump(&mut self, caller_pc: usize, asserted: bool) {
+        self.indirect_jumps
+            .entry(caller_pc)
+            .and_modify(|s| *s |= asserted)
+            .or_insert(asserted);
     }
 
     /// Return true if the subroutine has an unknown state change, false otherwise.
