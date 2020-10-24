@@ -481,26 +481,18 @@ impl CPU {
         if i.absolute_argument().is_none() {
             match i.typ() {
                 InstructionType::Call => {
-                    self.analysis
-                        .add_indirect_jump(self.subroutine, i.pc(), IndirectJump::Call);
+                    self.analysis.add_indirect_jump(i.pc(), IndirectJump::Call);
                 }
                 InstructionType::Jump => {
-                    self.analysis
-                        .add_indirect_jump(self.subroutine, i.pc(), IndirectJump::Jump);
+                    self.analysis.add_indirect_jump(i.pc(), IndirectJump::Jump);
                 }
                 InstructionType::Return if call => {
-                    self.analysis.add_indirect_jump(
-                        self.subroutine,
-                        i.pc(),
-                        IndirectJump::ReturnCall,
-                    );
+                    self.analysis
+                        .add_indirect_jump(i.pc(), IndirectJump::ReturnCall);
                 }
                 InstructionType::Return if !call => {
-                    self.analysis.add_indirect_jump(
-                        self.subroutine,
-                        i.pc(),
-                        IndirectJump::ReturnJump,
-                    );
+                    self.analysis
+                        .add_indirect_jump(i.pc(), IndirectJump::ReturnJump);
                 }
                 _ => {}
             }
