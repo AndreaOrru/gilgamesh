@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "types.hpp"
+
 enum class ROMType {
   LoROM,
   HiROM,
@@ -22,11 +24,14 @@ enum Header {
 };
 
 class ROM {
- private:
-  std::string path;
-  std::vector<uint8_t> data;
-  ROMType romType;
-
  public:
   ROM(const std::string& path);
+  u8 readByte(const u24 address);
+  u16 readWord(const u24 address);
+  u24 readAddress(const u24 address);
+
+ private:
+  std::string path;
+  std::vector<u8> data;
+  ROMType romType;
 };
