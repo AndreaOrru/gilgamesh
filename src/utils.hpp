@@ -5,4 +5,4 @@
 
 #include "types.hpp"
 
-void readBinaryFile(const std::string& path, std::vector<u8>& buffer);
+std::vector<u8> readBinaryFile(const std::string& path);

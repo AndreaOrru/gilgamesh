@@ -4,7 +4,7 @@
 using namespace std;
 
 ROM::ROM(const string& path) : path{path} {
-  readBinaryFile(path, data);
+  data = readBinaryFile(path);
 };
 
 u8 ROM::readByte(const u24 address) {
