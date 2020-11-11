@@ -33,13 +33,14 @@ class ROM {
   static bool isRAM(u24 address);
   size_t size() const;
   size_t realSize() const;
+  std::string title() const;
   u24 resetVector() const;
   u24 nmiVector() const;
+  u24 translate(u24 address) const;
 
   ROMType romType;
 
  private:
-  u24 translate(u24 address) const;
   u24 translateHeader(u24 address) const;
   ROMType discoverType() const;
   ROMType discoverSubtype() const;

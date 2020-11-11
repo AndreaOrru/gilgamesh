@@ -45,6 +45,18 @@ size_t ROM::realSize() const {
   return data.size();
 }
 
+string ROM::title() const {
+  string title;
+  for (int i = 0; i < Header::TITLE_LEN; i++) {
+    char c = readByte(translateHeader(Header::TITLE + i));
+    if (c == 0x00) {
+      break;
+    }
+    title.push_back(c);
+  }
+  return title;
+}
+
 u24 ROM::resetVector() const {
   return readWord(translateHeader(Header::RESET));
 }

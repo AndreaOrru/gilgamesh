@@ -2,6 +2,6 @@
 
 #include <string>
 
-#include "rom.hpp"
+class ROM;
 
-ROM assemble(const std::string& name);
+const ROM* assemble(const std::string& name);
