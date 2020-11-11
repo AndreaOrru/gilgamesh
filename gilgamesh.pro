@@ -19,7 +19,10 @@ CONFIG += c++17 debug
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-SOURCES += src/main.cpp src/mainwindow.cpp src/rom.cpp src/utils.cpp
-HEADERS += src/mainwindow.hpp src/rom.hpp src/types.hpp src/utils.hpp
+SOURCES += src/gui/mainwindow.cpp
+HEADERS += src/gui/mainwindow.hpp
+
+SOURCES += src/main.cpp src/rom.cpp src/utils.cpp
+HEADERS += src/rom.hpp src/types.hpp src/utils.hpp
 
 QT += widgets

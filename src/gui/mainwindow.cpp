@@ -1,6 +1,6 @@
 #include <QtWidgets>
 
-#include "mainwindow.hpp"
+#include "gui/mainwindow.hpp"
 #include "rom.hpp"
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
