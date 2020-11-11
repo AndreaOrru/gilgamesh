@@ -1,6 +1,5 @@
-#include <QtWidgets>
-
 #include "mainwindow.h"
+#include <QtWidgets>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   setupFileMenu();
@@ -25,14 +24,14 @@ void MainWindow::setupFileMenu() {
   menuBar()->addMenu(fileMenu);
 
   fileMenu->addAction(
-      tr("&Open ROM..."), this, [this]() { openFile(); }, QKeySequence::Open);
+      tr("&Open ROM..."), this, [this]() { openROM(); }, QKeySequence::Open);
 
   fileMenu->addSeparator();
   fileMenu->addAction(tr("E&xit"), qApp, &QApplication::quit,
                       QKeySequence::Quit);
 }
 
-void MainWindow::openFile(const QString& path) {
+void MainWindow::openROM(const QString& path) {
   QString fileName = path;
 
   if (fileName.isNull()) {

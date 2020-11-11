@@ -11,7 +11,7 @@ class MainWindow : public QMainWindow {
   MainWindow(QWidget* parent = nullptr);
 
  public slots:
-  void openFile(const QString& path = QString());
+  void openROM(const QString& path = QString());
 
  private:
   void setupEditor();
