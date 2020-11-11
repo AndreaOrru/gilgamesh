@@ -54,7 +54,7 @@ compile_commands.json
 *_qmlcache.qrc
 
 # Clangd cache
-/.cache/
+.cache/
 
-# Application binary
-/gilgamesh
+# Compilation output
+/build/

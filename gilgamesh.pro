@@ -6,6 +6,7 @@ TEMPLATE = app
 TARGET = gilgamesh
 INCLUDEPATH += src
 
+DESTDIR = build
 OBJECTS_DIR = build
 MOC_DIR = build
 
@@ -18,11 +19,11 @@ CONFIG += c++17 debug
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+QT += widgets
+
 # Input
 SOURCES += src/gui/mainwindow.cpp
 HEADERS += src/gui/mainwindow.hpp
 
 SOURCES += src/main.cpp src/rom.cpp src/utils.cpp
 HEADERS += src/rom.hpp src/types.hpp src/utils.hpp
-
-QT += widgets
