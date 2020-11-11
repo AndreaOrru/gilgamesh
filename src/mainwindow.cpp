@@ -1,5 +1,7 @@
-#include "mainwindow.h"
 #include <QtWidgets>
+
+#include "mainwindow.hpp"
+#include "rom.hpp"
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   setupFileMenu();
@@ -38,7 +40,8 @@ void MainWindow::openROM(const QString& path) {
     fileName = QFileDialog::getOpenFileName(this, tr("Open ROM"), "",
                                             "SNES ROMs (*.smc *.sfc *.fig)");
   }
+
   if (!fileName.isEmpty()) {
-    qInfo() << fileName;
+    rom = new ROM(fileName.toStdString());
   }
 }
