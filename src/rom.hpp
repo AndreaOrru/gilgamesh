@@ -30,8 +30,12 @@ class ROM {
   u16 readWord(const u24 address);
   u24 readAddress(const u24 address);
 
+  ROMType romType;
+
  private:
+  ROMType discoverType();
+  int typeScore(ROMType romType);
+
   std::string path;
   std::vector<u8> data;
-  ROMType romType;
 };

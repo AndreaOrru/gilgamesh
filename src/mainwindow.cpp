@@ -46,5 +46,6 @@ void MainWindow::openROM(const QString& path) {
       delete rom;
     }
     rom = new ROM(fileName.toStdString());
+    qInfo() << (int)rom->romType;
   }
 }
