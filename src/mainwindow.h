@@ -1,7 +1,8 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QTextEdit>
+
+class QTextEdit;
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
@@ -9,8 +10,12 @@ class MainWindow : public QMainWindow {
  public:
   MainWindow(QWidget* parent = nullptr);
 
+ public slots:
+  void openFile(const QString& path = QString());
+
  private:
   void setupEditor();
+  void setupFileMenu();
 
   QTextEdit* editor;
 };
