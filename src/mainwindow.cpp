@@ -42,6 +42,9 @@ void MainWindow::openROM(const QString& path) {
   }
 
   if (!fileName.isEmpty()) {
+    if (rom != nullptr) {
+      delete rom;
+    }
     rom = new ROM(fileName.toStdString());
   }
 }
