@@ -1,2 +1,5 @@
+# Qt-es
+/.qmake.stash
+
 # Compilation output
 /build/

@@ -30,7 +30,7 @@ class ROM {
   u16 readWord(u24 address) const;
   u24 readAddress(u24 address) const;
   std::vector<u8> read(u24 address, size_t bytes) const;
-  bool isRAM(u24 address) const;
+  static bool isRAM(u24 address);
   size_t size() const;
   size_t realSize() const;
   u24 resetVector() const;

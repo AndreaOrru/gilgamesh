@@ -58,3 +58,6 @@ compile_commands.json
 
 # Compilation output
 /build/
+
+# SNES ROMs
+*.sfc

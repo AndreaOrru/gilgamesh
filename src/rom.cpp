@@ -33,7 +33,7 @@ vector<u8> ROM::read(u24 address, size_t bytes) const {
   return buffer;
 }
 
-bool ROM::isRAM(u24 address) const {
+bool ROM::isRAM(u24 address) {
   return (address <= 0x001FFF) || (0x7E0000 <= address && address <= 0x7FFFFF);
 }
 

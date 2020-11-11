@@ -7,4 +7,5 @@ OBJECTS_DIR = build
 CONFIG += c++17 debug
 QT =
 
-SOURCES += main.cpp
+SOURCES += ../src/rom.cpp ../src/utils.cpp
+SOURCES += asar.cpp main.cpp test_rom.cpp
