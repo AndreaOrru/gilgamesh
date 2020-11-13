@@ -1,5 +1,5 @@
 #!/bin/sh
 
-qmake
-bear make -j$(nproc)
+qmake || exit 1
+bear make -j$(nproc) || exit 1
 ./build/gilgamesh

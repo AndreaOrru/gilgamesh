@@ -1,7 +1,7 @@
 #!/bin/sh
 
-cd ./tests
+cd ./tests || exit 1
 
-qmake
-bear make -j$(nproc)
+qmake || exit 1
+bear make -j$(nproc) || exit 1
 ./build/tests
