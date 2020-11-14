@@ -1,11 +1,13 @@
+#include <unordered_set>
+
 #include "cpu.hpp"
 
 #include "analysis.hpp"
 #include "instruction.hpp"
 #include "rom.hpp"
 
-CPU::CPU(Analysis* analysis, u24 pc, u24 subroutine, State state)
-    : analysis{analysis}, pc{pc}, subroutine{subroutine}, state{state} {}
+CPU::CPU(Analysis* analysis, u24 pc, u24 subroutinePC, State state)
+    : analysis{analysis}, pc{pc}, subroutinePC{subroutinePC}, state{state} {}
 
 void CPU::run() {
   while (!stop) {
@@ -22,7 +24,7 @@ void CPU::step() {
   auto opcode = analysis->rom.readByte(pc);
   auto argument = analysis->rom.readAddress(pc + 1);
   auto instruction =
-      Instruction(analysis, pc, subroutine, opcode, argument, state);
+      Instruction(analysis, pc, subroutinePC, opcode, argument, state);
 
   if (analysis->hasVisited(instruction)) {
     stop = true;
@@ -73,10 +75,13 @@ void CPU::call(const Instruction& instruction) {
 
   CPU cpu(*this);
   cpu.pc = *target;
-  cpu.subroutine = *target;
+  cpu.subroutinePC = *target;
+  cpu.stateChange = StateChange();
 
   analysis->addSubroutine(*target);
   cpu.run();
+
+  propagateSubroutineState(*target);
 }
 
 void CPU::interrupt(const Instruction& instruction) {
@@ -92,6 +97,7 @@ void CPU::jump(const Instruction& instruction) {
 }
 
 void CPU::ret(const Instruction& instruction) {
+  subroutine()->stateChanges.insert(stateChange);
   stop = true;
 }
 
@@ -107,5 +113,30 @@ void CPU::sepRep(const Instruction& instruction) {
 
     default:
       __builtin_unreachable();
+  }
+}
+
+void CPU::applyStateChange(StateChange stateChange) {
+  if (auto m = stateChange.m) {
+    this->state.m = *m;
+    this->stateChange.m = *m;
+  }
+  if (auto x = stateChange.x) {
+    this->state.x = *x;
+    this->stateChange.x = *x;
+  }
+}
+
+Subroutine* CPU::subroutine() {
+  return &analysis->subroutines.at(subroutinePC);
+}
+
+void CPU::propagateSubroutineState(u24 target) {
+  auto& stateChanges = analysis->subroutines.at(target).stateChanges;
+
+  if ((stateChanges.size()) == 1) {
+    applyStateChange(*stateChanges.begin());
+  } else {
+    stop = true;
   }
 }

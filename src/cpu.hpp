@@ -5,6 +5,7 @@
 
 class Analysis;
 class Instruction;
+class Subroutine;
 
 class CPU {
  public:
@@ -22,10 +23,15 @@ class CPU {
   void ret(const Instruction& instruction);
   void sepRep(const Instruction& instruction);
 
+  void applyStateChange(StateChange stateChange);
+  Subroutine* subroutine();
+  void propagateSubroutineState(u24 target);
+
   Analysis* analysis;
   bool stop = false;
 
   u24 pc;
-  u24 subroutine;
+  u24 subroutinePC;
   State state;
+  StateChange stateChange;
 };

@@ -25,5 +25,5 @@ QT += widgets
 SOURCES += src/gui/disassemblyview.cpp src/gui/highlighter.cpp src/gui/labelsview.cpp src/gui/mainwindow.cpp
 HEADERS += src/gui/disassemblyview.hpp src/gui/highlighter.hpp src/gui/labelsview.hpp src/gui/mainwindow.hpp
 
-SOURCES += src/analysis.cpp src/cpu.cpp src/instruction.cpp src/main.cpp src/rom.cpp src/subroutine.cpp src/utils.cpp
+SOURCES += src/analysis.cpp src/cpu.cpp src/instruction.cpp src/main.cpp src/rom.cpp src/state.cpp src/subroutine.cpp src/utils.cpp
 HEADERS += src/analysis.hpp src/cpu.hpp src/instruction.hpp src/opcodes.hpp src/rom.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp

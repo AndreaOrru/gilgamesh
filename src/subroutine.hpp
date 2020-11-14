@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 
+#include "state.hpp"
 #include "types.hpp"
 
 class Instruction;
@@ -15,4 +16,5 @@ class Subroutine {
   u24 pc;
   std::string label;
   std::map<u24, const Instruction*> instructions;
+  StateChangeSet stateChanges;
 };
