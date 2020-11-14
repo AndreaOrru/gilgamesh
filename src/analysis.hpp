@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/container_hash/hash.hpp>
 #include <map>
 #include <optional>
 #include <string>
@@ -12,47 +13,65 @@
 #include "subroutine.hpp"
 #include "types.hpp"
 
+/**
+ * ROM's entry point.
+ */
 struct EntryPoint {
-  std::string label;
-  u24 pc;
-  State state;
+  std::string label;  // Subroutine's label.
+  u24 pc;             // Subroutine's PC.
+  State state;        // CPU's state.
 
+  // Hash table utils.
   bool operator==(const EntryPoint& other) const;
   friend std::size_t hash_value(const EntryPoint& entryPoint);
 };
+// Set of EntryPoints.
 typedef std::unordered_set<EntryPoint, boost::hash<EntryPoint>> EntryPointSet;
 
+/**
+ * Code reference.
+ */
 struct Reference {
   u24 target;
   u24 subroutinePC;
 
+  // Hash table utils.
   bool operator==(const Reference& other) const;
   friend std::size_t hash_value(const Reference& reference);
 };
+// Set of References.
 typedef std::unordered_set<Reference, boost::hash<Reference>> ReferenceSet;
 
+/**
+ * Class holding the state of the ROM's analysis.
+ */
 class Analysis {
  public:
-  Analysis(const std::string& romPath);
+  Analysis(const std::string& romPath);  // Constructor.
+  void run();                            // Analyze the ROM.
 
-  void run();
+  // Add an instruction to the analysis.
   Instruction* addInstruction(u24 pc,
                               u24 subroutinePC,
                               u8 opcode,
                               u24 argument,
                               State state);
+  // Add a reference from an instruction to another.
   void addReference(u24 source, u24 target, u24 subroutinePC);
+  // Add a subroutine to the analysis.
   void addSubroutine(u24 pc, std::optional<std::string> label = std::nullopt);
-  bool hasVisited(const Instruction& instruction) const;
 
-  ROM rom;
-  std::map<u24, Subroutine> subroutines;
+  ROM rom;                                // The ROM being analyzed.
+  std::map<u24, Subroutine> subroutines;  // All the analyzed subroutines.
 
  private:
-  void clear();
-  void generateLocalLabels();
+  void clear();                // Clear the results of the analysis.
+  void generateLocalLabels();  // Generate local label names.
 
+  // ROM's entry points.
   EntryPointSet entryPoints;
+  // All the analyzed instructions.
   std::unordered_map<u24, InstructionSet> instructions;
+  // Instructions referenced by other instructions.
   std::unordered_map<u24, ReferenceSet> references;
 };
