@@ -1,11 +1,14 @@
 #include "gui/disassemblyview.hpp"
 
 #include "analysis.hpp"
+#include "highlighter.hpp"
 #include "utils.hpp"
 
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
   setFontFamily("monospace");
   setReadOnly(true);
+
+  highlighter = new Highlighter(document());
 }
 
 void DisassemblyView::setAnalysis(const Analysis* analysis) {
