@@ -40,6 +40,7 @@ struct StateChange {
 
   void set(u8 mask);
   void reset(u8 mask);
+  void applyInference(StateChange inference);
 
   bool operator==(const StateChange& other) const;
   friend std::size_t hash_value(const StateChange& stateChange);

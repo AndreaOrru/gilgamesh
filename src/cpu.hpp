@@ -24,6 +24,7 @@ class CPU {
   void sepRep(const Instruction& instruction);
 
   void applyStateChange(StateChange stateChange);
+  void deriveStateInference(const Instruction& instruction);
   Subroutine* subroutine();
   void propagateSubroutineState(u24 target);
 
@@ -34,4 +35,5 @@ class CPU {
   u24 subroutinePC;
   State state;
   StateChange stateChange;
+  StateChange stateInference;
 };

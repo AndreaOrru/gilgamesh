@@ -37,6 +37,8 @@ void CPU::step() {
 void CPU::execute(const Instruction& instruction) {
   pc += instruction.size();
 
+  deriveStateInference(instruction);
+
   switch (instruction.type()) {
     case InstructionType::Branch:
       return branch(instruction);
@@ -122,6 +124,8 @@ void CPU::sepRep(const Instruction& instruction) {
     default:
       __builtin_unreachable();
   }
+
+  stateChange.applyInference(stateInference);
 }
 
 void CPU::applyStateChange(StateChange stateChange) {
@@ -132,6 +136,17 @@ void CPU::applyStateChange(StateChange stateChange) {
   if (auto x = stateChange.x) {
     this->state.x = *x;
     this->stateChange.x = *x;
+  }
+}
+
+void CPU::deriveStateInference(const Instruction& instruction) {
+  if (instruction.addressMode() == AddressMode::ImmediateM &&
+      !stateChange.m.has_value()) {
+    stateInference.m = (bool)state.m;
+  }
+  if (instruction.addressMode() == AddressMode::ImmediateX &&
+      !stateChange.x.has_value()) {
+    stateInference.x = (bool)state.x;
   }
 }
 

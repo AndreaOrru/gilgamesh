@@ -39,6 +39,15 @@ void StateChange::reset(u8 mask) {
   x = change.x ? false : x;
 }
 
+void StateChange::applyInference(StateChange inference) {
+  if (m.has_value() && (m == inference.m)) {
+    m = nullopt;
+  }
+  if (x.has_value() && (x == inference.x)) {
+    x = nullopt;
+  }
+}
+
 bool StateChange::operator==(const StateChange& other) const {
   return m == other.m && x == other.x;
 };
