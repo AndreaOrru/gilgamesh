@@ -25,22 +25,21 @@ void CPU::step() {
   auto opcode = analysis->rom.readByte(pc);
   auto argument = analysis->rom.readAddress(pc + 1);
   auto instruction =
-      Instruction(analysis, pc, subroutinePC, opcode, argument, state);
+      analysis->addInstruction(pc, subroutinePC, opcode, argument, state);
 
-  if (analysis->hasVisited(instruction)) {
+  if (instruction == nullptr) {
     stop = true;
   } else {
-    analysis->addInstruction(instruction);
     execute(instruction);
   }
 }
 
-void CPU::execute(const Instruction& instruction) {
-  pc += instruction.size();
+void CPU::execute(const Instruction* instruction) {
+  pc += instruction->size();
 
   deriveStateInference(instruction);
 
-  switch (instruction.type()) {
+  switch (instruction->type()) {
     case InstructionType::Branch:
       return branch(instruction);
     case InstructionType::Call:
@@ -53,26 +52,26 @@ void CPU::execute(const Instruction& instruction) {
       return ret(instruction);
     case InstructionType::SepRep:
       return sepRep(instruction);
-    // case InstructionType::Pop:
-    //   return pop(instruction);
-    // case InstructionType::Push:
-    //   return push(instruction);
+    case InstructionType::Pop:
+      return pop(instruction);
+    case InstructionType::Push:
+      return push(instruction);
     default:
       return;
   }
 }
 
-void CPU::branch(const Instruction& instruction) {
+void CPU::branch(const Instruction* instruction) {
   CPU cpu(*this);
   cpu.run();
 
-  auto target = *instruction.absoluteArgument();
-  analysis->addReference(instruction.pc, target, subroutinePC);
+  auto target = *instruction->absoluteArgument();
+  analysis->addReference(instruction->pc, target, subroutinePC);
   pc = target;
 }
 
-void CPU::call(const Instruction& instruction) {
-  auto target = instruction.absoluteArgument();
+void CPU::call(const Instruction* instruction) {
+  auto target = instruction->absoluteArgument();
   if (!target.has_value()) {
     return unknownStateChange(UnknownReason::IndirectJump);
   }
@@ -81,43 +80,43 @@ void CPU::call(const Instruction& instruction) {
   cpu.pc = *target;
   cpu.subroutinePC = *target;
   cpu.stateChange = StateChange();
-  switch (instruction.operation()) {
+  switch (instruction->operation()) {
     case Op::JSR:
-      cpu.stack.push(&instruction, instruction.pc, 2);
+      cpu.stack.push(instruction, instruction->pc, 2);
       break;
     case Op::JSL:
-      cpu.stack.push(&instruction, instruction.pc, 3);
+      cpu.stack.push(instruction, instruction->pc, 3);
       break;
     default:
       __builtin_unreachable();
   }
 
   analysis->addSubroutine(*target);
-  analysis->addReference(instruction.pc, *target, subroutinePC);
+  analysis->addReference(instruction->pc, *target, subroutinePC);
   cpu.run();
 
   propagateSubroutineState(*target);
 }
 
-void CPU::interrupt(const Instruction& instruction) {
+void CPU::interrupt(const Instruction* instruction) {
   return unknownStateChange(UnknownReason::SuspectInstruction);
 }
 
-void CPU::jump(const Instruction& instruction) {
-  if (auto target = instruction.absoluteArgument()) {
-    analysis->addReference(instruction.pc, *target, subroutinePC);
+void CPU::jump(const Instruction* instruction) {
+  if (auto target = instruction->absoluteArgument()) {
+    analysis->addReference(instruction->pc, *target, subroutinePC);
     pc = *target;
   } else {
     return unknownStateChange(UnknownReason::IndirectJump);
   }
 }
 
-void CPU::ret(const Instruction& instruction) {
-  if (instruction.operation() == Op::RTI) {
+void CPU::ret(const Instruction* instruction) {
+  if (instruction->operation() == Op::RTI) {
     return standardRet();
   }
 
-  size_t retSize = instruction.operation() == Op::RTS ? 2 : 3;
+  size_t retSize = instruction->operation() == Op::RTS ? 2 : 3;
   auto stackEntries = stack.pop(retSize);
   if (checkReturnManipulation(instruction, stackEntries) == false) {
     return standardRet();
@@ -126,10 +125,10 @@ void CPU::ret(const Instruction& instruction) {
   return unknownStateChange(UnknownReason::StackManipulation);
 }
 
-void CPU::sepRep(const Instruction& instruction) {
-  auto arg = *instruction.absoluteArgument();
+void CPU::sepRep(const Instruction* instruction) {
+  auto arg = *instruction->absoluteArgument();
 
-  switch (instruction.operation()) {
+  switch (instruction->operation()) {
     case Op::SEP:
       state.set(arg);
       stateChange.set(arg);
@@ -147,6 +146,68 @@ void CPU::sepRep(const Instruction& instruction) {
   stateChange.applyInference(stateInference);
 }
 
+void CPU::push(const Instruction* instruction) {
+  switch (instruction->operation()) {
+    case Op::PHP:
+      return stack.pushState(instruction, state, stateChange);
+
+    case Op::PHA:
+      return stack.push(instruction, nullopt, state.sizeA());
+
+    case Op::PHX:
+    case Op::PHY:
+      return stack.push(instruction, nullopt, state.sizeX());
+
+    case Op::PHB:
+    case Op::PHK:
+      return stack.push(instruction, nullopt, 1);
+
+    case Op::PHD:
+    case Op::PEA:
+    case Op::PER:
+    case Op::PEI:
+      return stack.push(instruction, nullopt, 2);
+
+    default:
+      __builtin_unreachable();
+  }
+}
+
+void CPU::pop(const Instruction* instruction) {
+  switch (instruction->operation()) {
+    case Op::PLP: {
+      auto entry = stack.popOne();
+      if (entry.instruction && entry.instruction->operation() == Op::PHP) {
+        auto [state, stateChange] = get<pair<State, StateChange>>(entry.data);
+        this->state = state;
+        this->stateChange = stateChange;
+      } else {
+        return unknownStateChange(UnknownReason::StackManipulation);
+      }
+    } break;
+
+    case Op::PLA:
+      stack.pop(state.sizeA());
+      break;
+
+    case Op::PLX:
+    case Op::PLY:
+      stack.pop(state.sizeX());
+      break;
+
+    case Op::PLB:
+      stack.popOne();
+      break;
+
+    case Op::PLD:
+      stack.pop(2);
+      break;
+
+    default:
+      __builtin_unreachable();
+  }
+}
+
 void CPU::applyStateChange(StateChange stateChange) {
   if (auto m = stateChange.m) {
     this->state.m = *m;
@@ -158,9 +219,9 @@ void CPU::applyStateChange(StateChange stateChange) {
   }
 }
 
-bool CPU::checkReturnManipulation(const Instruction& instruction,
+bool CPU::checkReturnManipulation(const Instruction* instruction,
                                   vector<StackEntry> entries) {
-  auto op = instruction.operation();
+  auto op = instruction->operation();
 
   for (auto& entry : entries) {
     auto caller = entry.instruction;
@@ -178,12 +239,12 @@ bool CPU::checkReturnManipulation(const Instruction& instruction,
   return false;
 }
 
-void CPU::deriveStateInference(const Instruction& instruction) {
-  if (instruction.addressMode() == AddressMode::ImmediateM &&
+void CPU::deriveStateInference(const Instruction* instruction) {
+  if (instruction->addressMode() == AddressMode::ImmediateM &&
       !stateChange.m.has_value()) {
     stateInference.m = (bool)state.m;
   }
-  if (instruction.addressMode() == AddressMode::ImmediateX &&
+  if (instruction->addressMode() == AddressMode::ImmediateX &&
       !stateChange.x.has_value()) {
     stateInference.x = (bool)state.x;
   }

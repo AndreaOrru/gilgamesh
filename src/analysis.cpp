@@ -53,12 +53,22 @@ void Analysis::run() {
   generateLocalLabels();
 }
 
-void Analysis::addInstruction(const Instruction& instruction) {
-  auto& instructionSet = instructions.try_emplace(instruction.pc).first->second;
-  auto instructionIter = instructionSet.insert(instruction).first;
+Instruction* Analysis::addInstruction(u24 pc,
+                                      u24 subroutinePC,
+                                      u8 opcode,
+                                      u24 argument,
+                                      State state) {
+  auto& instructionSet = instructions.try_emplace(pc).first->second;
+  auto [instructionIter, inserted] =
+      instructionSet.emplace(this, pc, subroutinePC, opcode, argument, state);
+  if (!inserted) {
+    return nullptr;
+  }
 
-  auto& subroutine = subroutines.at(instruction.subroutine);
-  subroutine.addInstruction((Instruction*)&(*instructionIter));
+  auto& subroutine = subroutines.at(subroutinePC);
+  auto instructionPtr = (Instruction*)&(*instructionIter);
+  subroutine.addInstruction(instructionPtr);
+  return instructionPtr;
 }
 
 void Analysis::addReference(u24 source, u24 target, u24 subroutinePC) {

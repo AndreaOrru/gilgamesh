@@ -17,19 +17,21 @@ class CPU {
 
  private:
   void step();
-  void execute(const Instruction& instruction);
+  void execute(const Instruction* instruction);
 
-  void branch(const Instruction& instruction);
-  void call(const Instruction& instruction);
-  void interrupt(const Instruction& instruction);
-  void jump(const Instruction& instruction);
-  void ret(const Instruction& instruction);
-  void sepRep(const Instruction& instruction);
+  void branch(const Instruction* instruction);
+  void call(const Instruction* instruction);
+  void interrupt(const Instruction* instruction);
+  void jump(const Instruction* instruction);
+  void ret(const Instruction* instruction);
+  void sepRep(const Instruction* instruction);
+  void pop(const Instruction* instruction);
+  void push(const Instruction* instruction);
 
   void applyStateChange(StateChange stateChange);
-  bool checkReturnManipulation(const Instruction& instruction,
+  bool checkReturnManipulation(const Instruction* instruction,
                                std::vector<StackEntry> entries);
-  void deriveStateInference(const Instruction& instruction);
+  void deriveStateInference(const Instruction* instruction);
   void standardRet();
   Subroutine* subroutine();
   void propagateSubroutineState(u24 target);

@@ -36,7 +36,11 @@ class Analysis {
   Analysis(const std::string& romPath);
 
   void run();
-  void addInstruction(const Instruction& instruction);
+  Instruction* addInstruction(u24 pc,
+                              u24 subroutinePC,
+                              u8 opcode,
+                              u24 argument,
+                              State state);
   void addReference(u24 source, u24 target, u24 subroutinePC);
   void addSubroutine(u24 pc, std::optional<std::string> label = std::nullopt);
   bool hasVisited(const Instruction& instruction) const;
