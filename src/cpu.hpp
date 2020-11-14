@@ -7,6 +7,10 @@ class Analysis;
 class Instruction;
 
 class CPU {
+ public:
+  CPU(Analysis* analysis, u24 pc, u24 subroutine, State state);
+  void run();
+
  private:
   void step();
   void execute(const Instruction& instruction);
@@ -24,8 +28,4 @@ class CPU {
   u24 pc;
   u24 subroutine;
   State state;
-
- public:
-  CPU(Analysis* analysis, u24 pc, u24 subroutine, State state);
-  void run();
 };

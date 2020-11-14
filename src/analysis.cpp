@@ -39,10 +39,10 @@ void Analysis::run() {
 }
 
 void Analysis::addInstruction(const Instruction& instruction) {
-  auto instructionSet = instructions.try_emplace(instruction.pc).first->second;
+  auto& instructionSet = instructions.try_emplace(instruction.pc).first->second;
   auto instructionIter = instructionSet.insert(instruction).first;
 
-  auto subroutine = subroutines.at(instruction.subroutine);
+  auto& subroutine = subroutines.at(instruction.subroutine);
   subroutine.addInstruction(&(*instructionIter));
 }
 

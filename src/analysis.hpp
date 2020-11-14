@@ -30,14 +30,12 @@ class Analysis {
   void addSubroutine(u24 pc, std::string label);
   bool hasVisited(const Instruction& instruction) const;
 
+  ROM rom;
+  std::map<u24, Subroutine> subroutines;
+
  private:
   void clear();
 
-  ROM rom;
   EntryPointSet entryPoints;
-
   std::unordered_map<u24, InstructionSet> instructions;
-  std::map<u24, Subroutine> subroutines;
-
-  friend class CPU;
 };

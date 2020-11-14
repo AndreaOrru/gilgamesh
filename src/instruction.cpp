@@ -177,7 +177,7 @@ optional<u24> Instruction::absoluteArgument() const {
 
 string Instruction::argumentString() const {
   auto arg = argument();
-  auto sz = size();
+  auto sz = argumentSize();
 
   switch (addressMode()) {
     default:
@@ -237,4 +237,14 @@ string Instruction::argumentString() const {
     case Move:
       return format("%02X,%02X", *arg >> 8, *arg & 0xFF);
   };
+}
+
+string Instruction::toString() const {
+  string s;
+
+  s += name();
+  s += " ";
+  s += argumentString();
+
+  return s;
 }

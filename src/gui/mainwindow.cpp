@@ -49,5 +49,11 @@ void MainWindow::openROM(const QString& path) {
     ROM rom(fileName.toStdString());
     analysis = new Analysis(rom);
     analysis->run();
+
+    for (auto& [pc, subroutine] : analysis->subroutines) {
+      for (auto& [pc, instruction] : subroutine.instructions) {
+        qInfo() << instruction->toString().c_str();
+      }
+    }
   }
 }

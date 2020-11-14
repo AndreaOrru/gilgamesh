@@ -46,6 +46,7 @@ class Instruction {
   std::optional<u24> argument() const;
   std::optional<u24> absoluteArgument() const;
   std::string argumentString() const;
+  std::string toString() const;
 
   u24 pc;
   u24 subroutine;

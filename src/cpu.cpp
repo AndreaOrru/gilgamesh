@@ -4,7 +4,9 @@
 #include "rom.hpp"
 
 CPU::CPU(Analysis* analysis, u24 pc, u24 subroutine, State state)
-    : analysis{analysis}, pc{pc}, subroutine{subroutine}, state{state} {}
+    : analysis{analysis}, pc{pc}, subroutine{subroutine}, state{state} {
+  stop = false;
+}
 
 void CPU::run() {
   while (!stop) {
