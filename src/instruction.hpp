@@ -50,6 +50,7 @@ class Instruction {
 
   u24 pc;
   u24 subroutine;
+  std::optional<std::string> label = std::nullopt;
 
  private:
   Analysis* analysis;

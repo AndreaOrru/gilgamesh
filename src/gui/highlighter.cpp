@@ -13,6 +13,8 @@ void Highlighter::setupFormats() {
   labelFormat.setForeground(Qt::darkRed);
   labelFormat.setFontWeight(QFont::Bold);
 
+  localLabelFormat.setForeground(Qt::darkRed);
+
   opcodeFormat.setForeground(Qt::darkBlue);
 }
 
@@ -29,6 +31,10 @@ void Highlighter::setupPatterns() {
 
   rule.pattern = QRegularExpression("^[A-Za-z0-9_]+:");
   rule.format = labelFormat;
+  rules.append(rule);
+
+  rule.pattern = QRegularExpression("^\\.[A-Za-z0-9_]+:");
+  rule.format = localLabelFormat;
   rules.append(rule);
 
   rule.pattern = QRegularExpression(";[^\n]*");

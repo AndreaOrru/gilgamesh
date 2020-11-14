@@ -18,6 +18,17 @@ size_t hash_value(const EntryPoint& entryPoint) {
   return seed;
 }
 
+bool Reference::operator==(const Reference& other) const {
+  return target == other.target && subroutinePC == other.subroutinePC;
+}
+
+size_t hash_value(const Reference& reference) {
+  size_t seed = 0;
+  boost::hash_combine(seed, reference.target);
+  boost::hash_combine(seed, reference.subroutinePC);
+  return seed;
+}
+
 Analysis::Analysis(const std::string& romPath) : rom(romPath) {
   entryPoints = {
       {.label = "reset", .pc = rom.resetVector(), .state = State()},
@@ -38,6 +49,8 @@ void Analysis::run() {
     CPU cpu(this, e.pc, e.pc, e.state);
     cpu.run();
   }
+
+  generateLocalLabels();
 }
 
 void Analysis::addInstruction(const Instruction& instruction) {
@@ -45,7 +58,12 @@ void Analysis::addInstruction(const Instruction& instruction) {
   auto instructionIter = instructionSet.insert(instruction).first;
 
   auto& subroutine = subroutines.at(instruction.subroutine);
-  subroutine.addInstruction(&(*instructionIter));
+  subroutine.addInstruction((Instruction*)&(*instructionIter));
+}
+
+void Analysis::addReference(u24 source, u24 target, u24 subroutinePC) {
+  auto& referenceSet = references.try_emplace(source).first->second;
+  referenceSet.insert({target, subroutinePC});
 }
 
 void Analysis::addSubroutine(u24 pc, optional<string> label) {
@@ -60,4 +78,16 @@ bool Analysis::hasVisited(const Instruction& instruction) const {
     return instructionSet.count(instruction) > 0;
   }
   return false;
+}
+
+void Analysis::generateLocalLabels() {
+  for (auto& [source, referenceSet] : references) {
+    for (auto& [target, subroutinePC] : referenceSet) {
+      if (subroutines.count(target) == 0) {
+        auto& subroutine = subroutines.at(subroutinePC);
+        auto& instruction = subroutine.instructions.at(target);
+        instruction->label = format("loc_%06X", target);
+      }
+    }
+  }
 }

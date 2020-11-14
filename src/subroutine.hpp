@@ -11,10 +11,10 @@ class Instruction;
 class Subroutine {
  public:
   Subroutine(u24 pc, std::string label);
-  void addInstruction(const Instruction* instruction);
+  void addInstruction(Instruction* instruction);
 
   u24 pc;
   std::string label;
-  std::map<u24, const Instruction*> instructions;
+  std::map<u24, Instruction*> instructions;
   StateChangeSet stateChanges;
 };

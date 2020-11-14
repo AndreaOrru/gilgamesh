@@ -63,7 +63,9 @@ void CPU::branch(const Instruction& instruction) {
   CPU cpu(*this);
   cpu.run();
 
-  pc = *instruction.absoluteArgument();
+  auto target = *instruction.absoluteArgument();
+  analysis->addReference(instruction.pc, target, subroutinePC);
+  pc = target;
 }
 
 void CPU::call(const Instruction& instruction) {
@@ -79,6 +81,7 @@ void CPU::call(const Instruction& instruction) {
   cpu.stateChange = StateChange();
 
   analysis->addSubroutine(*target);
+  analysis->addReference(instruction.pc, *target, subroutinePC);
   cpu.run();
 
   propagateSubroutineState(*target);
@@ -90,6 +93,7 @@ void CPU::interrupt(const Instruction& instruction) {
 
 void CPU::jump(const Instruction& instruction) {
   if (auto target = instruction.absoluteArgument()) {
+    analysis->addReference(instruction.pc, *target, subroutinePC);
     pc = *target;
   } else {
     stop = true;

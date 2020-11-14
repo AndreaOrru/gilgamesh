@@ -30,6 +30,10 @@ void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
 }
 
 void DisassemblyView::renderInstruction(const Instruction* instruction) {
+  if (auto label = instruction->label) {
+    append(qformat(".%s:", label->c_str()));
+  }
+
   auto code = qformat("  %-30s; $%06X | %s", instruction->toString().c_str(),
                       instruction->pc, "");
   append(code);

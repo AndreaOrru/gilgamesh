@@ -24,5 +24,6 @@ class Highlighter : public QSyntaxHighlighter {
 
   QTextCharFormat commentFormat;
   QTextCharFormat labelFormat;
+  QTextCharFormat localLabelFormat;
   QTextCharFormat opcodeFormat;
 };
