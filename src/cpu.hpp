@@ -10,7 +10,13 @@ class CPU {
  private:
   void step();
   void execute(const Instruction& instruction);
+
   void branch(const Instruction& instruction);
+  void call(const Instruction& instruction);
+  void interrupt(const Instruction& instruction);
+  void jump(const Instruction& instruction);
+  void ret(const Instruction& instruction);
+  void sepRep(const Instruction& instruction);
 
   Analysis* analysis;
   bool stop;

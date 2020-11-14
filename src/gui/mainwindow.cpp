@@ -1,5 +1,6 @@
 #include <QtWidgets>
 
+#include "analysis.hpp"
 #include "gui/mainwindow.hpp"
 #include "rom.hpp"
 
@@ -42,10 +43,11 @@ void MainWindow::openROM(const QString& path) {
   }
 
   if (!fileName.isEmpty()) {
-    if (rom != nullptr) {
-      delete rom;
+    if (analysis != nullptr) {
+      delete analysis;
     }
-    rom = new ROM(fileName.toStdString());
-    qInfo() << (int)rom->romType;
+    ROM rom(fileName.toStdString());
+    analysis = new Analysis(rom);
+    analysis->run();
   }
 }

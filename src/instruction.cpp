@@ -14,7 +14,7 @@ Instruction::Instruction(Analysis* analysis,
     : pc{pc},
       subroutine{subroutine},
       analysis{analysis},
-      _opcode{opcode},
+      opcode{opcode},
       _argument{argument},
       state{state} {}
 
@@ -32,19 +32,19 @@ size_t hash_value(const Instruction& instruction) {
 }
 
 string Instruction::name() const {
-  return OPCODE_NAMES[opcode()];
+  return OPCODE_NAMES[operation()];
 }
 
-Op Instruction::opcode() const {
-  return OPCODE_TABLE[_opcode].first;
+Op Instruction::operation() const {
+  return OPCODE_TABLE[opcode].first;
 }
 
 AddressMode Instruction::addressMode() const {
-  return OPCODE_TABLE[_opcode].second;
+  return OPCODE_TABLE[opcode].second;
 }
 
 InstructionType Instruction::type() const {
-  switch (opcode()) {
+  switch (operation()) {
     case Op::JSR:
     case Op::JSL:
       return InstructionType::Call;

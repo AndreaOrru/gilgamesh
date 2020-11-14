@@ -2,8 +2,8 @@
 
 #include <QMainWindow>
 
+class Analysis;
 class QTextEdit;
-class ROM;
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
@@ -19,5 +19,5 @@ class MainWindow : public QMainWindow {
   void setupFileMenu();
 
   QTextEdit* editor;
-  ROM* rom;
+  Analysis* analysis;
 };

@@ -37,7 +37,7 @@ class Instruction {
   friend std::size_t hash_value(const Instruction& instruction);
 
   std::string name() const;
-  Op opcode() const;
+  Op operation() const;
   AddressMode addressMode() const;
   InstructionType type() const;
   bool isControl() const;
@@ -52,7 +52,7 @@ class Instruction {
 
  private:
   Analysis* analysis;
-  u8 _opcode;
+  u8 opcode;
   u24 _argument;
   State state;
 };

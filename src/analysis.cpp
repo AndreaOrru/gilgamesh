@@ -1,5 +1,6 @@
-#include "analysis.hpp"
 #include <boost/container_hash/hash_fwd.hpp>
+
+#include "analysis.hpp"
 #include "cpu.hpp"
 #include "instruction.hpp"
 
@@ -30,8 +31,8 @@ void Analysis::clear() {
 void Analysis::run() {
   clear();
 
-  for (auto e : entryPoints) {
-    // addSubroutine(ep.pc, ep.label);
+  for (auto& e : entryPoints) {
+    addSubroutine(e.pc, e.label);
     CPU cpu(this, e.pc, e.pc, e.state);
     cpu.run();
   }
@@ -41,8 +42,12 @@ void Analysis::addInstruction(const Instruction& instruction) {
   auto instructionSet = instructions.try_emplace(instruction.pc).first->second;
   auto instructionIter = instructionSet.insert(instruction).first;
 
-  auto subroutine = subroutines[instruction.subroutine];
+  auto subroutine = subroutines.at(instruction.subroutine);
   subroutine.addInstruction(&(*instructionIter));
+}
+
+void Analysis::addSubroutine(u24 pc, string label) {
+  subroutines.try_emplace(pc, pc, label);
 }
 
 bool Analysis::hasVisited(const Instruction& instruction) const {

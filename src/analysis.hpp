@@ -27,6 +27,7 @@ class Analysis {
 
   void run();
   void addInstruction(const Instruction& instruction);
+  void addSubroutine(u24 pc, std::string label);
   bool hasVisited(const Instruction& instruction) const;
 
  private:

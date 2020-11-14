@@ -36,13 +36,75 @@ void CPU::execute(const Instruction& instruction) {
 
   switch (instruction.type()) {
     case InstructionType::Branch:
-      branch(instruction);
-
+      return branch(instruction);
+    case InstructionType::Call:
+      return call(instruction);
+    case InstructionType::Interrupt:
+      return interrupt(instruction);
+    case InstructionType::Jump:
+      return jump(instruction);
+    case InstructionType::Return:
+      return ret(instruction);
+    case InstructionType::SepRep:
+      return sepRep(instruction);
+    // case InstructionType::Pop:
+    //   return pop(instruction);
+    // case InstructionType::Push:
+    //   return push(instruction);
     default:
       return;
   }
 }
 
 void CPU::branch(const Instruction& instruction) {
-  return;
+  CPU cpu(*this);
+  cpu.run();
+
+  pc = *instruction.absoluteArgument();
+}
+
+void CPU::call(const Instruction& instruction) {
+  auto target = instruction.absoluteArgument();
+  if (!target.has_value()) {
+    stop = true;
+    return;
+  }
+
+  CPU cpu(*this);
+  cpu.pc = *target;
+  cpu.subroutine = *target;
+
+  analysis->addSubroutine(*target, "");
+  cpu.run();
+}
+
+void CPU::interrupt(const Instruction& instruction) {
+  stop = true;
+}
+
+void CPU::jump(const Instruction& instruction) {
+  if (auto target = instruction.absoluteArgument()) {
+    pc = *target;
+  } else {
+    stop = true;
+  }
+}
+
+void CPU::ret(const Instruction& instruction) {
+  stop = true;
+}
+
+void CPU::sepRep(const Instruction& instruction) {
+  auto arg = *instruction.absoluteArgument();
+
+  switch (instruction.operation()) {
+    case Op::SEP:
+      break;
+
+    case Op::REP:
+      break;
+
+    default:
+      __builtin_unreachable();
+  }
 }
