@@ -1,12 +1,15 @@
 #pragma once
 
+#include <boost/container_hash/hash.hpp>
 #include <optional>
 #include <string>
+#include <unordered_set>
 
 #include "opcodes.hpp"
 #include "state.hpp"
 #include "types.hpp"
 
+class Analysis;
 class Subroutine;
 
 enum class InstructionType {
@@ -23,11 +26,16 @@ enum class InstructionType {
 
 class Instruction {
  public:
-  Instruction(u24 pc,
+  Instruction(Analysis* analysis,
+              u24 pc,
+              u24 subroutine,
               u8 opcode,
               u24 argument,
-              State state,
-              Subroutine* subroutine);
+              State state);
+
+  bool operator==(const Instruction& other) const;
+  friend std::size_t hash_value(const Instruction& instruction);
+
   std::string name() const;
   Op opcode() const;
   AddressMode addressMode() const;
@@ -39,10 +47,15 @@ class Instruction {
   std::optional<u24> absoluteArgument() const;
   std::string argumentString() const;
 
- private:
   u24 pc;
+  u24 subroutine;
+
+ private:
+  Analysis* analysis;
   u8 _opcode;
   u24 _argument;
   State state;
-  Subroutine* subroutine;
 };
+
+typedef std::unordered_set<Instruction, boost::hash<Instruction>>
+    InstructionSet;

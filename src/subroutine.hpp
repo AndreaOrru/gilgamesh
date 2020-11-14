@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <map>
 
 #include "types.hpp"
 
@@ -9,5 +9,8 @@ class Instruction;
 class Subroutine {
  private:
   u24 pc;
-  std::vector<Instruction*> instructions;
+  std::map<u24, const Instruction*> instructions;
+
+ public:
+  void addInstruction(const Instruction* instruction);
 };

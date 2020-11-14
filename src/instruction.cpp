@@ -1,19 +1,35 @@
 #include "instruction.hpp"
+#include "analysis.hpp"
 #include "opcodes.hpp"
 #include "utils.hpp"
 
 using namespace std;
 
-Instruction::Instruction(u24 pc,
+Instruction::Instruction(Analysis* analysis,
+                         u24 pc,
+                         u24 subroutine,
                          u8 opcode,
                          u24 argument,
-                         State state,
-                         Subroutine* subroutine)
+                         State state)
     : pc{pc},
+      subroutine{subroutine},
+      analysis{analysis},
       _opcode{opcode},
       _argument{argument},
-      state{state},
-      subroutine{subroutine} {}
+      state{state} {}
+
+bool Instruction::operator==(const Instruction& other) const {
+  return pc == other.pc && subroutine == other.subroutine &&
+         state == other.state;
+}
+
+size_t hash_value(const Instruction& instruction) {
+  size_t seed = 0;
+  boost::hash_combine(seed, instruction.pc);
+  boost::hash_combine(seed, instruction.subroutine);
+  boost::hash_combine(seed, instruction.state.p);
+  return seed;
+}
 
 string Instruction::name() const {
   return OPCODE_NAMES[opcode()];

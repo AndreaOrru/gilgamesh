@@ -25,5 +25,5 @@ QT += widgets
 SOURCES += src/gui/mainwindow.cpp
 HEADERS += src/gui/mainwindow.hpp
 
-SOURCES += src/instruction.cpp src/main.cpp src/rom.cpp src/utils.cpp
-HEADERS += src/instruction.hpp src/opcodes.hpp src/rom.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp
+SOURCES += src/analysis.cpp src/cpu.cpp src/instruction.cpp src/main.cpp src/rom.cpp src/subroutine.cpp src/utils.cpp
+HEADERS += src/analysis.hpp src/cpu.hpp src/instruction.hpp src/opcodes.hpp src/rom.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp

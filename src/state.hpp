@@ -19,4 +19,6 @@ struct State {
 
   std::size_t sizeA() const { return m ? 1 : 2; }
   std::size_t sizeX() const { return x ? 1 : 2; }
+
+  bool operator==(const State& other) const { return p == other.p; }
 };
