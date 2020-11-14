@@ -27,6 +27,14 @@ bool State::operator==(const State& other) const {
   return p == other.p;
 }
 
+StateChange::StateChange() : StateChange(UnknownReason::Known) {}
+
+StateChange::StateChange(UnknownReason unknownReason)
+    : unknownReason{unknownReason} {}
+
+StateChange::StateChange(optional<bool> m, optional<bool> x)
+    : m{m}, x{x}, unknownReason{UnknownReason::Known} {}
+
 void StateChange::set(u8 mask) {
   auto change = State(mask);
   m = change.m ? true : m;
@@ -46,6 +54,10 @@ void StateChange::applyInference(StateChange inference) {
   if (x.has_value() && (x == inference.x)) {
     x = nullopt;
   }
+}
+
+bool StateChange::unknown() {
+  return unknownReason != UnknownReason::Known;
 }
 
 bool StateChange::operator==(const StateChange& other) const {

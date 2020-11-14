@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stack.hpp"
 #include "state.hpp"
 #include "types.hpp"
 
@@ -27,6 +28,7 @@ class CPU {
   void deriveStateInference(const Instruction& instruction);
   Subroutine* subroutine();
   void propagateSubroutineState(u24 target);
+  void unknownStateChange(UnknownReason reason);
 
   Analysis* analysis;
   bool stop = false;
@@ -36,4 +38,5 @@ class CPU {
   State state;
   StateChange stateChange;
   StateChange stateInference;
+  Stack stack;
 };

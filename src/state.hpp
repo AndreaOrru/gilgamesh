@@ -34,16 +34,33 @@ struct State {
   bool operator==(const State& other) const;
 };
 
+enum class UnknownReason {
+  Known,
+  Unknown,
+  SuspectInstruction,
+  MultipleReturnStates,
+  IndirectJump,
+  StackManipulation,
+  Recursion,
+  MutableCode,
+};
+
 struct StateChange {
-  std::optional<bool> m;
-  std::optional<bool> x;
+  StateChange();
+  StateChange(UnknownReason unknownReason);
+  StateChange(std::optional<bool> m, std::optional<bool> x);
 
   void set(u8 mask);
   void reset(u8 mask);
   void applyInference(StateChange inference);
+  bool unknown();
 
   bool operator==(const StateChange& other) const;
   friend std::size_t hash_value(const StateChange& stateChange);
+
+  std::optional<bool> m;
+  std::optional<bool> x;
+  UnknownReason unknownReason;
 };
 
 typedef std::unordered_set<StateChange, boost::hash<StateChange>>
