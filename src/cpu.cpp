@@ -106,9 +106,13 @@ void CPU::sepRep(const Instruction& instruction) {
 
   switch (instruction.operation()) {
     case Op::SEP:
+      state.set(arg);
+      stateChange.set(arg);
       break;
 
     case Op::REP:
+      state.reset(arg);
+      stateChange.reset(arg);
       break;
 
     default:

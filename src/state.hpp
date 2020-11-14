@@ -21,8 +21,15 @@ struct State {
     u8 p;
   };
 
+  State();
+  State(u8 p);
+  State(bool m, bool x);
+
   std::size_t sizeA() const;
   std::size_t sizeX() const;
+
+  void set(u8 mask);
+  void reset(u8 mask);
 
   bool operator==(const State& other) const;
 };
@@ -30,6 +37,9 @@ struct State {
 struct StateChange {
   std::optional<bool> m;
   std::optional<bool> x;
+
+  void set(u8 mask);
+  void reset(u8 mask);
 
   bool operator==(const StateChange& other) const;
   friend std::size_t hash_value(const StateChange& stateChange);
