@@ -27,7 +27,7 @@ class MainWindow : public QMainWindow {
   QDockWidget* leftDockWidget;
 
   DisassemblyView* disassemblyView;
-  LabelsView* labelsView;
+  LabelsView* subroutinesView;
 
   Analysis* analysis = nullptr;
 };

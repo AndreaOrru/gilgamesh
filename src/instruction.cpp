@@ -236,7 +236,7 @@ string Instruction::argumentString() const {
       return format("($%02X,s),y", *arg);
 
     case Move:
-      return format("%02X,%02X", *arg >> 8, *arg & 0xFF);
+      return format("$%02X,$%02X", *arg >> 8, *arg & 0xFF);
   };
 }
 

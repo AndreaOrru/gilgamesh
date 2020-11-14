@@ -7,6 +7,8 @@
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
   setFontFamily("monospace");
   setReadOnly(true);
+  setTextInteractionFlags(this->textInteractionFlags() |
+                          Qt::TextSelectableByKeyboard);
 
   highlighter = new Highlighter(document());
 }

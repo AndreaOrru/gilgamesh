@@ -33,16 +33,16 @@ void MainWindow::setupWidgets() {
   disassemblyView = new DisassemblyView(this);
   setCentralWidget(disassemblyView);
 
-  leftDockWidget = new QDockWidget("Labels", this);
-  labelsView = new LabelsView(leftDockWidget);
-  leftDockWidget->setWidget(labelsView);
+  leftDockWidget = new QDockWidget("Subroutines", this);
+  subroutinesView = new LabelsView(leftDockWidget);
+  leftDockWidget->setWidget(subroutinesView);
   addDockWidget(Qt::LeftDockWidgetArea, leftDockWidget);
 }
 
 void MainWindow::setupSignals() {
   connect(this, &MainWindow::analysisChanged, disassemblyView,
           &DisassemblyView::setAnalysis);
-  connect(this, &MainWindow::analysisChanged, labelsView,
+  connect(this, &MainWindow::analysisChanged, subroutinesView,
           &LabelsView::setAnalysis);
 }
 
