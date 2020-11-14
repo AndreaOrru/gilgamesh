@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QTextEdit>
+#include "subroutine.hpp"
 
 class Analysis;
 
@@ -12,4 +13,8 @@ class DisassemblyView : public QTextEdit {
 
  public slots:
   void setAnalysis(const Analysis* analysis);
+
+ private:
+  void renderSubroutine(const Subroutine& subroutine);
+  void renderInstruction(const Instruction* instruction);
 };
