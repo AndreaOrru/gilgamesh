@@ -1,6 +1,7 @@
 #include <boost/container_hash/hash_fwd.hpp>
 
 #include "analysis.hpp"
+
 #include "cpu.hpp"
 #include "instruction.hpp"
 #include "utils.hpp"
@@ -17,7 +18,7 @@ size_t hash_value(const EntryPoint& entryPoint) {
   return seed;
 }
 
-Analysis::Analysis(const ROM& rom) : rom{rom} {
+Analysis::Analysis(const std::string& romPath) : rom(romPath) {
   entryPoints = {
       {.label = "reset", .pc = rom.resetVector(), .state = State()},
       {.label = "nmi", .pc = rom.nmiVector(), .state = State()},

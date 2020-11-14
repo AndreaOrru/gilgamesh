@@ -1,10 +1,10 @@
 #include <QtWidgets>
 
+#include "gui/mainwindow.hpp"
+
 #include "analysis.hpp"
 #include "gui/disassemblyview.hpp"
 #include "gui/labelsview.hpp"
-#include "gui/mainwindow.hpp"
-#include "qdockwidget.h"
 #include "rom.hpp"
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -12,6 +12,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
   setupMenus();
   setupWidgets();
+  setupSignals();
 }
 
 void MainWindow::setupMenus() {
@@ -38,6 +39,13 @@ void MainWindow::setupWidgets() {
   addDockWidget(Qt::LeftDockWidgetArea, leftDockWidget);
 }
 
+void MainWindow::setupSignals() {
+  connect(this, &MainWindow::analysisChanged, disassemblyView,
+          &DisassemblyView::setAnalysis);
+  connect(this, &MainWindow::analysisChanged, labelsView,
+          &LabelsView::setAnalysis);
+}
+
 void MainWindow::openROM(const QString& path) {
   QString fileName = path;
 
@@ -50,15 +58,10 @@ void MainWindow::openROM(const QString& path) {
     if (analysis != nullptr) {
       delete analysis;
     }
-    ROM rom(fileName.toStdString());
-    analysis = new Analysis(rom);
+    analysis = new Analysis(fileName.toStdString());
     analysis->run();
 
-    QStringList labels;
-    for (auto& [pc, subroutine] : analysis->subroutines) {
-      labels << QString::fromStdString(subroutine.label);
-    }
-    labelsView->setLabels(labels);
+    emit analysisChanged(analysis);
   }
 }
 

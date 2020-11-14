@@ -1,12 +1,11 @@
 #include "cpu.hpp"
+
 #include "analysis.hpp"
 #include "instruction.hpp"
 #include "rom.hpp"
 
 CPU::CPU(Analysis* analysis, u24 pc, u24 subroutine, State state)
-    : analysis{analysis}, pc{pc}, subroutine{subroutine}, state{state} {
-  stop = false;
-}
+    : analysis{analysis}, pc{pc}, subroutine{subroutine}, state{state} {}
 
 void CPU::run() {
   while (!stop) {

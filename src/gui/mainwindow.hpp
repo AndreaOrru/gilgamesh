@@ -1,8 +1,6 @@
 #pragma once
 
 #include <QMainWindow>
-#include "gui/disassemblyview.hpp"
-#include "qdockwidget.h"
 
 class Analysis;
 class DisassemblyView;
@@ -14,18 +12,22 @@ class MainWindow : public QMainWindow {
  public:
   MainWindow(QWidget* parent = nullptr);
 
- public slots:
+ signals:
+  void analysisChanged(const Analysis* analysis);
+
+ private slots:
   void openROM(const QString& path = QString());
   void about();
 
  private:
   void setupMenus();
   void setupWidgets();
+  void setupSignals();
 
   QDockWidget* leftDockWidget;
 
   DisassemblyView* disassemblyView;
   LabelsView* labelsView;
 
-  Analysis* analysis;
+  Analysis* analysis = nullptr;
 };

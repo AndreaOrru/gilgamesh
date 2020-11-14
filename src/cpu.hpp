@@ -23,7 +23,7 @@ class CPU {
   void sepRep(const Instruction& instruction);
 
   Analysis* analysis;
-  bool stop;
+  bool stop = false;
 
   u24 pc;
   u24 subroutine;

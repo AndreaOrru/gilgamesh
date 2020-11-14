@@ -24,7 +24,7 @@ typedef std::unordered_set<EntryPoint, boost::hash<EntryPoint>> EntryPointSet;
 
 class Analysis {
  public:
-  Analysis(const ROM& rom);
+  Analysis(const std::string& romPath);
 
   void run();
   void addInstruction(const Instruction& instruction);

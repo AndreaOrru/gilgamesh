@@ -2,6 +2,8 @@
 
 #include <QListWidget>
 
+class Analysis;
+
 class LabelsView : public QListWidget {
   Q_OBJECT
 
@@ -9,5 +11,5 @@ class LabelsView : public QListWidget {
   LabelsView(QWidget* parent = nullptr);
 
  public slots:
-  void setLabels(QStringList labels);
+  void setAnalysis(const Analysis* analysis);
 };
