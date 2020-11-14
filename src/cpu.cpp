@@ -6,6 +6,8 @@
 #include "instruction.hpp"
 #include "rom.hpp"
 
+using namespace std;
+
 CPU::CPU(Analysis* analysis, u24 pc, u24 subroutinePC, State state)
     : analysis{analysis}, pc{pc}, subroutinePC{subroutinePC}, state{state} {}
 
@@ -81,10 +83,10 @@ void CPU::call(const Instruction& instruction) {
   cpu.stateChange = StateChange();
   switch (instruction.operation()) {
     case Op::JSR:
-      cpu.stack.push(instruction.pc, 2);
+      cpu.stack.push(&instruction, instruction.pc, 2);
       break;
     case Op::JSL:
-      cpu.stack.push(instruction.pc, 3);
+      cpu.stack.push(&instruction, instruction.pc, 3);
       break;
     default:
       __builtin_unreachable();
@@ -111,12 +113,17 @@ void CPU::jump(const Instruction& instruction) {
 }
 
 void CPU::ret(const Instruction& instruction) {
+  if (instruction.operation() == Op::RTI) {
+    return standardRet();
+  }
+
   size_t retSize = instruction.operation() == Op::RTS ? 2 : 3;
   auto stackEntries = stack.pop(retSize);
-  // TODO: check manipulation...
+  if (checkReturnManipulation(instruction, stackEntries) == false) {
+    return standardRet();
+  }
 
-  subroutine()->addStateChange(stateChange);
-  stop = true;
+  return unknownStateChange(UnknownReason::StackManipulation);
 }
 
 void CPU::sepRep(const Instruction& instruction) {
@@ -151,6 +158,26 @@ void CPU::applyStateChange(StateChange stateChange) {
   }
 }
 
+bool CPU::checkReturnManipulation(const Instruction& instruction,
+                                  vector<StackEntry> entries) {
+  auto op = instruction.operation();
+
+  for (auto& entry : entries) {
+    auto caller = entry.instruction;
+    if (caller == nullptr) {
+      return true;
+    }
+
+    if (op == Op::RTS && caller->operation() != Op::JSR) {
+      return true;
+    } else if (op == Op::RTL && caller->operation() != Op::JSL) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void CPU::deriveStateInference(const Instruction& instruction) {
   if (instruction.addressMode() == AddressMode::ImmediateM &&
       !stateChange.m.has_value()) {
@@ -160,6 +187,11 @@ void CPU::deriveStateInference(const Instruction& instruction) {
       !stateChange.x.has_value()) {
     stateInference.x = (bool)state.x;
   }
+}
+
+void CPU::standardRet() {
+  subroutine()->addStateChange(stateChange);
+  stop = true;
 }
 
 Subroutine* CPU::subroutine() {

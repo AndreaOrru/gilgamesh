@@ -2,24 +2,29 @@
 
 using namespace std;
 
-void Stack::setPointer(u16 pointer) {
+void Stack::setPointer(const Instruction* instruction, u16 pointer) {
+  lastManipulator = instruction;
   this->pointer = pointer;
 }
 
-void Stack::push(u24 data, size_t size) {
+void Stack::push(const Instruction* instruction, u24 data, size_t size) {
   for (size_t i = size; i > 0; i--) {
     u8 byte = (data >> (i * 8)) & 0xFF;
-    memory[pointer--] = byte;
+    memory[pointer--] = {instruction, byte};
   }
 }
 
-optional<u8> Stack::popByte() {
+StackEntry Stack::popByte() {
   auto search = memory.find(++pointer);
-  return (search != memory.end()) ? optional(search->second) : nullopt;
+  if (search != memory.end()) {
+    return search->second;
+  } else {
+    return {nullptr, nullopt};
+  }
 }
 
-vector<optional<u8>> Stack::pop(size_t size) {
-  vector<optional<u8>> result;
+vector<StackEntry> Stack::pop(size_t size) {
+  vector<StackEntry> result;
   for (size_t i = 0; i < size; i++) {
     result.push_back(popByte());
   }

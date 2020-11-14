@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "stack.hpp"
 #include "state.hpp"
 #include "types.hpp"
@@ -25,7 +27,10 @@ class CPU {
   void sepRep(const Instruction& instruction);
 
   void applyStateChange(StateChange stateChange);
+  bool checkReturnManipulation(const Instruction& instruction,
+                               std::vector<StackEntry> entries);
   void deriveStateInference(const Instruction& instruction);
+  void standardRet();
   Subroutine* subroutine();
   void propagateSubroutineState(u24 target);
   void unknownStateChange(UnknownReason reason);
