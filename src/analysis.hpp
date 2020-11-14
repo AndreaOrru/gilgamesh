@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -27,7 +28,7 @@ class Analysis {
 
   void run();
   void addInstruction(const Instruction& instruction);
-  void addSubroutine(u24 pc, std::string label);
+  void addSubroutine(u24 pc, std::optional<std::string> label = std::nullopt);
   bool hasVisited(const Instruction& instruction) const;
 
   ROM rom;

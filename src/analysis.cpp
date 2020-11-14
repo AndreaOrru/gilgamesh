@@ -3,6 +3,7 @@
 #include "analysis.hpp"
 #include "cpu.hpp"
 #include "instruction.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -46,8 +47,9 @@ void Analysis::addInstruction(const Instruction& instruction) {
   subroutine.addInstruction(&(*instructionIter));
 }
 
-void Analysis::addSubroutine(u24 pc, string label) {
-  subroutines.try_emplace(pc, pc, label);
+void Analysis::addSubroutine(u24 pc, optional<string> label) {
+  auto labelValue = label.value_or(format("sub_%06X", pc));
+  subroutines.try_emplace(pc, pc, labelValue);
 }
 
 bool Analysis::hasVisited(const Instruction& instruction) const {

@@ -76,7 +76,7 @@ void CPU::call(const Instruction& instruction) {
   cpu.pc = *target;
   cpu.subroutine = *target;
 
-  analysis->addSubroutine(*target, "");
+  analysis->addSubroutine(*target);
   cpu.run();
 }
 

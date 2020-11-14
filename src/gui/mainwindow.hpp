@@ -1,9 +1,12 @@
 #pragma once
 
 #include <QMainWindow>
+#include "gui/disassemblyview.hpp"
+#include "qdockwidget.h"
 
 class Analysis;
-class QTextEdit;
+class DisassemblyView;
+class LabelsView;
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
@@ -13,11 +16,16 @@ class MainWindow : public QMainWindow {
 
  public slots:
   void openROM(const QString& path = QString());
+  void about();
 
  private:
-  void setupEditor();
-  void setupFileMenu();
+  void setupMenus();
+  void setupWidgets();
 
-  QTextEdit* editor;
+  QDockWidget* leftDockWidget;
+
+  DisassemblyView* disassemblyView;
+  LabelsView* labelsView;
+
   Analysis* analysis;
 };
