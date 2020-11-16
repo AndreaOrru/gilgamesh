@@ -1,5 +1,3 @@
-#include <unordered_set>
-
 #include "cpu.hpp"
 
 #include "analysis.hpp"
@@ -8,16 +6,20 @@
 
 using namespace std;
 
+// Constructor.
 CPU::CPU(Analysis* analysis, u24 pc, u24 subroutinePC, State state)
     : analysis{analysis}, pc{pc}, subroutinePC{subroutinePC}, state{state} {}
 
+// Start emulating.
 void CPU::run() {
   while (!stop) {
     step();
   }
 }
 
+// Fetch and execute the next instruction.
 void CPU::step() {
+  // Stop if we have jumped into RAM.
   if (ROM::isRAM(pc)) {
     return unknownStateChange(UnknownReason::MutableCode);
   }
@@ -27,6 +29,7 @@ void CPU::step() {
   auto instruction =
       analysis->addInstruction(pc, subroutinePC, opcode, argument, state);
 
+  // Stop the analysis if we have already visited this instruction.
   if (instruction == nullptr) {
     stop = true;
   } else {
@@ -34,9 +37,12 @@ void CPU::step() {
   }
 }
 
+// Emulate an instruction.
 void CPU::execute(const Instruction* instruction) {
   pc += instruction->size();
 
+  // See if we can learn something about the *required*
+  // state of the CPU based on the current instruction.
   deriveStateInference(instruction);
 
   switch (instruction->type()) {
@@ -61,15 +67,21 @@ void CPU::execute(const Instruction* instruction) {
   }
 }
 
+// Branch emulation.
 void CPU::branch(const Instruction* instruction) {
+  // Run a parallel instance of the CPU to cover
+  // the case in which the branch is not taken.
   CPU cpu(*this);
   cpu.run();
 
+  // Log the fact that the current instruction references the
+  // instruction pointed by the branch. Then take the branch.
   auto target = *instruction->absoluteArgument();
   analysis->addReference(instruction->pc, target, subroutinePC);
   pc = target;
 }
 
+// Call emulation.
 void CPU::call(const Instruction* instruction) {
   auto target = instruction->absoluteArgument();
   if (!target.has_value()) {
@@ -98,6 +110,7 @@ void CPU::call(const Instruction* instruction) {
   propagateSubroutineState(*target);
 }
 
+// Interrupt emulation.
 void CPU::interrupt(const Instruction* instruction) {
   return unknownStateChange(UnknownReason::SuspectInstruction);
 }
@@ -111,6 +124,7 @@ void CPU::jump(const Instruction* instruction) {
   }
 }
 
+// Return emulation.
 void CPU::ret(const Instruction* instruction) {
   if (instruction->operation() == Op::RTI) {
     return standardRet();
@@ -125,6 +139,13 @@ void CPU::ret(const Instruction* instruction) {
   return unknownStateChange(UnknownReason::StackManipulation);
 }
 
+// Emulate a simple return.
+void CPU::standardRet() {
+  subroutine()->addStateChange(stateChange);
+  stop = true;
+}
+
+// SEP/REP emulation.
 void CPU::sepRep(const Instruction* instruction) {
   auto arg = *instruction->absoluteArgument();
 
@@ -143,9 +164,51 @@ void CPU::sepRep(const Instruction* instruction) {
       __builtin_unreachable();
   }
 
+  // Simplify the state change by applying our knowledge of the current state.
+  // If we know that the processor is operating in 8-bits accumulator mode and
+  // we switch to that mode, effectively no state change is being performed.
   stateChange.applyInference(stateInference);
 }
 
+// Pop value from stack.
+void CPU::pop(const Instruction* instruction) {
+  switch (instruction->operation()) {
+    case Op::PLP: {
+      auto entry = stack.popOne();
+      if (entry.instruction && entry.instruction->operation() == Op::PHP) {
+        // Regular state restoring.
+        auto [state, stateChange] = get<pair<State, StateChange>>(entry.data);
+        this->state = state;
+        this->stateChange = stateChange;
+      } else {
+        // Stack manipulation. Stop here.
+        return unknownStateChange(UnknownReason::StackManipulation);
+      }
+    } break;
+
+    case Op::PLA:
+      stack.pop(state.sizeA());
+      break;
+
+    case Op::PLX:
+    case Op::PLY:
+      stack.pop(state.sizeX());
+      break;
+
+    case Op::PLB:
+      stack.popOne();
+      break;
+
+    case Op::PLD:
+      stack.pop(2);
+      break;
+
+    default:
+      __builtin_unreachable();
+  }
+}
+
+// Push value onto stack.
 void CPU::push(const Instruction* instruction) {
   switch (instruction->operation()) {
     case Op::PHP:
@@ -173,41 +236,7 @@ void CPU::push(const Instruction* instruction) {
   }
 }
 
-void CPU::pop(const Instruction* instruction) {
-  switch (instruction->operation()) {
-    case Op::PLP: {
-      auto entry = stack.popOne();
-      if (entry.instruction && entry.instruction->operation() == Op::PHP) {
-        auto [state, stateChange] = get<pair<State, StateChange>>(entry.data);
-        this->state = state;
-        this->stateChange = stateChange;
-      } else {
-        return unknownStateChange(UnknownReason::StackManipulation);
-      }
-    } break;
-
-    case Op::PLA:
-      stack.pop(state.sizeA());
-      break;
-
-    case Op::PLX:
-    case Op::PLY:
-      stack.pop(state.sizeX());
-      break;
-
-    case Op::PLB:
-      stack.popOne();
-      break;
-
-    case Op::PLD:
-      stack.pop(2);
-      break;
-
-    default:
-      __builtin_unreachable();
-  }
-}
-
+// Apply a state change to the current CPU instance.
 void CPU::applyStateChange(StateChange stateChange) {
   if (auto m = stateChange.m) {
     this->state.m = *m;
@@ -219,6 +248,7 @@ void CPU::applyStateChange(StateChange stateChange) {
   }
 }
 
+// Check whether the return instruction is operating on a manipulated stack.
 bool CPU::checkReturnManipulation(const Instruction* instruction,
                                   vector<StackEntry> entries) {
   auto op = instruction->operation();
@@ -239,7 +269,12 @@ bool CPU::checkReturnManipulation(const Instruction* instruction,
   return false;
 }
 
+// Derive a state inference from the current state and instruction.
 void CPU::deriveStateInference(const Instruction* instruction) {
+  // If we're executing an instruction with a certain operand size,
+  // and no state change has been performed in the current subroutine,
+  // then we can infer that the state of the processor as we enter
+  // the subroutine *must* be the same in all cases.
   if (instruction->addressMode() == AddressMode::ImmediateM &&
       !stateChange.m.has_value()) {
     stateInference.m = (bool)state.m;
@@ -250,15 +285,13 @@ void CPU::deriveStateInference(const Instruction* instruction) {
   }
 }
 
-void CPU::standardRet() {
-  subroutine()->addStateChange(stateChange);
-  stop = true;
-}
-
+// Return a pointer to the current subroutine object.
 Subroutine* CPU::subroutine() {
   return &analysis->subroutines.at(subroutinePC);
 }
 
+// Take the state change of the given subroutine and
+// propagate it to to the current subroutine state.
 void CPU::propagateSubroutineState(u24 target) {
   auto& subroutine = analysis->subroutines.at(target);
   if (!subroutine.unknownStateChanges.empty()) {
@@ -273,6 +306,7 @@ void CPU::propagateSubroutineState(u24 target) {
   }
 }
 
+// Signal an unknown subroutine state change.
 void CPU::unknownStateChange(UnknownReason reason) {
   subroutine()->addStateChange(StateChange(reason));
   stop = true;
