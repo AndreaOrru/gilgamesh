@@ -2,6 +2,7 @@
 
 using namespace std;
 
+// Read a whole file into memory.
 vector<u8> readBinaryFile(const string& path) {
   FILE* file = fopen(path.c_str(), "rb");
 
