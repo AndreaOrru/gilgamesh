@@ -3,16 +3,16 @@
 using namespace std;
 
 // Set a new stack pointer.
-void Stack::setPointer(const Instruction* instruction, u16 pointer) {
-  lastManipulator = instruction;
+void Stack::setPointer(u16 pointer, const Instruction* instruction) {
   this->pointer = pointer;
+  lastManipulator = instruction;
 }
 
 // Push values onto the stack.
-void Stack::push(const Instruction* instruction,
+void Stack::push(size_t size,
                  optional<u24> data,
-                 size_t size) {
-  for (size_t i = size; i > 0; i--) {
+                 const Instruction* instruction) {
+  for (int i = size - 1; i >= 0; i--) {
     StackData stackData = nullopt;
     if (data.has_value()) {
       stackData = (*data >> (i * 8)) & 0xFF;
@@ -22,11 +22,16 @@ void Stack::push(const Instruction* instruction,
 }
 
 // Push state (PHP) onto the stack.
-void Stack::pushState(const Instruction* instruction,
-                      State state,
-                      StateChange stateChange) {
+void Stack::pushState(State state,
+                      StateChange stateChange,
+                      const Instruction* instruction) {
   memory[pointer--] = {instruction,
                        pair<State, StateChange>(state, stateChange)};
+}
+
+// Push a value onto the stack.
+void Stack::pushOne(optional<u24> data, const Instruction* instruction) {
+  push(1, data, instruction);
 }
 
 // Pop an entry from the stack.

@@ -35,6 +35,8 @@ class Instruction {
               u8 opcode,
               u24 argument,
               State state);
+  // Test constructor.
+  Instruction(u8 opcode);
 
   std::string name() const;         // Name of the instruction's operation.
   Op operation() const;             // Instruction's operation.

@@ -24,17 +24,21 @@ struct StackEntry {
 class Stack {
  public:
   // Set a new stack pointer.
-  void setPointer(const Instruction* instruction, u16 pointer);
+  void setPointer(u16 pointer, const Instruction* instruction);
 
   // Push values onto the stack.
-  void push(const Instruction* instruction,
-            std::optional<u24> data,
-            size_t size);
+  void push(size_t size,
+            std::optional<u24> data = std::nullopt,
+            const Instruction* instruction = nullptr);
 
   // Push state (PHP) onto the stack.
-  void pushState(const Instruction* instruction,
-                 State state,
-                 StateChange stateChange);
+  void pushState(State state,
+                 StateChange stateChange,
+                 const Instruction* instruction = nullptr);
+
+  // Push a value onto the stack.
+  void pushOne(std::optional<u24> data,
+               const Instruction* instruction = nullptr);
 
   // Pop an entry from the stack.
   StackEntry popOne();

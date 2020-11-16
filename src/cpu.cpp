@@ -94,10 +94,10 @@ void CPU::call(const Instruction* instruction) {
   cpu.stateChange = StateChange();
   switch (instruction->operation()) {
     case Op::JSR:
-      cpu.stack.push(instruction, instruction->pc, 2);
+      cpu.stack.push(2, instruction->pc, instruction);
       break;
     case Op::JSL:
-      cpu.stack.push(instruction, instruction->pc, 3);
+      cpu.stack.push(3, instruction->pc, instruction);
       break;
     default:
       __builtin_unreachable();
@@ -212,24 +212,24 @@ void CPU::pop(const Instruction* instruction) {
 void CPU::push(const Instruction* instruction) {
   switch (instruction->operation()) {
     case Op::PHP:
-      return stack.pushState(instruction, state, stateChange);
+      return stack.pushState(state, stateChange, instruction);
 
     case Op::PHA:
-      return stack.push(instruction, nullopt, state.sizeA());
+      return stack.push(state.sizeA(), nullopt, instruction);
 
     case Op::PHX:
     case Op::PHY:
-      return stack.push(instruction, nullopt, state.sizeX());
+      return stack.push(state.sizeX(), nullopt, instruction);
 
     case Op::PHB:
     case Op::PHK:
-      return stack.push(instruction, nullopt, 1);
+      return stack.pushOne(nullopt, instruction);
 
     case Op::PHD:
     case Op::PEA:
     case Op::PER:
     case Op::PEI:
-      return stack.push(instruction, nullopt, 2);
+      return stack.push(2, nullopt, instruction);
 
     default:
       __builtin_unreachable();

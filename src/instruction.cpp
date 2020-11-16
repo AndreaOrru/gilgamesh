@@ -18,6 +18,9 @@ Instruction::Instruction(Analysis* analysis,
       _argument{argument},
       state{state} {}
 
+// Test constructor.
+Instruction::Instruction(u8 opcode) : opcode{opcode} {}
+
 // Name of the instruction's operation.
 string Instruction::name() const {
   return OPCODE_NAMES[operation()];
