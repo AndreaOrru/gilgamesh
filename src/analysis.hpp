@@ -56,8 +56,10 @@ class Analysis {
                               u8 opcode,
                               u24 argument,
                               State state);
+
   // Add a reference from an instruction to another.
   void addReference(u24 source, u24 target, u24 subroutinePC);
+
   // Add a subroutine to the analysis.
   void addSubroutine(u24 pc, std::optional<std::string> label = std::nullopt);
 
@@ -70,8 +72,10 @@ class Analysis {
 
   // ROM's entry points.
   EntryPointSet entryPoints;
+
   // All the analyzed instructions.
   std::unordered_map<u24, InstructionSet> instructions;
+
   // Instructions referenced by other instructions.
   std::unordered_map<u24, ReferenceSet> references;
 };

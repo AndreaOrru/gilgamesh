@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 
+// Memory addressing modes.
 enum AddressMode {
   Implied,
   ImmediateM,
@@ -34,6 +35,7 @@ enum AddressMode {
   PeiDirectPageIndirect,
 };
 
+// 65c816 operations.
 enum Op {
   ADC,
   AND,
@@ -129,6 +131,7 @@ enum Op {
   XCE,
 };
 
+// Name of 65c816 opcodes.
 inline const std::string OPCODE_NAMES[] = {
     "adc", "and", "asl", "bcc", "bcs", "beq", "bit", "bmi", "bne", "bpl", "bra",
     "brk", "brl", "bvc", "bvs", "clc", "cld", "cli", "clv", "cmp", "cop", "cpx",
@@ -141,6 +144,8 @@ inline const std::string OPCODE_NAMES[] = {
     "wai", "wdm", "xba", "xce",
 };
 
+// Size of the argument for each addressing mode.
+// {} means the size depends on the state register.
 inline const std::optional<int> ARGUMENT_SIZES[] = {
     0,   // Implied
     {},  // ImmediateM
@@ -172,6 +177,8 @@ inline const std::optional<int> ARGUMENT_SIZES[] = {
     1,   // PeiDirectPageIndirect
 };
 
+// All 65c816 opcodes expressed as a combination
+// of operations and addressing modes.
 inline const std::pair<Op, AddressMode> OPCODE_TABLE[] = {
     {Op::BRK, AddressMode::Immediate8},
     {Op::ORA, AddressMode::DirectPageIndexedIndirect},
