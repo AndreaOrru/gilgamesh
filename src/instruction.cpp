@@ -6,6 +6,7 @@
 
 using namespace std;
 
+// Constructor.
 Instruction::Instruction(Analysis* analysis,
                          u24 pc,
                          u24 subroutine,
@@ -19,55 +20,52 @@ Instruction::Instruction(Analysis* analysis,
       _argument{argument},
       state{state} {}
 
-bool Instruction::operator==(const Instruction& other) const {
-  return pc == other.pc && subroutine == other.subroutine &&
-         state == other.state;
-}
-
-size_t hash_value(const Instruction& instruction) {
-  size_t seed = 0;
-  boost::hash_combine(seed, instruction.pc);
-  boost::hash_combine(seed, instruction.subroutine);
-  boost::hash_combine(seed, instruction.state.p);
-  return seed;
-}
-
+// Name of the instruction's operation.
 string Instruction::name() const {
   return OPCODE_NAMES[operation()];
 }
 
+// Instruction's operation.
 Op Instruction::operation() const {
   return OPCODE_TABLE[opcode].first;
 }
 
+// Instruction'a address mode.
 AddressMode Instruction::addressMode() const {
   return OPCODE_TABLE[opcode].second;
 }
 
+// Category of the instruction.
 InstructionType Instruction::type() const {
   switch (operation()) {
+    // Call instructions.
     case Op::JSR:
     case Op::JSL:
       return InstructionType::Call;
 
+    // Jump instructions.
     case Op::JMP:
     case Op::JML:
     case Op::BRA:
     case Op::BRL:
       return InstructionType::Jump;
 
+    // Return instructions.
     case Op::RTS:
     case Op::RTL:
     case Op::RTI:
       return InstructionType::Return;
 
+    // Interrupt instructions.
     case Op::BRK:
       return InstructionType::Interrupt;
 
+    // SEP/REP instructions.
     case Op::SEP:
     case Op::REP:
       return InstructionType::SepRep;
 
+    // Pop instructions.
     case Op::PLA:
     case Op::PLB:
     case Op::PLD:
@@ -76,6 +74,7 @@ InstructionType Instruction::type() const {
     case Op::PLY:
       return InstructionType::Pop;
 
+    // Push instructions.
     case Op::PEA:
     case Op::PEI:
     case Op::PER:
@@ -88,6 +87,7 @@ InstructionType Instruction::type() const {
     case Op::PHY:
       return InstructionType::Push;
 
+    // Branch instructions.
     case Op::BCC:
     case Op::BCS:
     case Op::BEQ:
@@ -98,11 +98,13 @@ InstructionType Instruction::type() const {
     case Op::BVS:
       return InstructionType::Branch;
 
+    // Other instructions.
     default:
       return InstructionType::Other;
   }
 }
 
+// Whether this is a control instruction.
 bool Instruction::isControl() const {
   switch (type()) {
     case InstructionType::Branch:
@@ -117,10 +119,12 @@ bool Instruction::isControl() const {
   }
 }
 
+// Instruction size.
 size_t Instruction::size() const {
   return argumentSize() + 1;
 }
 
+// Instruction's argument size.
 size_t Instruction::argumentSize() const {
   if (auto size = ARGUMENT_SIZES[addressMode()]) {
     return *size;
@@ -136,6 +140,7 @@ size_t Instruction::argumentSize() const {
   }
 }
 
+// Instruction's argument, if any.
 optional<u24> Instruction::argument() const {
   switch (argumentSize()) {
     case 0:
@@ -150,22 +155,27 @@ optional<u24> Instruction::argument() const {
   __builtin_unreachable();
 }
 
+// Instruction's argument as an absolute value, if possible.
 optional<u24> Instruction::absoluteArgument() const {
+  // No argument.
   auto arg = argument();
   if (!arg.has_value()) {
     return {};
   }
 
   switch (addressMode()) {
+    // Fully specified argument.
     case AddressMode::ImmediateM:
     case AddressMode::ImmediateX:
     case AddressMode::Immediate8:
     case AddressMode::AbsoluteLong:
       return arg;
 
+    // Partially specified argument.
     case AddressMode::Absolute:
       return isControl() ? optional((pc & 0xFF0000) | *arg) : nullopt;
 
+    // Branches.
     case AddressMode::Relative:
       return pc + size() + ((i8)*arg);
     case AddressMode::RelativeLong:
@@ -176,6 +186,7 @@ optional<u24> Instruction::absoluteArgument() const {
   };
 };
 
+// Instruction's argument as a string.
 string Instruction::argumentString() const {
   auto arg = argument();
   auto sz = argumentSize();
@@ -240,6 +251,7 @@ string Instruction::argumentString() const {
   };
 }
 
+// Disassemble the instruction.
 string Instruction::toString() const {
   string s;
 
@@ -248,4 +260,17 @@ string Instruction::toString() const {
   s += argumentString();
 
   return s;
+}
+
+// Hash table utils.
+bool Instruction::operator==(const Instruction& other) const {
+  return pc == other.pc && subroutine == other.subroutine &&
+         state == other.state;
+}
+size_t hash_value(const Instruction& instruction) {
+  size_t seed = 0;
+  boost::hash_combine(seed, instruction.pc);
+  boost::hash_combine(seed, instruction.subroutine);
+  boost::hash_combine(seed, instruction.state.p);
+  return seed;
 }

@@ -78,7 +78,6 @@ struct StateChange {
   std::optional<bool> x;        // Index size flag.
   UnknownReason unknownReason;  // Reason for state being unknown, if any.
 };
-
 // Set of StateChanges.
 typedef std::unordered_set<StateChange, boost::hash<StateChange>>
     StateChangeSet;
