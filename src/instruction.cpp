@@ -1,7 +1,5 @@
 #include "instruction.hpp"
 
-#include "analysis.hpp"
-#include "opcodes.hpp"
 #include "utils.hpp"
 
 using namespace std;

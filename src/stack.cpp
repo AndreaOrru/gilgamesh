@@ -2,11 +2,13 @@
 
 using namespace std;
 
+// Set a new stack pointer.
 void Stack::setPointer(const Instruction* instruction, u16 pointer) {
   lastManipulator = instruction;
   this->pointer = pointer;
 }
 
+// Push values onto the stack.
 void Stack::push(const Instruction* instruction,
                  optional<u24> data,
                  size_t size) {
@@ -19,6 +21,7 @@ void Stack::push(const Instruction* instruction,
   }
 }
 
+// Push state (PHP) onto the stack.
 void Stack::pushState(const Instruction* instruction,
                       State state,
                       StateChange stateChange) {
@@ -26,6 +29,7 @@ void Stack::pushState(const Instruction* instruction,
                        pair<State, StateChange>(state, stateChange)};
 }
 
+// Pop an entry from the stack.
 StackEntry Stack::popOne() {
   auto search = memory.find(++pointer);
   if (search != memory.end()) {
@@ -35,6 +39,7 @@ StackEntry Stack::popOne() {
   }
 }
 
+// Pop one or more entries from the stack.
 vector<StackEntry> Stack::pop(size_t size) {
   vector<StackEntry> result;
   for (size_t i = 0; i < size; i++) {
