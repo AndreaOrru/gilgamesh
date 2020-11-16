@@ -73,7 +73,7 @@ class Analysis {
   // ROM's entry points.
   EntryPointSet entryPoints;
 
-  // All the analyzed instructions.
+  // Map from PC to the set of instructions at that address.
   std::unordered_map<u24, InstructionSet> instructions;
 
   // Instructions referenced by other instructions.
