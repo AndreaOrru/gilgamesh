@@ -1,8 +1,7 @@
 #pragma once
 
-#include <boost/container_hash/hash.hpp>
 #include <optional>
-#include <unordered_set>
+#include <unordered_map>
 
 #include "types.hpp"
 
@@ -78,6 +77,6 @@ struct StateChange {
   std::optional<bool> x;        // Index size flag.
   UnknownReason unknownReason;  // Reason for state being unknown, if any.
 };
-// Set of StateChanges.
-typedef std::unordered_set<StateChange, boost::hash<StateChange>>
-    StateChangeSet;
+
+// Map from InstructionPC to StateChange.
+typedef std::unordered_map<InstructionPC, StateChange> StateChangeMap;

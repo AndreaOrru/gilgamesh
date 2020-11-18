@@ -2,6 +2,8 @@
 
 #include "analysis.hpp"
 #include "highlighter.hpp"
+#include "instruction.hpp"
+#include "subroutine.hpp"
 #include "utils.hpp"
 
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {

@@ -48,6 +48,7 @@ Analysis::Analysis(const std::string& romPath) : rom(romPath) {
 void Analysis::clear() {
   instructions.clear();
   subroutines.clear();
+  references.clear();
 }
 
 // Analyze the ROM.
@@ -64,8 +65,8 @@ void Analysis::run() {
 }
 
 // Add an instruction to the analysis.
-Instruction* Analysis::addInstruction(u24 pc,
-                                      u24 subroutinePC,
+Instruction* Analysis::addInstruction(InstructionPC pc,
+                                      SubroutinePC subroutinePC,
                                       u8 opcode,
                                       u24 argument,
                                       State state) {
@@ -88,15 +89,35 @@ Instruction* Analysis::addInstruction(u24 pc,
 }
 
 // Add a reference from an instruction to another.
-void Analysis::addReference(u24 source, u24 target, u24 subroutinePC) {
+void Analysis::addReference(InstructionPC source,
+                            InstructionPC target,
+                            SubroutinePC subroutinePC) {
   auto& referenceSet = references.try_emplace(source).first->second;
   referenceSet.insert({target, subroutinePC});
 }
 
 // Add a subroutine to the analysis.
-void Analysis::addSubroutine(u24 pc, optional<string> label) {
+void Analysis::addSubroutine(SubroutinePC pc, optional<string> label) {
   auto labelValue = label.value_or(format("sub_%06X", pc));
   subroutines.try_emplace(pc, pc, labelValue);
+}
+
+// Get an assertion for the current instruction, if any.
+optional<Assertion> Analysis::getAssertion(InstructionPC pc,
+                                           SubroutinePC subroutinePC) {
+  auto instructionAssertion = instructionAssertions.find(pc);
+  if (instructionAssertion != instructionAssertions.end()) {
+    return optional(
+        Assertion{AssertionType::Instruction, instructionAssertion->second});
+  }
+
+  auto subroutineAssertion = subroutineAssertions.find({pc, subroutinePC});
+  if (subroutineAssertion != subroutineAssertions.end()) {
+    return optional(
+        Assertion{AssertionType::Subroutine, subroutineAssertion->second});
+  }
+
+  return nullopt;
 }
 
 // Generate local label names.

@@ -1,3 +1,5 @@
+#include <boost/container_hash/hash.hpp>
+
 #include "state.hpp"
 
 using namespace std;
@@ -9,7 +11,10 @@ using namespace std;
 // Constructors.
 State::State() : State(true, true) {}
 State::State(u8 p) : p{p} {}
-State::State(bool m, bool x) : x{x}, m{m} {}
+State::State(bool m, bool x) : p{0} {
+  this->m = m;
+  this->x = x;
+}
 
 // Size of A in bytes.
 std::size_t State::sizeA() const {
@@ -28,7 +33,7 @@ void State::set(u8 mask) {
 
 // Reset bits in P.
 void State::reset(u8 mask) {
-  p &= !mask;
+  p &= ~mask;
 }
 
 // Comparison function.

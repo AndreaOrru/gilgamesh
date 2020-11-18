@@ -7,7 +7,10 @@
 using namespace std;
 
 // Constructor.
-CPU::CPU(Analysis* analysis, u24 pc, u24 subroutinePC, State state)
+CPU::CPU(Analysis* analysis,
+         InstructionPC pc,
+         SubroutinePC subroutinePC,
+         State state)
     : analysis{analysis}, pc{pc}, subroutinePC{subroutinePC}, state{state} {}
 
 // Start emulating.
@@ -21,7 +24,7 @@ void CPU::run() {
 void CPU::step() {
   // Stop if we have jumped into RAM.
   if (ROM::isRAM(pc)) {
-    return unknownStateChange(UnknownReason::MutableCode);
+    return unknownStateChange(pc, UnknownReason::MutableCode);
   }
 
   auto opcode = analysis->rom.readByte(pc);
@@ -85,7 +88,7 @@ void CPU::branch(const Instruction* instruction) {
 void CPU::call(const Instruction* instruction) {
   auto target = instruction->absoluteArgument();
   if (!target.has_value()) {
-    return unknownStateChange(UnknownReason::IndirectJump);
+    return unknownStateChange(instruction->pc, UnknownReason::IndirectJump);
   }
 
   CPU cpu(*this);
@@ -107,12 +110,12 @@ void CPU::call(const Instruction* instruction) {
   analysis->addReference(instruction->pc, *target, subroutinePC);
   cpu.run();
 
-  propagateSubroutineState(*target);
+  propagateSubroutineState(pc, *target);
 }
 
 // Interrupt emulation.
 void CPU::interrupt(const Instruction* instruction) {
-  return unknownStateChange(UnknownReason::SuspectInstruction);
+  return unknownStateChange(instruction->pc, UnknownReason::SuspectInstruction);
 }
 
 void CPU::jump(const Instruction* instruction) {
@@ -120,28 +123,28 @@ void CPU::jump(const Instruction* instruction) {
     analysis->addReference(instruction->pc, *target, subroutinePC);
     pc = *target;
   } else {
-    return unknownStateChange(UnknownReason::IndirectJump);
+    return unknownStateChange(instruction->pc, UnknownReason::IndirectJump);
   }
 }
 
 // Return emulation.
 void CPU::ret(const Instruction* instruction) {
   if (instruction->operation() == Op::RTI) {
-    return standardRet();
+    return standardRet(instruction);
   }
 
   size_t retSize = instruction->operation() == Op::RTS ? 2 : 3;
   auto stackEntries = stack.pop(retSize);
   if (checkReturnManipulation(instruction, stackEntries) == false) {
-    return standardRet();
+    return standardRet(instruction);
   }
 
-  return unknownStateChange(UnknownReason::StackManipulation);
+  return unknownStateChange(instruction->pc, UnknownReason::StackManipulation);
 }
 
 // Emulate a simple return.
-void CPU::standardRet() {
-  subroutine()->addStateChange(stateChange);
+void CPU::standardRet(const Instruction* instruction) {
+  subroutine()->addStateChange(instruction->pc, stateChange);
   stop = true;
 }
 
@@ -182,7 +185,8 @@ void CPU::pop(const Instruction* instruction) {
         this->stateChange = stateChange;
       } else {
         // Stack manipulation. Stop here.
-        return unknownStateChange(UnknownReason::StackManipulation);
+        return unknownStateChange(instruction->pc,
+                                  UnknownReason::StackManipulation);
       }
     } break;
 
@@ -292,22 +296,38 @@ Subroutine* CPU::subroutine() {
 
 // Take the state change of the given subroutine and
 // propagate it to to the current subroutine state.
-void CPU::propagateSubroutineState(u24 target) {
+void CPU::propagateSubroutineState(InstructionPC pc, InstructionPC target) {
   auto& subroutine = analysis->subroutines.at(target);
   if (!subroutine.unknownStateChanges.empty()) {
-    return unknownStateChange(UnknownReason::Unknown);
+    return unknownStateChange(pc, UnknownReason::Unknown);
   }
 
   auto& stateChanges = subroutine.knownStateChanges;
   if ((stateChanges.size()) == 1) {
-    applyStateChange(*stateChanges.begin());
+    applyStateChange(stateChanges.begin()->second);
   } else {
-    return unknownStateChange(UnknownReason::MultipleReturnStates);
+    return unknownStateChange(pc, UnknownReason::MultipleReturnStates);
   }
 }
 
 // Signal an unknown subroutine state change.
-void CPU::unknownStateChange(UnknownReason reason) {
-  subroutine()->addStateChange(StateChange(reason));
-  stop = true;
+void CPU::unknownStateChange(InstructionPC pc, UnknownReason reason) {
+  // Check if we have an assertion to specify what the state change is.
+  auto assertion = analysis->getAssertion(pc, subroutinePC);
+  if (assertion.has_value()) {
+    switch (assertion->type) {
+      case AssertionType::Instruction:
+        applyStateChange(assertion->stateChange);
+        break;
+
+      case AssertionType::Subroutine:
+        subroutine()->addStateChange(pc, assertion->stateChange);
+        stop = true;
+        break;
+    }
+  } else {
+    // No assertions, we need stop here.
+    subroutine()->addStateChange(pc, StateChange(UnknownReason(reason)));
+    stop = true;
+  }
 }

@@ -12,8 +12,11 @@ class Subroutine;
 
 class CPU {
  public:
-  CPU(Analysis* analysis, u24 pc, u24 subroutine, State state);  // Constructor.
-  void run();  // Start emulating.
+  CPU(Analysis* analysis,
+      InstructionPC pc,
+      SubroutinePC subroutinePC,
+      State state);  // Constructor.
+  void run();        // Start emulating.
 
  private:
   // Fetch and execute the next instruction.
@@ -22,15 +25,15 @@ class CPU {
   // Emulate an instruction.
   void execute(const Instruction* instruction);
 
-  void branch(const Instruction* instruction);     // Branch emulation.
-  void call(const Instruction* instruction);       // Call emulation.
-  void interrupt(const Instruction* instruction);  // Interrupt emulation.
-  void jump(const Instruction* instruction);       // Jump emulation.
-  void ret(const Instruction* instruction);        // Return emulation.
-  void standardRet();                              // Emulate a simple return.
-  void sepRep(const Instruction* instruction);     // SEP/REP emulation.
-  void pop(const Instruction* instruction);        // Pop value from stack.
-  void push(const Instruction* instruction);       // Push value onto stack.
+  void branch(const Instruction* instruction);       // Branch emulation.
+  void call(const Instruction* instruction);         // Call emulation.
+  void interrupt(const Instruction* instruction);    // Interrupt emulation.
+  void jump(const Instruction* instruction);         // Jump emulation.
+  void ret(const Instruction* instruction);          // Return emulation.
+  void standardRet(const Instruction* instruction);  // Emulate a simple return.
+  void sepRep(const Instruction* instruction);       // SEP/REP emulation.
+  void pop(const Instruction* instruction);          // Pop value from stack.
+  void push(const Instruction* instruction);         // Push value onto stack.
 
   // Apply a state change to the current CPU instance.
   void applyStateChange(StateChange stateChange);
@@ -47,10 +50,10 @@ class CPU {
 
   // Take the state change of the given subroutine and
   // propagate it to to the current subroutine state.
-  void propagateSubroutineState(u24 target);
+  void propagateSubroutineState(InstructionPC pc, InstructionPC target);
 
   // Signal an unknown subroutine state change.
-  void unknownStateChange(UnknownReason reason);
+  void unknownStateChange(InstructionPC pc, UnknownReason reason);
 
   // Pointer to the analysis.
   Analysis* analysis;
@@ -58,10 +61,10 @@ class CPU {
   // Whether we should stop emulating after the current instruction.
   bool stop = false;
 
-  u24 pc;            // Program Counter.
-  u24 subroutinePC;  // Subroutine currently being executed.
-  Stack stack;       // CPU stack.
-  State state;       // CPU state.
+  InstructionPC pc;           // Program Counter.
+  SubroutinePC subroutinePC;  // Subroutine currently being executed.
+  Stack stack;                // CPU stack.
+  State state;                // CPU state.
 
   // CPU state change caused by the execution of the current subroutine.
   StateChange stateChange;

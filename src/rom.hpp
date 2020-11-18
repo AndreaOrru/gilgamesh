@@ -49,10 +49,10 @@ class ROM {
   std::string title() const;
 
   // Return the reset vector (ROM's entry point).
-  u24 resetVector() const;
+  SubroutinePC resetVector() const;
 
   // Return the NMI vector (VBLANK handler).
-  u24 nmiVector() const;
+  SubroutinePC nmiVector() const;
 
   // Translate an address from SNES to PC.
   u24 translate(u24 address) const;

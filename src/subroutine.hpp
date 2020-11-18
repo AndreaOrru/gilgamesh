@@ -10,15 +10,23 @@ class Instruction;
 
 class Subroutine {
  public:
-  Subroutine(u24 pc, std::string label);          // Constructor.
-  void addInstruction(Instruction* instruction);  // Add an instruction.
-  void addStateChange(StateChange stateChange);   // Add a state change.
+  // Constructor.
+  Subroutine(SubroutinePC pc, std::string label);
 
-  u24 pc;             // Program Counter.
+  // Add an instruction.
+  void addInstruction(Instruction* instruction);
+
+  // Add a state change.
+  void addStateChange(InstructionPC pc, StateChange stateChange);
+
+  SubroutinePC pc;    // Program Counter.
   std::string label;  // Label.
   // Map from PC to instructions.
-  std::map<u24, Instruction*> instructions;
+  std::map<InstructionPC, Instruction*> instructions;
 
-  StateChangeSet knownStateChanges;    // Known state changes.
-  StateChangeSet unknownStateChanges;  // Unknown state changes.
+  // Known state changes.
+  StateChangeMap knownStateChanges;
+
+  // Unknown state changes.
+  StateChangeMap unknownStateChanges;
 };

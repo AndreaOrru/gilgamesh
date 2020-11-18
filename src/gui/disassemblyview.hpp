@@ -1,10 +1,11 @@
 #pragma once
 
 #include <QTextEdit>
-#include "subroutine.hpp"
 
 class Analysis;
 class Highlighter;
+class Instruction;
+class Subroutine;
 
 class DisassemblyView : public QTextEdit {
   Q_OBJECT;

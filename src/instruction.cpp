@@ -6,8 +6,8 @@ using namespace std;
 
 // Constructor.
 Instruction::Instruction(Analysis* analysis,
-                         u24 pc,
-                         u24 subroutine,
+                         InstructionPC pc,
+                         SubroutinePC subroutine,
                          u8 opcode,
                          u24 argument,
                          State state)

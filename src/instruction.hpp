@@ -10,7 +10,6 @@
 #include "types.hpp"
 
 class Analysis;
-class Subroutine;
 
 // Categories of instructions.
 enum class InstructionType {
@@ -30,8 +29,8 @@ class Instruction {
  public:
   // Constructor.
   Instruction(Analysis* analysis,
-              u24 pc,
-              u24 subroutine,
+              InstructionPC pc,
+              SubroutinePC subroutine,
               u8 opcode,
               u24 argument,
               State state);
@@ -56,8 +55,8 @@ class Instruction {
   bool operator==(const Instruction& other) const;
   friend std::size_t hash_value(const Instruction& instruction);
 
-  u24 pc;          // Instruction's address.
-  u24 subroutine;  // Subroutine to which the instruction belongs.
+  InstructionPC pc;         // Instruction's address.
+  SubroutinePC subroutine;  // Subroutine to which the instruction belongs.
   // Instruction's label, if any.
   std::optional<std::string> label = std::nullopt;
 

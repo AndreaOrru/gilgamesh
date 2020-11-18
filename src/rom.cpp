@@ -68,12 +68,12 @@ string ROM::title() const {
 }
 
 // Return the reset vector (ROM's entry point).
-u24 ROM::resetVector() const {
+SubroutinePC ROM::resetVector() const {
   return readWord(translateHeader(Header::RESET));
 }
 
 // Return the NMI vector (VBLANK handler).
-u24 ROM::nmiVector() const {
+SubroutinePC ROM::nmiVector() const {
   return readWord(translateHeader(Header::NMI));
 }
 

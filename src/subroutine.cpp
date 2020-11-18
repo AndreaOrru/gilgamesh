@@ -3,7 +3,8 @@
 #include "instruction.hpp"
 
 // Constructor.
-Subroutine::Subroutine(u24 pc, std::string label) : pc{pc}, label{label} {}
+Subroutine::Subroutine(SubroutinePC pc, std::string label)
+    : pc{pc}, label{label} {}
 
 // Add an instruction.
 void Subroutine::addInstruction(Instruction* instruction) {
@@ -11,10 +12,10 @@ void Subroutine::addInstruction(Instruction* instruction) {
 }
 
 // Add a state change.
-void Subroutine::addStateChange(StateChange stateChange) {
+void Subroutine::addStateChange(SubroutinePC pc, StateChange stateChange) {
   if (stateChange.unknown()) {
-    unknownStateChanges.insert(stateChange);
+    unknownStateChanges[pc] = stateChange;
   } else {
-    knownStateChanges.insert(stateChange);
+    knownStateChanges[pc] = stateChange;
   }
 }

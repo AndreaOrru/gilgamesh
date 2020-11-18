@@ -18,7 +18,7 @@
  */
 struct EntryPoint {
   std::string label;  // Subroutine's label.
-  u24 pc;             // Subroutine's PC.
+  SubroutinePC pc;    // Subroutine's PC.
   State state;        // CPU's state.
 
   // Hash table utils.
@@ -32,8 +32,8 @@ typedef std::unordered_set<EntryPoint, boost::hash<EntryPoint>> EntryPointSet;
  * Code reference.
  */
 struct Reference {
-  u24 target;
-  u24 subroutinePC;
+  InstructionPC target;
+  SubroutinePC subroutinePC;
 
   // Hash table utils.
   bool operator==(const Reference& other) const;
@@ -41,6 +41,22 @@ struct Reference {
 };
 // Set of References.
 typedef std::unordered_set<Reference, boost::hash<Reference>> ReferenceSet;
+
+/**
+ * Type of state assertions.
+ */
+enum class AssertionType {
+  Instruction,
+  Subroutine,
+};
+
+/**
+ * Structure representing a state assertion.
+ */
+struct Assertion {
+  AssertionType type;
+  StateChange stateChange;
+};
 
 /**
  * Class holding the state of the ROM's analysis.
@@ -51,20 +67,38 @@ class Analysis {
   void run();                            // Analyze the ROM.
 
   // Add an instruction to the analysis.
-  Instruction* addInstruction(u24 pc,
-                              u24 subroutinePC,
+  Instruction* addInstruction(InstructionPC pc,
+                              SubroutinePC subroutinePC,
                               u8 opcode,
                               u24 argument,
                               State state);
 
   // Add a reference from an instruction to another.
-  void addReference(u24 source, u24 target, u24 subroutinePC);
+  void addReference(InstructionPC source,
+                    InstructionPC target,
+                    SubroutinePC subroutinePC);
 
   // Add a subroutine to the analysis.
-  void addSubroutine(u24 pc, std::optional<std::string> label = std::nullopt);
+  void addSubroutine(SubroutinePC pc,
+                     std::optional<std::string> label = std::nullopt);
 
-  ROM rom;                                // The ROM being analyzed.
-  std::map<u24, Subroutine> subroutines;  // All the analyzed subroutines.
+  // Get an assertion for the current instruction, if any.
+  std::optional<Assertion> getAssertion(InstructionPC pc,
+                                        SubroutinePC subroutinePC);
+
+  ROM rom;  // The ROM being analyzed.
+
+  // All the analyzed subroutines.
+  std::map<SubroutinePC, Subroutine> subroutines;
+
+  // Assertions on instruction state changes.
+  std::unordered_map<InstructionPC, StateChange> instructionAssertions;
+
+  // Assertions on subroutine state changes.
+  std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
+                     StateChange,
+                     boost::hash<std::pair<InstructionPC, SubroutinePC>>>
+      subroutineAssertions;
 
  private:
   void clear();                // Clear the results of the analysis.
@@ -74,8 +108,8 @@ class Analysis {
   EntryPointSet entryPoints;
 
   // Map from PC to the set of instructions at that address.
-  std::unordered_map<u24, InstructionSet> instructions;
+  std::unordered_map<InstructionPC, InstructionSet> instructions;
 
   // Instructions referenced by other instructions.
-  std::unordered_map<u24, ReferenceSet> references;
+  std::unordered_map<InstructionPC, ReferenceSet> references;
 };
