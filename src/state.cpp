@@ -58,14 +58,14 @@ StateChange::StateChange(optional<bool> m, optional<bool> x)
 
 // Set bits that were changed to 1 in P.
 void StateChange::set(u8 mask) {
-  auto change = State(mask);
+  State change(mask);
   m = change.m ? true : m;
   x = change.x ? true : x;
 }
 
 // Reset bits that were changed to 1 in P.
 void StateChange::reset(u8 mask) {
-  auto change = State(mask);
+  State change(mask);
   m = change.m ? false : m;
   x = change.x ? false : x;
 }
