@@ -46,6 +46,12 @@ class Stack {
   // Pop one or more entries from the stack.
   std::vector<StackEntry> pop(size_t size);
 
+  // Return values from the top of the stack without popping.
+  std::vector<StackEntry> peek(size_t size);
+
+  // Compare the value at the top of the stack with a given value.
+  bool matchValue(size_t size, u24 value);
+
  private:
   std::unordered_map<u16, StackEntry> memory;  // SNES's RAM.
   u16 pointer = 0x100;                         // Stack pointer.
