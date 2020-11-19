@@ -10,7 +10,7 @@ QT = core
 SOURCES += asar.cpp main.cpp
 SOURCES += ../src/utils.cpp
 
-SOURCES += ../src/instruction.cpp
+SOURCES += ../src/instruction.cpp test_instruction.cpp
 SOURCES += ../src/rom.cpp test_rom.cpp
 SOURCES += ../src/stack.cpp test_stack.cpp
 SOURCES += ../src/subroutine.cpp test_subroutine.cpp
