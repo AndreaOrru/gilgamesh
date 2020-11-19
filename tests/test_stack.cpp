@@ -1,9 +1,8 @@
 #include <catch2/catch.hpp>
 #include <variant>
 
-#include "stack.hpp"
-
 #include "instruction.hpp"
+#include "stack.hpp"
 
 using namespace std;
 

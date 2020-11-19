@@ -57,14 +57,14 @@ class Instruction {
 
   InstructionPC pc;         // Instruction's address.
   SubroutinePC subroutine;  // Subroutine to which the instruction belongs.
+  u8 opcode;                // Opcode byte.
+  State state;              // CPU state in which the instruction is executed.
   // Instruction's label, if any.
   std::optional<std::string> label = std::nullopt;
 
  private:
   Analysis* analysis;  // Pointer to the analysis.
-  u8 opcode;           // Opcode byte.
   u24 _argument;       // Argument (if any).
-  State state;         // CPU state in which the instruction is executed.
 };
 // Set of Instructions.
 typedef std::unordered_set<Instruction, boost::hash<Instruction>>

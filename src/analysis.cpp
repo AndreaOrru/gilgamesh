@@ -36,7 +36,10 @@ size_t hash_value(const Reference& reference) {
  *  Analysis  *
  **************/
 
-// Constructor.
+// Construct an empty analysis.
+Analysis::Analysis() {}
+
+// Construct an analysis from a ROM path.
 Analysis::Analysis(const std::string& romPath) : rom(romPath) {
   entryPoints = {
       {.label = "reset", .pc = rom.resetVector(), .state = State()},

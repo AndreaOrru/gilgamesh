@@ -13,10 +13,10 @@ Instruction::Instruction(Analysis* analysis,
                          State state)
     : pc{pc},
       subroutine{subroutine},
-      analysis{analysis},
       opcode{opcode},
-      _argument{argument},
-      state{state} {}
+      state{state},
+      analysis{analysis},
+      _argument{argument} {}
 
 // Test constructor.
 Instruction::Instruction(u8 opcode) : opcode{opcode} {}

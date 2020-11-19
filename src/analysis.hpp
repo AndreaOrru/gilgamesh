@@ -63,8 +63,13 @@ struct Assertion {
  */
 class Analysis {
  public:
-  Analysis(const std::string& romPath);  // Constructor.
-  void run();                            // Analyze the ROM.
+  // Construct an empty analysis.
+  Analysis();
+  // Construct an analysis from a ROM path.
+  Analysis(const std::string& romPath);
+
+  // Analyze the ROM.
+  void run();
 
   // Add an instruction to the analysis.
   Instruction* addInstruction(InstructionPC pc,
@@ -86,14 +91,20 @@ class Analysis {
   std::optional<Assertion> getAssertion(InstructionPC pc,
                                         SubroutinePC subroutinePC);
 
-  ROM rom;  // The ROM being analyzed.
+  // The ROM being analyzed.
+  ROM rom;
+  // ROM's entry points.
+  EntryPointSet entryPoints;
 
+  // Map from PC to the set of instructions at that address.
+  std::unordered_map<InstructionPC, InstructionSet> instructions;
   // All the analyzed subroutines.
   std::map<SubroutinePC, Subroutine> subroutines;
+  // Instructions referenced by other instructions.
+  std::unordered_map<InstructionPC, ReferenceSet> references;
 
   // Assertions on instruction state changes.
   std::unordered_map<InstructionPC, StateChange> instructionAssertions;
-
   // Assertions on subroutine state changes.
   std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
                      StateChange,
@@ -103,13 +114,4 @@ class Analysis {
  private:
   void clear();                // Clear the results of the analysis.
   void generateLocalLabels();  // Generate local label names.
-
-  // ROM's entry points.
-  EntryPointSet entryPoints;
-
-  // Map from PC to the set of instructions at that address.
-  std::unordered_map<InstructionPC, InstructionSet> instructions;
-
-  // Instructions referenced by other instructions.
-  std::unordered_map<InstructionPC, ReferenceSet> references;
 };

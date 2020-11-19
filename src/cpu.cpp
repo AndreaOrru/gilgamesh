@@ -11,7 +11,7 @@ CPU::CPU(Analysis* analysis,
          InstructionPC pc,
          SubroutinePC subroutinePC,
          State state)
-    : analysis{analysis}, pc{pc}, subroutinePC{subroutinePC}, state{state} {}
+    : pc{pc}, subroutinePC{subroutinePC}, state{state}, analysis{analysis} {}
 
 // Start emulating.
 void CPU::run() {

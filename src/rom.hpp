@@ -28,7 +28,10 @@ enum Header {
 // Class representing a SNES ROM.
 class ROM {
  public:
-  ROM(const std::string& path);  // Constructor.
+  // Construct an empty ROM (for test purposes).
+  ROM();
+  // Construct a ROM from a file path.
+  ROM(const std::string& path);
 
   u8 readByte(u24 address) const;      // Read a byte.
   u16 readWord(u24 address) const;     // Read a word (16 bits).
@@ -57,7 +60,9 @@ class ROM {
   // Translate an address from SNES to PC.
   u24 translate(u24 address) const;
 
-  ROMType romType;  // ROM classification.
+  ROMType romType;       // ROM classification.
+  std::string path;      // ROM's file path.
+  std::vector<u8> data;  // ROM's data.
 
  private:
   // Translate address inside the header.
@@ -71,7 +76,4 @@ class ROM {
 
   // Estimate the likelihood that the the ROM is of the given type.
   int typeScore(ROMType romType) const;
-
-  std::string path;      // ROM's file path.
-  std::vector<u8> data;  // ROM's data.
 };

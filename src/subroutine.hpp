@@ -8,8 +8,8 @@
 
 class Instruction;
 
-class Subroutine {
- public:
+// Structure representing a subroutine.
+struct Subroutine {
   // Constructor.
   Subroutine(SubroutinePC pc, std::string label);
 

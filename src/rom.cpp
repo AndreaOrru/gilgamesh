@@ -4,7 +4,10 @@
 
 using namespace std;
 
-// Constructor.
+// Construct an empty ROM (for test purposes).
+ROM::ROM() {}
+
+// Construct a ROM from a file path.
 ROM::ROM(const string& path) : path{path} {
   data = readBinaryFile(path);
   romType = discoverType();

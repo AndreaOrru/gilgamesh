@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #include <vector>
 
 #include "stack.hpp"
@@ -12,16 +13,28 @@ class Subroutine;
 
 class CPU {
  public:
+  // Constructor.
   CPU(Analysis* analysis,
       InstructionPC pc,
       SubroutinePC subroutinePC,
-      State state);  // Constructor.
-  void run();        // Start emulating.
+      State state);
+
+  // Start emulating.
+  void run();
+
+  InstructionPC pc;           // Program Counter.
+  SubroutinePC subroutinePC;  // Subroutine currently being executed.
+  Stack stack;                // CPU stack.
+  State state;                // CPU state.
+  // CPU state change caused by the execution of the current subroutine.
+  StateChange stateChange;
+
+  // Whether we should stop emulating after the current instruction.
+  bool stop = false;
 
  private:
   // Fetch and execute the next instruction.
   void step();
-
   // Emulate an instruction.
   void execute(const Instruction* instruction);
 
@@ -57,19 +70,10 @@ class CPU {
 
   // Pointer to the analysis.
   Analysis* analysis;
-
-  // Whether we should stop emulating after the current instruction.
-  bool stop = false;
-
-  InstructionPC pc;           // Program Counter.
-  SubroutinePC subroutinePC;  // Subroutine currently being executed.
-  Stack stack;                // CPU stack.
-  State state;                // CPU state.
-
-  // CPU state change caused by the execution of the current subroutine.
-  StateChange stateChange;
-
   // What we know about the CPU state based on the
   // sequence of instructions we have executed.
   StateChange stateInference;
+
+  // Test functions.
+  friend void runInstruction(CPU& cpu, u8 opcode, u24 argument);
 };
