@@ -42,8 +42,8 @@ Analysis::Analysis() {}
 // Construct an analysis from a ROM object.
 Analysis::Analysis(const ROM& rom) : rom{rom} {
   entryPoints = {
-      {.label = "reset", .pc = rom.resetVector(), .state = State()},
-      {.label = "nmi", .pc = rom.nmiVector(), .state = State()},
+      {"reset", rom.resetVector(), State()},
+      {"nmi", rom.nmiVector(), State()},
   };
 }
 
@@ -70,6 +70,11 @@ void Analysis::run() {
   }
 
   generateLocalLabels();
+}
+
+// Add an entry point to the analysis.
+void Analysis::addEntryPoint(string label, SubroutinePC pc, State state) {
+  entryPoints.emplace(EntryPoint{label, pc, state});
 }
 
 // Add an instruction to the analysis.

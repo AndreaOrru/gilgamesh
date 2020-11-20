@@ -155,3 +155,30 @@ TEST_CASE("StateChange is propagated correctly between subroutines",
   REQUIRE(ldx->operation() == Op::LDX);
   REQUIRE(ldx->argument() == 0x1234);
 }
+
+TEST_CASE("Entry points can be added and analyzed", "[analysis]") {
+  Analysis analysis(*assemble("unknown_call_jump"));
+  analysis.run();
+
+  // Test there are two subroutines (including NMI).
+  REQUIRE(analysis.subroutines.size() == 2);
+
+  // Check the subroutines have the right name and number of instructions.
+  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(resetSubroutine.label == "reset");
+  REQUIRE(resetSubroutine.instructions.size() == 1);
+  REQUIRE(resetSubroutine.unknownStateChanges.size() == 1);
+
+  auto nmiSubroutine = analysis.subroutines.at(0x8003);
+  REQUIRE(nmiSubroutine.label == "nmi");
+  REQUIRE(nmiSubroutine.instructions.size() == 2);
+  REQUIRE(nmiSubroutine.unknownStateChanges.size() == 1);
+
+  // Test adding a custom entry point.
+  analysis.addEntryPoint("loop", 0x9002);
+  analysis.run();
+
+  auto loopSubroutine = analysis.subroutines.at(0x9002);
+  REQUIRE(loopSubroutine.label == "loop");
+  REQUIRE(loopSubroutine.instructions.size() == 1);
+}

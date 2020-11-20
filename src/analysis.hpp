@@ -88,6 +88,9 @@ class Analysis {
   // Analyze the ROM.
   void run();
 
+  // Add an entry point to the analysis.
+  void addEntryPoint(std::string label, SubroutinePC pc, State state = State());
+
   // Add an instruction to the analysis.
   Instruction* addInstruction(InstructionPC pc,
                               SubroutinePC subroutinePC,
