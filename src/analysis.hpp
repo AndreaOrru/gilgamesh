@@ -65,6 +65,8 @@ class Analysis {
  public:
   // Construct an empty analysis.
   Analysis();
+  // Construct an analysis from a ROM object.
+  Analysis(const ROM& rom);
   // Construct an analysis from a ROM path.
   Analysis(const std::string& romPath);
 
@@ -89,10 +91,10 @@ class Analysis {
 
   // Get an assertion for the current instruction, if any.
   std::optional<Assertion> getAssertion(InstructionPC pc,
-                                        SubroutinePC subroutinePC);
+                                        SubroutinePC subroutinePC) const;
 
   // The ROM being analyzed.
-  ROM rom;
+  const ROM rom;
   // ROM's entry points.
   EntryPointSet entryPoints;
 

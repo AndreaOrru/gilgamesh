@@ -30,7 +30,7 @@ class Instruction {
   // Constructor.
   Instruction(Analysis* analysis,
               InstructionPC pc,
-              SubroutinePC subroutine,
+              SubroutinePC subroutinePC,
               u8 opcode,
               u24 argument,
               State state);
@@ -42,6 +42,7 @@ class Instruction {
   AddressMode addressMode() const;  // Instruction'a address mode.
   InstructionType type() const;     // Category of the instruction.
   bool isControl() const;           // Whether this is a control instruction.
+  bool isSepRep() const;            // Whether this is a SEP/REP instruction.
   size_t size() const;              // Instruction size.
   size_t argumentSize() const;      // Instruction's argument size.
   // Instruction's argument, if any.
@@ -55,10 +56,10 @@ class Instruction {
   bool operator==(const Instruction& other) const;
   friend std::size_t hash_value(const Instruction& instruction);
 
-  InstructionPC pc;         // Instruction's address.
-  SubroutinePC subroutine;  // Subroutine to which the instruction belongs.
-  u8 opcode;                // Opcode byte.
-  State state;              // CPU state in which the instruction is executed.
+  InstructionPC pc;           // Instruction's address.
+  SubroutinePC subroutinePC;  // Subroutine to which the instruction belongs.
+  u8 opcode;                  // Opcode byte.
+  State state;                // CPU state in which the instruction is executed.
   // Instruction's label, if any.
   std::optional<std::string> label = std::nullopt;
 

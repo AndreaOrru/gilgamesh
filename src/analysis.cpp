@@ -39,12 +39,17 @@ size_t hash_value(const Reference& reference) {
 // Construct an empty analysis.
 Analysis::Analysis() {}
 
-// Construct an analysis from a ROM path.
-Analysis::Analysis(const std::string& romPath) : rom(romPath) {
+// Construct an analysis from a ROM object.
+Analysis::Analysis(const ROM& rom) : rom{rom} {
   entryPoints = {
       {.label = "reset", .pc = rom.resetVector(), .state = State()},
       {.label = "nmi", .pc = rom.nmiVector(), .state = State()},
   };
+}
+
+// Construct an analysis from a ROM path.
+Analysis::Analysis(const std::string& romPath) {
+  Analysis(ROM(romPath));
 }
 
 // Clear the results of the analysis.
@@ -107,7 +112,7 @@ void Analysis::addSubroutine(SubroutinePC pc, optional<string> label) {
 
 // Get an assertion for the current instruction, if any.
 optional<Assertion> Analysis::getAssertion(InstructionPC pc,
-                                           SubroutinePC subroutinePC) {
+                                           SubroutinePC subroutinePC) const {
   auto instructionAssertion = instructionAssertions.find(pc);
   if (instructionAssertion != instructionAssertions.end()) {
     return optional(

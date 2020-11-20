@@ -254,7 +254,7 @@ void CPU::applyStateChange(StateChange stateChange) {
 
 // Check whether the return instruction is operating on a manipulated stack.
 bool CPU::checkReturnManipulation(const Instruction* instruction,
-                                  vector<StackEntry> entries) {
+                                  vector<StackEntry> entries) const {
   auto op = instruction->operation();
 
   for (auto& entry : entries) {
@@ -290,7 +290,7 @@ void CPU::deriveStateInference(const Instruction* instruction) {
 }
 
 // Return a pointer to the current subroutine object.
-Subroutine* CPU::subroutine() {
+Subroutine* CPU::subroutine() const {
   return &analysis->subroutines.at(subroutinePC);
 }
 

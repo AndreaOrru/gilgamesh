@@ -7,12 +7,12 @@ using namespace std;
 // Constructor.
 Instruction::Instruction(Analysis* analysis,
                          InstructionPC pc,
-                         SubroutinePC subroutine,
+                         SubroutinePC subroutinePC,
                          u8 opcode,
                          u24 argument,
                          State state)
     : pc{pc},
-      subroutine{subroutine},
+      subroutinePC{subroutinePC},
       opcode{opcode},
       state{state},
       analysis{analysis},
@@ -118,6 +118,10 @@ bool Instruction::isControl() const {
     default:
       return false;
   }
+}
+// Whether this is a SEP/REP instruction.
+bool Instruction::isSepRep() const {
+  return type() == InstructionType::SepRep;
 }
 
 // Instruction size.
@@ -265,13 +269,13 @@ string Instruction::toString() const {
 
 // Hash table utils.
 bool Instruction::operator==(const Instruction& other) const {
-  return pc == other.pc && subroutine == other.subroutine &&
+  return pc == other.pc && subroutinePC == other.subroutinePC &&
          state == other.state;
 }
 size_t hash_value(const Instruction& instruction) {
   size_t seed = 0;
   boost::hash_combine(seed, instruction.pc);
-  boost::hash_combine(seed, instruction.subroutine);
+  boost::hash_combine(seed, instruction.subroutinePC);
   boost::hash_combine(seed, instruction.state.p);
   return seed;
 }

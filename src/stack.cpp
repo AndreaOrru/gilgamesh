@@ -55,7 +55,7 @@ vector<StackEntry> Stack::pop(size_t size) {
 }
 
 // Return values from the top of the stack without popping.
-vector<StackEntry> Stack::peek(size_t size) {
+vector<StackEntry> Stack::peek(size_t size) const {
   vector<StackEntry> result;
   for (size_t i = 1; i <= size; i++) {
     auto search = memory.find(pointer + i);
@@ -69,7 +69,7 @@ vector<StackEntry> Stack::peek(size_t size) {
 }
 
 // Compare the value at the top of the stack with a given value.
-bool Stack::matchValue(size_t size, u24 value) {
+bool Stack::matchValue(size_t size, u24 value) const {
   auto entries = peek(size);
 
   for (size_t i = 0; i < size; i++) {

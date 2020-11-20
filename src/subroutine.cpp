@@ -19,3 +19,15 @@ void Subroutine::addStateChange(SubroutinePC pc, StateChange stateChange) {
     knownStateChanges[pc] = stateChange;
   }
 }
+
+// Whether the subroutine saves the CPU state at the beginning.
+bool Subroutine::savesStateInIncipit() const {
+  for (auto& [pc, instruction] : instructions) {
+    if (instruction->operation() == Op::PHP) {
+      return true;
+    } else if (instruction->isSepRep() || instruction->isControl()) {
+      return false;
+    }
+  }
+  return false;
+}

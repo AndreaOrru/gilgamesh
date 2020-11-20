@@ -1,6 +1,17 @@
+* Subroutine
+** isResponsibleForUnknown
+** Recursive subroutines
+
+* Analysis / CPU
+** Jump tables
+** Adding custom entry points
+** Renaming subroutines
+** `unknown_call_jump` test
+
+* StateChange
+** Simplify state changes
+
 * ROM
 ** Test ExLoROM
 ** Test ExHiROM
 ** Test SDD-1
-* Instruction
-** Tests

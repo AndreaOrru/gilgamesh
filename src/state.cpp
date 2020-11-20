@@ -70,8 +70,13 @@ void StateChange::reset(u8 mask) {
   x = change.x ? false : x;
 }
 
-// Return whether the state is unknown.
-bool StateChange::unknown() {
+// Return whether there are no state changes.
+bool StateChange::isEmpty() const {
+  return !unknown() && !m.has_value() && !x.has_value();
+}
+
+// Return whether the state change is unknown.
+bool StateChange::unknown() const {
   return unknownReason != UnknownReason::Known;
 }
 

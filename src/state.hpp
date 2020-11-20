@@ -63,9 +63,10 @@ struct StateChange {
   // New state change.
   StateChange(std::optional<bool> m, std::optional<bool> x);
 
-  void set(u8 mask);    // Set bits that were changed to 1 in P.
-  void reset(u8 mask);  // Reset bits that were changed to 1 in P.
-  bool unknown();       // Return whether the state is unknown.
+  void set(u8 mask);     // Set bits that were changed to 1 in P.
+  void reset(u8 mask);   // Reset bits that were changed to 1 in P.
+  bool isEmpty() const;  // Return whether there are no state changes.
+  bool unknown() const;  // Return whether the state is unknown.
   // Simplify the state change based on a state inference.
   void applyInference(StateChange inference);
 

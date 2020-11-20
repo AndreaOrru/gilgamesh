@@ -53,13 +53,13 @@ class CPU {
 
   // Check whether the return instruction is operating on a manipulated stack.
   bool checkReturnManipulation(const Instruction* instruction,
-                               std::vector<StackEntry> entries);
+                               std::vector<StackEntry> entries) const;
 
   // Derive a state inference from the current state and instruction.
   void deriveStateInference(const Instruction* instruction);
 
   // Return a pointer to the current subroutine object.
-  Subroutine* subroutine();
+  Subroutine* subroutine() const;
 
   // Take the state change of the given subroutine and
   // propagate it to to the current subroutine state.
