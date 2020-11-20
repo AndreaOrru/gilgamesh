@@ -20,6 +20,16 @@ void Subroutine::addStateChange(SubroutinePC pc, StateChange stateChange) {
   }
 }
 
+// Whether the subroutine is unknown because of `reason`.
+bool Subroutine::isUnknownBecauseOf(UnknownReason reason) const {
+  for (auto& [pc, stateChange] : unknownStateChanges) {
+    if (stateChange.unknownReason == reason) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Whether the subroutine saves the CPU state at the beginning.
 bool Subroutine::savesStateInIncipit() const {
   for (auto& [pc, instruction] : instructions) {

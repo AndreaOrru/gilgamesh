@@ -72,7 +72,7 @@ struct StateChange {
   // Simplify the state change based on a state inference.
   void applyInference(StateChange inference);
   // Simplify the state change based on a state.
-  StateChange simplify(State state);
+  StateChange simplify(State state) const;
 
   // Hash table utils.
   bool operator==(const StateChange& other) const;

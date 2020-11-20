@@ -56,12 +56,13 @@ class CPU {
   bool checkReturnManipulation(const Instruction* instruction,
                                std::vector<StackEntry> entries) const;
 
+  // Given a jump or call instruction, return its target(s), if any.
+  // Additionally, track jump tables when they're seen for the first time.
+  std::optional<std::unordered_set<InstructionPC>> computeJumpTargets(
+      const Instruction* instruction);
+
   // Derive a state inference from the current state and instruction.
   void deriveStateInference(const Instruction* instruction);
-
-  // Given a jump or call instruction, return its target(s), if any.
-  std::optional<std::unordered_set<InstructionPC>> jumpTargets(
-      const Instruction* instruction);
 
   // Return a pointer to the current subroutine object.
   Subroutine* subroutine() const;

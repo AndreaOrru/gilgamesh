@@ -87,7 +87,7 @@ void CPU::branch(const Instruction* instruction) {
 // Call emulation.
 void CPU::call(const Instruction* instruction) {
   // Indirect call with no information.
-  auto targets = jumpTargets(instruction);
+  auto targets = computeJumpTargets(instruction);
   if (!targets.has_value()) {
     return unknownStateChange(instruction->pc, UnknownReason::IndirectJump);
   }
@@ -128,7 +128,7 @@ void CPU::interrupt(const Instruction* instruction) {
 // Jump emulation.
 void CPU::jump(const Instruction* instruction) {
   // Indirect jump with no information.
-  auto targets = jumpTargets(instruction);
+  auto targets = computeJumpTargets(instruction);
   if (!targets.has_value()) {
     return unknownStateChange(instruction->pc, UnknownReason::IndirectJump);
   }
@@ -291,6 +291,34 @@ bool CPU::checkReturnManipulation(const Instruction* instruction,
   return false;
 }
 
+// Given a jump or call instruction, return its target(s), if any.
+// Additionally, track jump tables when they're seen for the first time.
+optional<unordered_set<InstructionPC>> CPU::computeJumpTargets(
+    const Instruction* instruction) {
+  // Non-indirect jump/call.
+  unordered_set<InstructionPC> targets;
+  if (auto arg = instruction->absoluteArgument()) {
+    targets.insert(*arg);
+    return targets;
+  }
+
+  // Indirect jump/call.
+  auto jumpTableSearch = analysis->jumpTables.find(instruction->pc);
+  if (jumpTableSearch == analysis->jumpTables.end() ||
+      jumpTableSearch->second.status == JumpTableStatus::Unknown) {
+    // Unknown jump table.
+    analysis->jumpTables.try_emplace(instruction->pc,
+                                     JumpTable{JumpTableStatus::Unknown, {}});
+    return nullopt;
+  } else {
+    // Collect jump table's targets.
+    for (auto [index, target] : jumpTableSearch->second.targets) {
+      targets.insert(target);
+    }
+  }
+  return targets;
+}
+
 // Derive a state inference from the current state and instruction.
 void CPU::deriveStateInference(const Instruction* instruction) {
   // If we're executing an instruction with a certain operand size,
@@ -305,32 +333,6 @@ void CPU::deriveStateInference(const Instruction* instruction) {
       !stateChange.x.has_value()) {
     stateInference.x = (bool)state.x;
   }
-}
-
-// Given a jump or call instruction, return its target(s), if any.
-optional<unordered_set<InstructionPC>> CPU::jumpTargets(
-    const Instruction* instruction) {
-  // Non-indirect jump/call.
-  unordered_set<InstructionPC> targets;
-  if (auto arg = instruction->absoluteArgument()) {
-    targets.insert(*arg);
-    return targets;
-  }
-
-  // Indirect jump/call.
-  auto search = analysis->jumpTables.find(instruction->pc);
-  if (search != analysis->jumpTables.end()) {
-    // Unknown jump table.
-    auto jumpTable = search->second;
-    if (jumpTable.status == JumpTableStatus::Unknown) {
-      return nullopt;
-    }
-    // Collect jump table's targets.
-    for (auto [index, target] : jumpTable.targets) {
-      targets.insert(target);
-    }
-  }
-  return targets;
 }
 
 // Return a pointer to the current subroutine object.
@@ -352,11 +354,8 @@ void CPU::propagateSubroutineState(
     if (!subroutine.unknownStateChanges.empty()) {
       return unknownStateChange(pc, UnknownReason::Unknown);
     }
-
     // Gather all state changes across subroutines.
-    for (auto& stateChange : subroutine.simplifiedStateChanges(state)) {
-      stateChanges.insert(stateChange);
-    }
+    stateChanges.merge(subroutine.simplifiedStateChanges(state));
   }
 
   // Ambiguous states.

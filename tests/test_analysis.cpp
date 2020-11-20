@@ -53,6 +53,30 @@ TEST_CASE("Loops do not cause the analysis to hang", "[analysis]") {
   REQUIRE(analysis.references.at(0x8000).count({0x8000, 0x8000}));
 }
 
+TEST_CASE("Jump tables are handled correctly", "[analysis]") {
+  Analysis analysis(*assemble("jump_tables"));
+  analysis.run();
+
+  // Test that there's a single subroutine, which is unknown
+  // because of an unexplored indirect jump instruction.
+  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(resetSubroutine.label == "reset");
+  REQUIRE(resetSubroutine.instructions.size() == 1);
+  REQUIRE(resetSubroutine.isUnknownBecauseOf(UnknownReason::IndirectJump));
+
+  // Specify the limits of the jump table.
+  analysis.defineJumpTable(0x8000, {0, 2});
+  analysis.run();
+
+  // Verify that the subroutines pointed by
+  // the jumptable have been explored.
+  {
+    REQUIRE(analysis.subroutines.size() - 1 == 3);
+    REQUIRE(analysis.subroutines.count(0x8100) == 1);
+    REQUIRE(analysis.subroutines.count(0x8200) == 1);
+  }
+}
+
 TEST_CASE("PHP and PLP correctly preserve state", "[analysis]") {
   Analysis analysis(*assemble("php_plp"));
   analysis.run();

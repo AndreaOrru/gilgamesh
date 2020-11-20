@@ -110,6 +110,33 @@ void Analysis::addSubroutine(SubroutinePC pc, optional<string> label) {
   subroutines.try_emplace(pc, pc, labelValue);
 }
 
+// Define a jump table: caller spans a jumptable going from x to y (included).
+void Analysis::defineJumpTable(InstructionPC callerPC,
+                               pair<u16, u16> range,
+                               JumpTableStatus status) {
+  auto& jumpTable = jumpTables.at(callerPC);
+  auto caller = anyInstruction(callerPC);
+
+  // TODO: support stepping by 3 for long addresses.
+  for (int x = range.first; x <= range.second; x += 2) {
+    auto offset = *caller->argument() + x;
+    auto bank = caller->pc & 0xFF0000;
+    auto target = bank | rom.readWord(bank | offset);
+    jumpTable.targets.insert_or_assign(x, target);
+  }
+  jumpTable.status = status;
+}
+
+// Return any of the instructions at address PC.
+const Instruction* Analysis::anyInstruction(InstructionPC pc) {
+  auto search = instructions.find(pc);
+  if (search == instructions.end()) {
+    return nullptr;
+  } else {
+    return &(*search->second.begin());
+  }
+}
+
 // Get an assertion for the current instruction, if any.
 optional<Assertion> Analysis::getAssertion(InstructionPC pc,
                                            SubroutinePC subroutinePC) const {

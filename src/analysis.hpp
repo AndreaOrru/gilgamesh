@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "instruction.hpp"
 #include "rom.hpp"
@@ -102,6 +103,14 @@ class Analysis {
   // Add a subroutine to the analysis.
   void addSubroutine(SubroutinePC pc,
                      std::optional<std::string> label = std::nullopt);
+
+  // Define a jump table: caller spans a jumptable going from x to y (included).
+  void defineJumpTable(InstructionPC callerPC,
+                       std::pair<u16, u16> range,
+                       JumpTableStatus status = JumpTableStatus::Partial);
+
+  // Return any of the instructions at address PC.
+  const Instruction* anyInstruction(InstructionPC pc);
 
   // Get an assertion for the current instruction, if any.
   std::optional<Assertion> getAssertion(InstructionPC pc,

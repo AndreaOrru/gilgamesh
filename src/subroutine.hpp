@@ -19,6 +19,9 @@ struct Subroutine {
   // Add a state change.
   void addStateChange(InstructionPC pc, StateChange stateChange);
 
+  // Whether the subroutine is unknown because of `reason`.
+  bool isUnknownBecauseOf(UnknownReason reason) const;
+
   // Whether the subroutine saves the CPU state at the beginning.
   bool savesStateInIncipit() const;
 

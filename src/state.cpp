@@ -89,7 +89,7 @@ void StateChange::applyInference(StateChange inference) {
 }
 
 // Simplify the state change based on a state.
-StateChange StateChange::simplify(State state) {
+StateChange StateChange::simplify(State state) const {
   StateChange stateChange = *this;
   if (state.m == stateChange.m) {
     stateChange.m = nullopt;

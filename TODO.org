@@ -7,11 +7,11 @@
 ** Test simplify
 
 * Analysis / CPU
-** Jump tables
 ** Adding custom entry points
 ** Renaming subroutines
 ** `unknown_call_jump` test
 ** `jump_tables` test
+*** missing test cases
 
 * ROM
 ** Test ExLoROM
