@@ -1,7 +1,9 @@
 #pragma once
 
+#include <boost/container_hash/hash.hpp>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "types.hpp"
 
@@ -69,6 +71,8 @@ struct StateChange {
   bool unknown() const;  // Return whether the state is unknown.
   // Simplify the state change based on a state inference.
   void applyInference(StateChange inference);
+  // Simplify the state change based on a state.
+  StateChange simplify(State state);
 
   // Hash table utils.
   bool operator==(const StateChange& other) const;
@@ -81,3 +85,6 @@ struct StateChange {
 
 // Map from InstructionPC to StateChange.
 typedef std::unordered_map<InstructionPC, StateChange> StateChangeMap;
+// Set of StateChanges.
+typedef std::unordered_set<StateChange, boost::hash<StateChange>>
+    StateChangeSet;

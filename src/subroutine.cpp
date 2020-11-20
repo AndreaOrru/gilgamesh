@@ -31,3 +31,12 @@ bool Subroutine::savesStateInIncipit() const {
   }
   return false;
 }
+
+// Return the state changes, simplified given the current state.
+StateChangeSet Subroutine::simplifiedStateChanges(State state) {
+  StateChangeSet stateChanges;
+  for (auto& [pc, stateChange] : knownStateChanges) {
+    stateChanges.insert(stateChange.simplify(state));
+  }
+  return stateChanges;
+}

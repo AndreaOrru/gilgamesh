@@ -1,15 +1,16 @@
+* StateChange
+** Test simplify
+
 * Subroutine
 ** isResponsibleForUnknown
 ** Recursive subroutines
+** Test simplify
 
 * Analysis / CPU
 ** Jump tables
 ** Adding custom entry points
 ** Renaming subroutines
 ** `unknown_call_jump` test
-
-* StateChange
-** Simplify state changes
 
 * ROM
 ** Test ExLoROM

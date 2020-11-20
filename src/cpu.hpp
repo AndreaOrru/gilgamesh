@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -58,12 +59,18 @@ class CPU {
   // Derive a state inference from the current state and instruction.
   void deriveStateInference(const Instruction* instruction);
 
+  // Given a jump or call instruction, return its target(s), if any.
+  std::optional<std::unordered_set<InstructionPC>> jumpTargets(
+      const Instruction* instruction);
+
   // Return a pointer to the current subroutine object.
   Subroutine* subroutine() const;
 
-  // Take the state change of the given subroutine and
+  // Take the state change of the given subroutines and
   // propagate it to to the current subroutine state.
-  void propagateSubroutineState(InstructionPC pc, InstructionPC target);
+  void propagateSubroutineState(
+      InstructionPC pc,
+      const std::unordered_set<InstructionPC>& target);
 
   // Signal an unknown subroutine state change.
   void unknownStateChange(InstructionPC pc, UnknownReason reason);

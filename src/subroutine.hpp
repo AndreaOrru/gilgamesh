@@ -22,6 +22,9 @@ struct Subroutine {
   // Whether the subroutine saves the CPU state at the beginning.
   bool savesStateInIncipit() const;
 
+  // Return the state changes, simplified given the current state.
+  StateChangeSet simplifiedStateChanges(State state);
+
   SubroutinePC pc;    // Program Counter.
   std::string label;  // Label.
   // Map from PC to instructions.

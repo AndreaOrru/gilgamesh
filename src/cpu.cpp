@@ -86,31 +86,38 @@ void CPU::branch(const Instruction* instruction) {
 
 // Call emulation.
 void CPU::call(const Instruction* instruction) {
-  auto target = instruction->absoluteArgument();
-  if (!target.has_value()) {
+  // Indirect call with no information.
+  auto targets = jumpTargets(instruction);
+  if (!targets.has_value()) {
     return unknownStateChange(instruction->pc, UnknownReason::IndirectJump);
   }
 
-  CPU cpu(*this);
-  cpu.pc = *target;
-  cpu.subroutinePC = *target;
-  cpu.stateChange = StateChange();
-  switch (instruction->operation()) {
-    case Op::JSR:
-      cpu.stack.push(2, instruction->pc, instruction);
-      break;
-    case Op::JSL:
-      cpu.stack.push(3, instruction->pc, instruction);
-      break;
-    default:
-      __builtin_unreachable();
+  for (auto target : *targets) {
+    // Create a parallel instance of the CPU to
+    // execute the subroutine that is being called.
+    CPU cpu(*this);
+    cpu.pc = target;
+    cpu.subroutinePC = target;
+    cpu.stateChange = StateChange();
+    // Push the return address on the stack.
+    switch (instruction->operation()) {
+      case Op::JSR:
+        cpu.stack.push(2, instruction->pc, instruction);
+        break;
+      case Op::JSL:
+        cpu.stack.push(3, instruction->pc, instruction);
+        break;
+      default:
+        __builtin_unreachable();
+    }
+
+    // Emulate the called subroutine.
+    analysis->addSubroutine(target);
+    analysis->addReference(instruction->pc, target, subroutinePC);
+    cpu.run();
   }
-
-  analysis->addSubroutine(*target);
-  analysis->addReference(instruction->pc, *target, subroutinePC);
-  cpu.run();
-
-  propagateSubroutineState(pc, *target);
+  // Propagate called subroutines state to caller.
+  propagateSubroutineState(pc, *targets);
 }
 
 // Interrupt emulation.
@@ -118,13 +125,24 @@ void CPU::interrupt(const Instruction* instruction) {
   return unknownStateChange(instruction->pc, UnknownReason::SuspectInstruction);
 }
 
+// Jump emulation.
 void CPU::jump(const Instruction* instruction) {
-  if (auto target = instruction->absoluteArgument()) {
-    analysis->addReference(instruction->pc, *target, subroutinePC);
-    pc = *target;
-  } else {
+  // Indirect jump with no information.
+  auto targets = jumpTargets(instruction);
+  if (!targets.has_value()) {
     return unknownStateChange(instruction->pc, UnknownReason::IndirectJump);
   }
+
+  // Execute each target in its own CPU instance.
+  for (auto target : *targets) {
+    analysis->addReference(instruction->pc, target, subroutinePC);
+    CPU cpu(*this);
+    cpu.pc = target;
+    cpu.run();
+  }
+
+  // Targets have already been executed - stop here.
+  stop = true;
 }
 
 // Return emulation.
@@ -289,25 +307,65 @@ void CPU::deriveStateInference(const Instruction* instruction) {
   }
 }
 
+// Given a jump or call instruction, return its target(s), if any.
+optional<unordered_set<InstructionPC>> CPU::jumpTargets(
+    const Instruction* instruction) {
+  // Non-indirect jump/call.
+  unordered_set<InstructionPC> targets;
+  if (auto arg = instruction->absoluteArgument()) {
+    targets.insert(*arg);
+    return targets;
+  }
+
+  // Indirect jump/call.
+  auto search = analysis->jumpTables.find(instruction->pc);
+  if (search != analysis->jumpTables.end()) {
+    // Unknown jump table.
+    auto jumpTable = search->second;
+    if (jumpTable.status == JumpTableStatus::Unknown) {
+      return nullopt;
+    }
+    // Collect jump table's targets.
+    for (auto [index, target] : jumpTable.targets) {
+      targets.insert(target);
+    }
+  }
+  return targets;
+}
+
 // Return a pointer to the current subroutine object.
 Subroutine* CPU::subroutine() const {
   return &analysis->subroutines.at(subroutinePC);
 }
 
-// Take the state change of the given subroutine and
+// Take the state change of the given subroutines and
 // propagate it to to the current subroutine state.
-void CPU::propagateSubroutineState(InstructionPC pc, InstructionPC target) {
-  auto& subroutine = analysis->subroutines.at(target);
-  if (!subroutine.unknownStateChanges.empty()) {
-    return unknownStateChange(pc, UnknownReason::Unknown);
+void CPU::propagateSubroutineState(
+    InstructionPC pc,
+    const unordered_set<InstructionPC>& targets) {
+  StateChangeSet stateChanges;
+
+  // Iterate through all the called subroutines.
+  for (auto target : targets) {
+    auto& subroutine = analysis->subroutines.at(target);
+    // Unknown state change.
+    if (!subroutine.unknownStateChanges.empty()) {
+      return unknownStateChange(pc, UnknownReason::Unknown);
+    }
+
+    // Gather all state changes across subroutines.
+    for (auto& stateChange : subroutine.simplifiedStateChanges(state)) {
+      stateChanges.insert(stateChange);
+    }
   }
 
-  auto& stateChanges = subroutine.knownStateChanges;
-  if ((stateChanges.size()) == 1) {
-    applyStateChange(stateChanges.begin()->second);
-  } else {
+  // Ambiguous states.
+  if (stateChanges.size() != 1) {
     return unknownStateChange(pc, UnknownReason::MultipleReturnStates);
   }
+
+  // Single, valid state change that we can propagate.
+  applyStateChange(*stateChanges.begin());
 }
 
 // Signal an unknown subroutine state change.

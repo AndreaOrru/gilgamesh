@@ -1,5 +1,3 @@
-#include <boost/container_hash/hash.hpp>
-
 #include "state.hpp"
 
 using namespace std;
@@ -88,6 +86,18 @@ void StateChange::applyInference(StateChange inference) {
   if (x.has_value() && (x == inference.x)) {
     x = nullopt;
   }
+}
+
+// Simplify the state change based on a state.
+StateChange StateChange::simplify(State state) {
+  StateChange stateChange = *this;
+  if (state.m == stateChange.m) {
+    stateChange.m = nullopt;
+  }
+  if (state.x == stateChange.x) {
+    stateChange.x = nullopt;
+  }
+  return stateChange;
 }
 
 // Hash table utils.

@@ -58,6 +58,20 @@ struct Assertion {
   StateChange stateChange;
 };
 
+// Set of possible jump table statuses.
+enum JumpTableStatus {
+  Unknown,
+  Empty,
+  Partial,
+  Complete,
+};
+
+// Structure representing a jump table.
+struct JumpTable {
+  JumpTableStatus status;
+  std::map<std::optional<u16>, InstructionPC> targets;
+};
+
 /**
  * Class holding the state of the ROM's analysis.
  */
@@ -112,6 +126,9 @@ class Analysis {
                      StateChange,
                      boost::hash<std::pair<InstructionPC, SubroutinePC>>>
       subroutineAssertions;
+
+  // Map from PC to jump tables.
+  std::unordered_map<InstructionPC, JumpTable> jumpTables;
 
  private:
   void clear();                // Clear the results of the analysis.
