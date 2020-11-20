@@ -11,6 +11,7 @@
 ** Adding custom entry points
 ** Renaming subroutines
 ** `unknown_call_jump` test
+** `jump_tables` test
 
 * ROM
 ** Test ExLoROM

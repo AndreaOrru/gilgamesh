@@ -78,6 +78,29 @@ TEST_CASE("PHP and PLP correctly preserve state", "[analysis]") {
   REQUIRE(stateChange.isEmpty());
 }
 
+TEST_CASE("Overlapping StateChanges are simplified when propagating",
+          "[analysis]") {
+  Analysis analysis(*assemble("simplified_state_changes"));
+  analysis.run();
+
+  // Test there are two subroutines (+ NMI).
+  REQUIRE(analysis.subroutines.size() - 1 == 2);
+
+  // Test there's a `reset` subroutine with the correct number of instructions.
+  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(resetSubroutine.label == "reset");
+  REQUIRE(resetSubroutine.instructions.size() == 5);
+
+  // Test there's a `double_state_change` subroutine
+  // with the correct number of instructions.
+  auto doubleStateSubroutine = analysis.subroutines.at(0x800E);
+  REQUIRE(doubleStateSubroutine.instructions.size() == 5);
+
+  // Test that the state is simplified.
+  REQUIRE(doubleStateSubroutine.knownStateChanges.size() == 2);
+  REQUIRE(doubleStateSubroutine.unknownStateChanges.empty());
+}
+
 TEST_CASE("StateChange is propagated correctly between subroutines",
           "[analysis]") {
   Analysis analysis(*assemble("state_change"));
