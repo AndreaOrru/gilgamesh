@@ -1,3 +1,5 @@
+#include <QDebug>
+
 #include "gui/disassemblyview.hpp"
 
 #include "analysis.hpp"
@@ -17,15 +19,27 @@ DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
 
 void DisassemblyView::setAnalysis(const Analysis* analysis) {
   clear();
-
   for (auto& [pc, subroutine] : analysis->subroutines) {
     renderSubroutine(subroutine);
   }
+  moveCursor(QTextCursor::Start);
+}
+
+void DisassemblyView::jumpToLabel(QString label) {
+  auto blockNumber = labelToBlockNumber[label];
+  auto block = document()->findBlockByNumber(blockNumber);
+
+  QTextCursor cursor(block);
+  moveCursor(QTextCursor::End);
+  setTextCursor(cursor);
 }
 
 void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
   auto label = qformat("%s:", subroutine.label.c_str());
   append(label);
+
+  auto blockNumber = textCursor().blockNumber();
+  labelToBlockNumber[QString::fromStdString(subroutine.label)] = blockNumber;
 
   for (auto& [pc, instruction] : subroutine.instructions) {
     renderInstruction(instruction);

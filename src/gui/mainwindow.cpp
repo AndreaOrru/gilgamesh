@@ -44,6 +44,9 @@ void MainWindow::setupSignals() {
           &DisassemblyView::setAnalysis);
   connect(this, &MainWindow::analysisChanged, subroutinesView,
           &LabelsView::setAnalysis);
+
+  connect(subroutinesView, &LabelsView::itemDoubleClicked, disassemblyView,
+          [this](auto item) { disassemblyView->jumpToLabel(item->text()); });
 }
 
 void MainWindow::openROM(const QString& path) {
