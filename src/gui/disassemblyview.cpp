@@ -7,7 +7,7 @@
 #include "utils.hpp"
 
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
-  setFontFamily("monospace");
+  setFontFamily("Iosevka Fixed SS09 Extended");
   setReadOnly(true);
   setTextInteractionFlags(this->textInteractionFlags() |
                           Qt::TextSelectableByKeyboard);

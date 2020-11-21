@@ -8,6 +8,8 @@ Highlighter::Highlighter(QTextDocument* parent) : QSyntaxHighlighter(parent) {
 }
 
 void Highlighter::setupFormats() {
+  argumentAliasFormat.setForeground(Qt::darkRed);
+
   commentFormat.setForeground(Qt::gray);
 
   labelFormat.setForeground(Qt::darkRed);
@@ -15,11 +17,15 @@ void Highlighter::setupFormats() {
 
   localLabelFormat.setForeground(Qt::darkRed);
 
-  opcodeFormat.setForeground(Qt::darkBlue);
+  opcodeFormat.setForeground(Qt::blue);
 }
 
 void Highlighter::setupPatterns() {
   Rule rule;
+
+  rule.pattern = QRegularExpression(" \\.?[A-Za-z0-9_]+");
+  rule.format = argumentAliasFormat;
+  rules.append(rule);
 
   QStringList opcode_patterns;
   for (auto& op : OPCODE_NAMES) {

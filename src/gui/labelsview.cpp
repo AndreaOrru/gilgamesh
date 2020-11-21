@@ -3,7 +3,7 @@
 #include "analysis.hpp"
 
 LabelsView::LabelsView(QWidget* parent) : QListWidget(parent) {
-  setFont(QFont("monospace"));
+  setFont(QFont("Iosevka Fixed SS09 Extended"));
 }
 
 void LabelsView::setAnalysis(const Analysis* analysis) {

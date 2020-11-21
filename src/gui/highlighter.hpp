@@ -22,6 +22,7 @@ class Highlighter : public QSyntaxHighlighter {
   };
   QVector<Rule> rules;
 
+  QTextCharFormat argumentAliasFormat;
   QTextCharFormat commentFormat;
   QTextCharFormat labelFormat;
   QTextCharFormat localLabelFormat;
