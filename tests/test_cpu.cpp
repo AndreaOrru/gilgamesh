@@ -16,8 +16,8 @@ pair<CPU, Analysis*> setupCPU(u8 p, bool stop = true) {
 }
 
 void runInstruction(CPU& cpu, u8 opcode, u24 argument) {
-  Instruction instruction(cpu.analysis, cpu.pc, cpu.subroutinePC, opcode,
-                          argument, cpu.state);
+  Instruction instruction(cpu.pc, cpu.subroutinePC, opcode, argument, cpu.state,
+                          cpu.analysis);
   cpu.execute(&instruction);
 }
 

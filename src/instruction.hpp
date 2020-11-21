@@ -10,6 +10,7 @@
 #include "types.hpp"
 
 class Analysis;
+class Subroutine;
 
 // Categories of instructions.
 enum class InstructionType {
@@ -28,14 +29,17 @@ enum class InstructionType {
 class Instruction {
  public:
   // Constructor.
-  Instruction(Analysis* analysis,
-              InstructionPC pc,
+  Instruction(InstructionPC pc,
               SubroutinePC subroutinePC,
               u8 opcode,
               u24 argument,
-              State state);
+              State state,
+              Analysis* analysis = nullptr);
   // Test constructor.
   Instruction(u8 opcode);
+
+  // Pointer to the subroutine to which the instruction belongs.
+  Subroutine* subroutine() const;
 
   std::string name() const;         // Name of the instruction's operation.
   Op operation() const;             // Instruction's operation.

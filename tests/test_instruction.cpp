@@ -3,8 +3,7 @@
 #include "instruction.hpp"
 
 TEST_CASE("LDA instruction is parsed correctly", "[instruction]") {
-  Instruction instruction(nullptr, 0x8000, 0x8000, 0xA9, 0x1234,
-                          State(false, false));
+  Instruction instruction(0x8000, 0x8000, 0xA9, 0x1234, State(false, false));
 
   REQUIRE(instruction.name() == "lda");
   REQUIRE(instruction.operation() == Op::LDA);
@@ -19,8 +18,7 @@ TEST_CASE("LDA instruction is parsed correctly", "[instruction]") {
 }
 
 TEST_CASE("BRL instruction is parsed correctly", "[instruction]") {
-  Instruction instruction(nullptr, 0x8000, 0x8000, 0x82, 0xFFFD,
-                          State(false, false));
+  Instruction instruction(0x8000, 0x8000, 0x82, 0xFFFD, State(false, false));
 
   REQUIRE(instruction.name() == "brl");
   REQUIRE(instruction.operation() == Op::BRL);

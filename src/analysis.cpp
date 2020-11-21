@@ -85,7 +85,7 @@ Instruction* Analysis::addInstruction(InstructionPC pc,
   auto& instructionSet = instructions.try_emplace(pc).first->second;
   // Insert the given instruction into the set.
   auto [instructionIter, inserted] =
-      instructionSet.emplace(this, pc, subroutinePC, opcode, argument, state);
+      instructionSet.emplace(pc, subroutinePC, opcode, argument, state, this);
   // If the instruction was already present, return NULL.
   if (!inserted) {
     return nullptr;

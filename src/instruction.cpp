@@ -6,12 +6,12 @@
 using namespace std;
 
 // Constructor.
-Instruction::Instruction(Analysis* analysis,
-                         InstructionPC pc,
+Instruction::Instruction(InstructionPC pc,
                          SubroutinePC subroutinePC,
                          u8 opcode,
                          u24 argument,
-                         State state)
+                         State state,
+                         Analysis* analysis)
     : pc{pc},
       subroutinePC{subroutinePC},
       opcode{opcode},
@@ -21,6 +21,11 @@ Instruction::Instruction(Analysis* analysis,
 
 // Test constructor.
 Instruction::Instruction(u8 opcode) : opcode{opcode} {}
+
+// Pointer to the subroutine to which the instruction belongs.
+Subroutine* Instruction::subroutine() const {
+  return &analysis->subroutines.at(subroutinePC);
+}
 
 // Name of the instruction's operation.
 string Instruction::name() const {
