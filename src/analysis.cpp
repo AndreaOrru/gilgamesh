@@ -113,6 +113,18 @@ void Analysis::addSubroutine(SubroutinePC pc, optional<string> label) {
   subroutines.try_emplace(pc, pc, labelValue);
 }
 
+// Add an instruction state change assertion.
+void Analysis::assertInstruction(InstructionPC pc, StateChange stateChange) {
+  instructionAssertions.insert_or_assign(pc, stateChange);
+}
+
+// Add a subroutine state change assertion.
+void Analysis::assertSubroutine(SubroutinePC subroutinePC,
+                                InstructionPC pc,
+                                StateChange stateChange) {
+  subroutineAssertions.insert_or_assign({subroutinePC, pc}, stateChange);
+}
+
 // Define a jump table: caller spans a jumptable going from x to y (included).
 void Analysis::defineJumpTable(InstructionPC callerPC,
                                pair<u16, u16> range,
@@ -169,7 +181,7 @@ optional<Assertion> Analysis::getAssertion(InstructionPC pc,
         Assertion{AssertionType::Instruction, instructionAssertion->second});
   }
 
-  auto subroutineAssertion = subroutineAssertions.find({pc, subroutinePC});
+  auto subroutineAssertion = subroutineAssertions.find({subroutinePC, pc});
   if (subroutineAssertion != subroutineAssertions.end()) {
     return optional(
         Assertion{AssertionType::Subroutine, subroutineAssertion->second});

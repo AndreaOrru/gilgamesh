@@ -117,7 +117,7 @@ void CPU::call(const Instruction* instruction) {
     cpu.run();
   }
   // Propagate called subroutines state to caller.
-  propagateSubroutineState(pc, *targets);
+  propagateSubroutineState(instruction->pc, *targets);
 }
 
 // Interrupt emulation.

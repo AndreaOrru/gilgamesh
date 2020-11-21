@@ -5,6 +5,35 @@
 
 using namespace std;
 
+TEST_CASE("Assertions work correctly", "[analysis]") {
+  Analysis analysis(*assemble("assertions"));
+  analysis.run();
+
+  REQUIRE(analysis.subroutines.size() - 1 == 2);
+
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(resetSubroutine.label == "reset");
+  REQUIRE(resetSubroutine.instructions.size() == 1);
+  REQUIRE(resetSubroutine.isUnknownBecauseOf(UnknownReason::Unknown));
+
+  auto& unknownSubroutine = analysis.subroutines.at(0x8005);
+  REQUIRE(unknownSubroutine.instructions.size() == 1);
+  REQUIRE(unknownSubroutine.isUnknownBecauseOf(UnknownReason::IndirectJump));
+
+  analysis.assertInstruction(0x8000, StateChange());
+  analysis.run();
+
+  resetSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(resetSubroutine.instructions.size() == 2);
+  REQUIRE(resetSubroutine.unknownStateChanges.empty());
+
+  analysis.assertSubroutine(0x8005, 0x8005, StateChange());
+  analysis.run();
+
+  unknownSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(unknownSubroutine.unknownStateChanges.empty());
+}
+
 TEST_CASE("State inference correctly simplifies state changes", "[analysis]") {
   Analysis analysis(*assemble("elidable_state_change"));
   analysis.run();
@@ -13,12 +42,12 @@ TEST_CASE("State inference correctly simplifies state changes", "[analysis]") {
   REQUIRE(analysis.subroutines.size() - 1 == 2);
 
   // Test there's a `reset` subroutine with the correct number of instructions.
-  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 4);
 
   // Test there's a subroutine with the correct number of instructions.
-  auto elidableChangeSubroutine = analysis.subroutines.at(0x800A);
+  auto& elidableChangeSubroutine = analysis.subroutines.at(0x800A);
   REQUIRE(elidableChangeSubroutine.instructions.size() == 6);
 
   // Test that the state is preserved.
@@ -38,7 +67,7 @@ TEST_CASE("Loops do not cause the analysis to hang", "[analysis]") {
   REQUIRE(analysis.subroutines.at(0x8000).instructions.size() == 1);
 
   // Check there is a single instruction in the analysis.
-  auto instructions = analysis.instructions;
+  auto& instructions = analysis.instructions;
   REQUIRE(instructions.size() == 1);
   REQUIRE(instructions.at(0x8000).size() == 1);
 
@@ -59,7 +88,7 @@ TEST_CASE("Jump tables are handled correctly", "[analysis]") {
 
   // Test that there's a single subroutine, which is unknown
   // because of an unexplored indirect jump instruction.
-  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 1);
   REQUIRE(resetSubroutine.isUnknownBecauseOf(UnknownReason::IndirectJump));
@@ -85,13 +114,13 @@ TEST_CASE("PHP and PLP correctly preserve state", "[analysis]") {
   REQUIRE(analysis.subroutines.size() - 1 == 2);
 
   // Test there's a `reset` subroutine with the correct number of instructions.
-  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 4);
   REQUIRE(!resetSubroutine.savesStateInIncipit());
 
   // Test there's a PHP/PLP subroutine with the correct number of instructions.
-  auto phpPlpSubroutine = analysis.subroutines.at(0x800A);
+  auto& phpPlpSubroutine = analysis.subroutines.at(0x800A);
   REQUIRE(phpPlpSubroutine.instructions.size() == 5);
   REQUIRE(phpPlpSubroutine.savesStateInIncipit());
 
@@ -111,13 +140,13 @@ TEST_CASE("Overlapping StateChanges are simplified when propagating",
   REQUIRE(analysis.subroutines.size() - 1 == 2);
 
   // Test there's a `reset` subroutine with the correct number of instructions.
-  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 5);
 
   // Test there's a `double_state_change` subroutine
   // with the correct number of instructions.
-  auto doubleStateSubroutine = analysis.subroutines.at(0x800E);
+  auto& doubleStateSubroutine = analysis.subroutines.at(0x800E);
   REQUIRE(doubleStateSubroutine.instructions.size() == 5);
 
   // Test that the state is simplified.
@@ -134,10 +163,10 @@ TEST_CASE("StateChange is propagated correctly between subroutines",
   REQUIRE(analysis.subroutines.size() - 1 == 2);
 
   // Check the subroutines have the right name and number of instructions.
-  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 5);
-  auto stateChangeSubroutine = analysis.subroutines.at(0x800E);
+  auto& stateChangeSubroutine = analysis.subroutines.at(0x800E);
   REQUIRE(stateChangeSubroutine.label == "sub_00800E");
   REQUIRE(stateChangeSubroutine.instructions.size() == 2);
 
@@ -164,12 +193,12 @@ TEST_CASE("Entry points can be added and analyzed", "[analysis]") {
   REQUIRE(analysis.subroutines.size() == 2);
 
   // Check the subroutines have the right name and number of instructions.
-  auto resetSubroutine = analysis.subroutines.at(0x8000);
+  auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 1);
   REQUIRE(resetSubroutine.unknownStateChanges.size() == 1);
 
-  auto nmiSubroutine = analysis.subroutines.at(0x8003);
+  auto& nmiSubroutine = analysis.subroutines.at(0x8003);
   REQUIRE(nmiSubroutine.label == "nmi");
   REQUIRE(nmiSubroutine.instructions.size() == 2);
   REQUIRE(nmiSubroutine.unknownStateChanges.size() == 1);
@@ -178,7 +207,7 @@ TEST_CASE("Entry points can be added and analyzed", "[analysis]") {
   analysis.addEntryPoint("loop", 0x9002);
   analysis.run();
 
-  auto loopSubroutine = analysis.subroutines.at(0x9002);
+  auto& loopSubroutine = analysis.subroutines.at(0x9002);
   REQUIRE(loopSubroutine.label == "loop");
   REQUIRE(loopSubroutine.instructions.size() == 1);
 }

@@ -107,6 +107,13 @@ class Analysis {
   void addSubroutine(SubroutinePC pc,
                      std::optional<std::string> label = std::nullopt);
 
+  // Add an instruction state change assertion.
+  void assertInstruction(InstructionPC pc, StateChange stateChange);
+  // Add a subroutine state change assertion.
+  void assertSubroutine(SubroutinePC subroutinePC,
+                        InstructionPC pc,
+                        StateChange stateChange);
+
   // Define a jump table: caller spans a jumptable going from x to y (included).
   void defineJumpTable(InstructionPC callerPC,
                        std::pair<u16, u16> range,
@@ -141,9 +148,9 @@ class Analysis {
   // Assertions on instruction state changes.
   std::unordered_map<InstructionPC, StateChange> instructionAssertions;
   // Assertions on subroutine state changes.
-  std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
+  std::unordered_map<std::pair<SubroutinePC, InstructionPC>,
                      StateChange,
-                     boost::hash<std::pair<InstructionPC, SubroutinePC>>>
+                     boost::hash<std::pair<SubroutinePC, InstructionPC>>>
       subroutineAssertions;
 
   // Map from PC to jump tables.
