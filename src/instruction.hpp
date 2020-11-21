@@ -38,9 +38,6 @@ class Instruction {
   // Test constructor.
   Instruction(u8 opcode);
 
-  // Pointer to the subroutine to which the instruction belongs.
-  Subroutine* subroutine() const;
-
   std::string name() const;         // Name of the instruction's operation.
   Op operation() const;             // Instruction's operation.
   AddressMode addressMode() const;  // Instruction'a address mode.
@@ -60,10 +57,17 @@ class Instruction {
   // Disassemble the instruction.
   std::string toString(bool alias = true) const;
 
+  // Pointer to the subroutine to which the instruction belongs.
+  Subroutine* subroutine() const;
+
+  std::string comment() const;           // Return the instruction's comment.
+  void setComment(std::string comment);  // Set the instruction's comment.
+
   // Hash table utils.
   bool operator==(const Instruction& other) const;
   friend std::size_t hash_value(const Instruction& instruction);
 
+  Analysis* analysis;         // Pointer to the analysis.
   InstructionPC pc;           // Instruction's address.
   SubroutinePC subroutinePC;  // Subroutine to which the instruction belongs.
   u8 opcode;                  // Opcode byte.
@@ -72,8 +76,7 @@ class Instruction {
   std::optional<std::string> label = std::nullopt;
 
  private:
-  Analysis* analysis;  // Pointer to the analysis.
-  u24 _argument;       // Argument (if any).
+  u24 _argument;  // Argument (if any).
 };
 // Set of Instructions.
 typedef std::unordered_set<Instruction, boost::hash<Instruction>>

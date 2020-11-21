@@ -135,6 +135,8 @@ class Analysis {
   std::map<SubroutinePC, Subroutine> subroutines;
   // Instructions referenced by other instructions.
   std::unordered_map<InstructionPC, ReferenceSet> references;
+  // Instruction's comments.
+  std::unordered_map<InstructionPC, std::string> comments;
 
   // Assertions on instruction state changes.
   std::unordered_map<InstructionPC, StateChange> instructionAssertions;

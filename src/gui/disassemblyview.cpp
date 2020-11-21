@@ -1,4 +1,6 @@
-#include <QDebug>
+#include <QInputDialog>
+#include <QMenu>
+#include <QScrollBar>
 
 #include "gui/disassemblyview.hpp"
 
@@ -17,12 +19,21 @@ DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
   highlighter = new Highlighter(document());
 }
 
-void DisassemblyView::setAnalysis(const Analysis* analysis) {
+void DisassemblyView::reset() {
   clear();
+  labelToBlockNumber.clear();
+  blockNumberToInstruction.clear();
+}
+
+void DisassemblyView::renderAnalysis(const Analysis* analysis) {
+  auto savedScroll = verticalScrollBar()->value();
+  reset();
+
   for (auto& [pc, subroutine] : analysis->subroutines) {
     renderSubroutine(subroutine);
   }
-  moveCursor(QTextCursor::Start);
+
+  verticalScrollBar()->setValue(savedScroll);
 }
 
 void DisassemblyView::jumpToLabel(QString label) {
@@ -32,6 +43,20 @@ void DisassemblyView::jumpToLabel(QString label) {
   QTextCursor cursor(block);
   moveCursor(QTextCursor::End);
   setTextCursor(cursor);
+}
+
+Instruction* DisassemblyView::getInstructionFromPos(const QPoint pos) const {
+  auto cursor = cursorForPosition(pos);
+  auto search = blockNumberToInstruction.find(cursor.blockNumber());
+  if (search != blockNumberToInstruction.end()) {
+    return search.value();
+  } else {
+    return nullptr;
+  }
+}
+
+void DisassemblyView::setBlockState(BlockState state) {
+  textCursor().block().setUserState(state);
 }
 
 void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
@@ -47,21 +72,44 @@ void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
   append("");
 }
 
-void DisassemblyView::setBlockState(BlockState state) {
-  textCursor().block().setUserState(state);
-}
-
-void DisassemblyView::renderInstruction(const Instruction* instruction) {
+void DisassemblyView::renderInstruction(Instruction* instruction) {
   if (auto label = instruction->label) {
     append(qformat(".%s:", label->c_str()));
   }
-
-  auto code = qformat("  %-30s; $%06X | %s", instruction->toString().c_str(),
-                      instruction->pc, "");
-  append(code);
+  append(qformat("  %-30s; $%06X | %s", instruction->toString().c_str(),
+                 instruction->pc, instruction->comment().c_str()));
 
   auto instructionStateChange = instruction->stateChange();
   if (instructionStateChange.has_value() && instructionStateChange->unknown()) {
     setBlockState(BlockState::UnknownStateChange);
+  }
+
+  auto blockNumber = textCursor().blockNumber();
+  blockNumberToInstruction[blockNumber] = instruction;
+}
+
+void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
+  QMenu* menu = createStandardContextMenu();
+
+  if (auto instruction = getInstructionFromPos(e->pos())) {
+    auto editComment = menu->addAction("Edit Comment");
+    connect(editComment, &QAction::triggered, this,
+            [=]() { this->editCommentDialog(instruction); });
+  }
+
+  menu->exec(e->globalPos());
+  delete menu;
+}
+
+void DisassemblyView::editCommentDialog(Instruction* instruction) {
+  auto comment = QString::fromStdString(instruction->comment());
+
+  bool ok;
+  QString newComment = QInputDialog::getText(
+      this, "Edit Comment", "Comment:", QLineEdit::Normal, comment, &ok);
+
+  if (ok) {
+    instruction->setComment(newComment.toStdString());
+    renderAnalysis(instruction->analysis);
   }
 }

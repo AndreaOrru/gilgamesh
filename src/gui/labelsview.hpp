@@ -11,5 +11,5 @@ class LabelsView : public QListWidget {
   LabelsView(QWidget* parent = nullptr);
 
  public slots:
-  void setAnalysis(const Analysis* analysis);
+  void renderAnalysis(const Analysis* analysis);
 };

@@ -12,20 +12,15 @@ Instruction::Instruction(InstructionPC pc,
                          u24 argument,
                          State state,
                          Analysis* analysis)
-    : pc{pc},
+    : analysis{analysis},
+      pc{pc},
       subroutinePC{subroutinePC},
       opcode{opcode},
       state{state},
-      analysis{analysis},
       _argument{argument} {}
 
 // Test constructor.
 Instruction::Instruction(u8 opcode) : opcode{opcode} {}
-
-// Pointer to the subroutine to which the instruction belongs.
-Subroutine* Instruction::subroutine() const {
-  return &analysis->subroutines.at(subroutinePC);
-}
 
 // Name of the instruction's operation.
 string Instruction::name() const {
@@ -287,6 +282,30 @@ string Instruction::toString(bool alias) const {
   s += alias ? argumentAlias() : argumentString();
 
   return s;
+}
+
+// Pointer to the subroutine to which the instruction belongs.
+Subroutine* Instruction::subroutine() const {
+  return &analysis->subroutines.at(subroutinePC);
+}
+
+// Return the instruction's comment.
+string Instruction::comment() const {
+  auto search = analysis->comments.find(pc);
+  if (search != analysis->comments.end()) {
+    return search->second;
+  } else {
+    return "";
+  }
+}
+
+// Set the instruction's comment.
+void Instruction::setComment(string comment) {
+  if (comment.empty()) {
+    analysis->comments.erase(pc);
+  } else {
+    analysis->comments.insert_or_assign(pc, comment);
+  }
 }
 
 // Hash table utils.
