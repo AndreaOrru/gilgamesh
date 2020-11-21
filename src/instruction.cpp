@@ -1,5 +1,6 @@
 #include "instruction.hpp"
 
+#include "analysis.hpp"
 #include "utils.hpp"
 
 using namespace std;
@@ -199,10 +200,8 @@ string Instruction::argumentString() const {
   switch (addressMode()) {
     default:
     case Implied:
-      return "";
-
     case ImpliedAccumulator:
-      return "a";
+      return "";
 
     case ImmediateM:
     case ImmediateX:
@@ -256,13 +255,26 @@ string Instruction::argumentString() const {
   };
 }
 
+// Instruction's argument as a string, as an alias if possible.
+string Instruction::argumentAlias() const {
+  if (isControl()) {
+    if (auto arg = absoluteArgument()) {
+      auto label = analysis->getLabel(*arg, subroutinePC);
+      if (label.has_value()) {
+        return *label;
+      }
+    }
+  }
+  return argumentString();
+}
+
 // Disassemble the instruction.
-string Instruction::toString() const {
+string Instruction::toString(bool alias) const {
   string s;
 
   s += name();
   s += " ";
-  s += argumentString();
+  s += alias ? argumentAlias() : argumentString();
 
   return s;
 }

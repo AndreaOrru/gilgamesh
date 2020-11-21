@@ -48,9 +48,7 @@ Analysis::Analysis(const ROM& rom) : rom{rom} {
 }
 
 // Construct an analysis from a ROM path.
-Analysis::Analysis(const std::string& romPath) {
-  Analysis(ROM(romPath));
-}
+Analysis::Analysis(const std::string& romPath) : Analysis(ROM(romPath)) {}
 
 // Clear the results of the analysis.
 void Analysis::clear() {
@@ -140,6 +138,26 @@ const Instruction* Analysis::anyInstruction(InstructionPC pc) {
   } else {
     return &(*search->second.begin());
   }
+}
+
+// Return the label associated with an address, if any.
+optional<string> Analysis::getLabel(InstructionPC pc,
+                                    optional<SubroutinePC> subroutinePC) const {
+  // Try to find a subroutine label first.
+  auto subroutineSearch = subroutines.find(pc);
+  if (subroutineSearch != subroutines.end()) {
+    return subroutineSearch->second.label;
+  }
+
+  // Try to find an instruction label.
+  if (!subroutinePC.has_value()) {
+    return nullopt;
+  }
+  auto& subroutine = subroutines.at(*subroutinePC);
+  auto* instruction = subroutine.instructions.at(pc);
+  return instruction->label.has_value()
+             ? optional(string(".") + *instruction->label)
+             : nullopt;
 }
 
 // Get an assertion for the current instruction, if any.

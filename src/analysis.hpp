@@ -119,6 +119,11 @@ class Analysis {
   std::optional<Assertion> getAssertion(InstructionPC pc,
                                         SubroutinePC subroutinePC) const;
 
+  // Return the label associated with an address, if any.
+  std::optional<std::string> getLabel(
+      InstructionPC pc,
+      std::optional<SubroutinePC> subroutinePC = std::nullopt) const;
+
   // The ROM being analyzed.
   const ROM rom;
   // ROM's entry points.

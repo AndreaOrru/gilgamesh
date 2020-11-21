@@ -15,3 +15,6 @@
 ** Test ExLoROM
 ** Test ExHiROM
 ** Test SDD-1
+
+* Misc
+** Verify there are no memory leaks

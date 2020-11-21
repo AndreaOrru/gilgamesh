@@ -50,7 +50,9 @@ class Instruction {
   // Instruction's argument as an absolute value, if possible.
   std::optional<u24> absoluteArgument() const;
   std::string argumentString() const;  // Instruction's argument as a string.
-  std::string toString() const;        // Disassemble the instruction.
+  std::string argumentAlias() const;
+  // Disassemble the instruction.
+  std::string toString(bool alias = true) const;
 
   // Hash table utils.
   bool operator==(const Instruction& other) const;
