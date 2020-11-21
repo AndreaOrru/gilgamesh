@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <string>
 
 #include "state.hpp"
@@ -27,6 +28,9 @@ struct Subroutine {
 
   // Return the state changes, simplified given the current state.
   StateChangeSet simplifiedStateChanges(State state);
+
+  // Return the state change caused by an instruction at the given PC, if any.
+  std::optional<StateChange> stateChangeForPC(InstructionPC pc) const;
 
   SubroutinePC pc;    // Program Counter.
   std::string label;  // Label.

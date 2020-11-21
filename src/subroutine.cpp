@@ -2,6 +2,8 @@
 
 #include "instruction.hpp"
 
+using namespace std;
+
 // Constructor.
 Subroutine::Subroutine(SubroutinePC pc, std::string label)
     : pc{pc}, label{label} {}
@@ -49,4 +51,19 @@ StateChangeSet Subroutine::simplifiedStateChanges(State state) {
     stateChanges.insert(stateChange.simplify(state));
   }
   return stateChanges;
+}
+
+// Return the state change caused by an instruction at the given PC, if any.
+optional<StateChange> Subroutine::stateChangeForPC(InstructionPC pc) const {
+  auto knownSearch = knownStateChanges.find(pc);
+  if (knownSearch != knownStateChanges.end()) {
+    return knownSearch->second;
+  }
+
+  auto unknownSearch = unknownStateChanges.find(pc);
+  if (unknownSearch != unknownStateChanges.end()) {
+    return unknownSearch->second;
+  }
+
+  return nullopt;
 }

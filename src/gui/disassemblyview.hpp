@@ -10,6 +10,11 @@ class Highlighter;
 class Instruction;
 class Subroutine;
 
+enum BlockState {
+  None = -1,
+  UnknownStateChange,
+};
+
 class DisassemblyView : public QTextEdit {
   Q_OBJECT;
 
@@ -21,6 +26,8 @@ class DisassemblyView : public QTextEdit {
   void jumpToLabel(QString label);
 
  private:
+  void setBlockState(BlockState state);
+
   void renderSubroutine(const Subroutine& subroutine);
   void renderInstruction(const Instruction* instruction);
 

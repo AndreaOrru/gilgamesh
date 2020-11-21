@@ -54,7 +54,9 @@ class Instruction {
   // Instruction's argument as an absolute value, if possible.
   std::optional<u24> absoluteArgument() const;
   std::string argumentString() const;  // Instruction's argument as a string.
-  std::string argumentAlias() const;
+  std::string argumentAlias() const;   // Aliased instructions argument, if any.
+  // Return the state change caused by this instruction, if any.
+  std::optional<StateChange> stateChange() const;
   // Disassemble the instruction.
   std::string toString(bool alias = true) const;
 

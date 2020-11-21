@@ -1,4 +1,7 @@
 #include "gui/highlighter.hpp"
+#include <QColor>
+
+#include "gui/disassemblyview.hpp"
 
 #include "opcodes.hpp"
 
@@ -18,6 +21,9 @@ void Highlighter::setupFormats() {
   localLabelFormat.setForeground(Qt::darkRed);
 
   opcodeFormat.setForeground(Qt::blue);
+
+  unknownStateChangeFormat.setBackground(QColor("orangered"));
+  unknownStateChangeFormat.setForeground(Qt::white);
 }
 
 void Highlighter::setupPatterns() {
@@ -55,5 +61,14 @@ void Highlighter::highlightBlock(const QString& text) {
       auto match = match_iterator.next();
       setFormat(match.capturedStart(), match.capturedLength(), rule.format);
     }
+  }
+
+  switch (currentBlockState()) {
+    case BlockState::UnknownStateChange:
+      setFormat(0, text.size(), unknownStateChangeFormat);
+      break;
+
+    default:
+      break;
   }
 }

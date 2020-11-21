@@ -260,7 +260,7 @@ string Instruction::argumentString() const {
   };
 }
 
-// Instruction's argument as a string, as an alias if possible.
+// Aliased instructions argument, if any.
 string Instruction::argumentAlias() const {
   if (isControl()) {
     if (auto arg = absoluteArgument()) {
@@ -271,6 +271,11 @@ string Instruction::argumentAlias() const {
     }
   }
   return argumentString();
+}
+
+// Return the state change caused by this instruction, if any.
+optional<StateChange> Instruction::stateChange() const {
+  return subroutine()->stateChangeForPC(pc);
 }
 
 // Disassemble the instruction.

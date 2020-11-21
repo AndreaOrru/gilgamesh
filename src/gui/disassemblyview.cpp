@@ -47,6 +47,10 @@ void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
   append("");
 }
 
+void DisassemblyView::setBlockState(BlockState state) {
+  textCursor().block().setUserState(state);
+}
+
 void DisassemblyView::renderInstruction(const Instruction* instruction) {
   if (auto label = instruction->label) {
     append(qformat(".%s:", label->c_str()));
@@ -55,4 +59,9 @@ void DisassemblyView::renderInstruction(const Instruction* instruction) {
   auto code = qformat("  %-30s; $%06X | %s", instruction->toString().c_str(),
                       instruction->pc, "");
   append(code);
+
+  auto instructionStateChange = instruction->stateChange();
+  if (instructionStateChange.has_value() && instructionStateChange->unknown()) {
+    setBlockState(BlockState::UnknownStateChange);
+  }
 }
