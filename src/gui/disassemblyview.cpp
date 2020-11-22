@@ -125,8 +125,15 @@ void DisassemblyView::editAssertionDialog(Instruction* instruction) {
   EditAssertionDialog dialog(instruction->assertion(), this);
   if (dialog.exec()) {
     auto analysis = instruction->analysis;
-    analysis->setAssertion(dialog.assertion, instruction->pc,
-                           instruction->subroutinePC);
+    auto assertion = dialog.assertion;
+
+    if (assertion.has_value()) {
+      analysis->addAssertion(*assertion, instruction->pc,
+                             instruction->subroutinePC);
+    } else {
+      analysis->removeAssertion(instruction->pc, instruction->subroutinePC);
+    }
+
     analysis->run();
     renderAnalysis(analysis);
   };

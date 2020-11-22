@@ -289,7 +289,7 @@ Subroutine* Instruction::subroutine() const {
   return &analysis->subroutines.at(subroutinePC);
 }
 
-Assertion Instruction::assertion() const {
+optional<Assertion> Instruction::assertion() const {
   return analysis->getAssertion(pc, subroutinePC);
 }
 

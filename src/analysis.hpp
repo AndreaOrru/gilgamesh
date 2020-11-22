@@ -101,11 +101,14 @@ class Analysis {
   const Instruction* anyInstruction(InstructionPC pc);
 
   // Get an assertion for the current instruction, if any.
-  Assertion getAssertion(InstructionPC pc, SubroutinePC subroutinePC) const;
-  // Add/remove assertion in the analysis.
-  void setAssertion(Assertion assertion,
+  std::optional<Assertion> getAssertion(InstructionPC pc,
+                                        SubroutinePC subroutinePC) const;
+  // Add a state change assertion to the analysis.
+  void addAssertion(Assertion assertion,
                     InstructionPC pc,
                     SubroutinePC subroutinePC);
+  // Remove a state change assertion from the analysis.
+  void removeAssertion(InstructionPC pc, SubroutinePC subroutinePC);
 
   // Return the label associated with an address, if any.
   std::optional<std::string> getLabel(

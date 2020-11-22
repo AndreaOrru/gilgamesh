@@ -114,25 +114,26 @@ void Analysis::addSubroutine(SubroutinePC pc, optional<string> label) {
 }
 
 // Get an assertion for an instruction, if any.
-Assertion Analysis::getAssertion(InstructionPC pc,
-                                 SubroutinePC subroutinePC) const {
+optional<Assertion> Analysis::getAssertion(InstructionPC pc,
+                                           SubroutinePC subroutinePC) const {
   auto search = assertions.find({pc, subroutinePC});
   if (search != assertions.end()) {
     return search->second;
   } else {
-    return Assertion(AssertionType::None);
+    return nullopt;
   }
 }
 
-// Add/remove assertion in the analysis.
-void Analysis::setAssertion(Assertion assertion,
+// Add a state change assertion to the analysis.
+void Analysis::addAssertion(Assertion assertion,
                             InstructionPC pc,
                             SubroutinePC subroutinePC) {
-  if (assertion.type == AssertionType::None) {
-    assertions.erase({pc, subroutinePC});
-  } else {
-    assertions.insert_or_assign({pc, subroutinePC}, assertion);
-  }
+  assertions.insert_or_assign({pc, subroutinePC}, assertion);
+}
+
+// Remove a state change assertion from the analysis.
+void Analysis::removeAssertion(InstructionPC pc, SubroutinePC subroutinePC) {
+  assertions.erase({pc, subroutinePC});
 }
 
 // Define a jump table: caller spans a jumptable going from x to y (included).

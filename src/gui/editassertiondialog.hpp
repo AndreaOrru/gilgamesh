@@ -12,9 +12,10 @@ class EditAssertionDialog : public QDialog {
   Q_OBJECT
 
  public:
-  EditAssertionDialog(Assertion assertion, QWidget* parent = nullptr);
+  EditAssertionDialog(std::optional<Assertion> assertion,
+                      QWidget* parent = nullptr);
 
-  Assertion assertion;
+  std::optional<Assertion> assertion;
 
  private:
   auto createRadioButtons();

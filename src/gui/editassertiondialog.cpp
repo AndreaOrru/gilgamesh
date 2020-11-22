@@ -7,7 +7,8 @@
 
 using namespace std;
 
-EditAssertionDialog::EditAssertionDialog(Assertion assertion, QWidget* parent)
+EditAssertionDialog::EditAssertionDialog(optional<Assertion> assertion,
+                                         QWidget* parent)
     : QDialog(parent), assertion{assertion} {
   setWindowTitle("Edit Assertion");
   setupLayout();
@@ -78,46 +79,43 @@ void EditAssertionDialog::applyToAssertion() {
   applyDisabledState();
 
   if (assertionTypeNone->isChecked()) {
-    assertion.type = AssertionType::None;
-    assertion.stateChange = StateChange();
+    assertion = nullopt;
     return;
   } else if (assertionTypeInstruction->isChecked()) {
-    assertion.type = AssertionType::Instruction;
+    assertion = Assertion(AssertionType::Instruction);
   } else if (assertionTypeSubroutine->isChecked()) {
-    assertion.type = AssertionType::Subroutine;
+    assertion = Assertion(AssertionType::Subroutine);
   }
 
   if (mAssertionOne->isChecked()) {
-    assertion.stateChange.m = true;
+    assertion->stateChange.m = true;
   } else if (mAssertionZero->isChecked()) {
-    assertion.stateChange.m = false;
+    assertion->stateChange.m = false;
   } else {
-    assertion.stateChange.m = nullopt;
+    assertion->stateChange.m = nullopt;
   }
 
   if (xAssertionOne->isChecked()) {
-    assertion.stateChange.x = true;
+    assertion->stateChange.x = true;
   } else if (xAssertionZero->isChecked()) {
-    assertion.stateChange.x = false;
+    assertion->stateChange.x = false;
   } else {
-    assertion.stateChange.x = nullopt;
+    assertion->stateChange.x = nullopt;
   }
 }
 
 void EditAssertionDialog::restoreFromAssertion() {
-  switch (assertion.type) {
-    case AssertionType::None:
-      assertionTypeNone->setChecked(true);
-      break;
-    case AssertionType::Instruction:
-      assertionTypeInstruction->setChecked(true);
-      break;
-    case AssertionType::Subroutine:
-      assertionTypeSubroutine->setChecked(true);
-      break;
+  if (!assertion.has_value()) {
+    assertionTypeNone->setChecked(true);
+  } else if (assertion->type == AssertionType::Instruction) {
+    assertionTypeInstruction->setChecked(true);
+  } else {
+    assertionTypeSubroutine->setChecked(true);
   }
 
-  auto stateChange = assertion.stateChange;
+  auto stateChange =
+      assertion.has_value() ? assertion->stateChange : StateChange();
+
   if (!stateChange.m.has_value()) {
     mAssertionNone->setChecked(true);
   } else if (stateChange.m) {

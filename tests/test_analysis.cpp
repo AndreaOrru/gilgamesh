@@ -11,29 +11,43 @@ TEST_CASE("Assertions work correctly", "[analysis]") {
   Analysis analysis(*assemble("assertions"));
   analysis.run();
 
+  // Test there are two subroutines (+ NMI).
   REQUIRE(analysis.subroutines.size() - 1 == 2);
 
+  // Test there's a `reset` subroutine with the correct number of instructions.
   auto& resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.label == "reset");
   REQUIRE(resetSubroutine.instructions.size() == 1);
+  // Test that the subroutine is unknown because it's calling an unknown sub.
   REQUIRE(resetSubroutine.isUnknownBecauseOf(UnknownReason::Unknown));
 
+  // Check that there's an unknown subroutine with an indirect jump.
   auto& unknownSubroutine = analysis.subroutines.at(0x8005);
   REQUIRE(unknownSubroutine.instructions.size() == 1);
   REQUIRE(unknownSubroutine.isUnknownBecauseOf(UnknownReason::IndirectJump));
 
-  analysis.setAssertion(Assertion(AssertionType::Instruction), 0x8000, 0x8000);
+  // Add an instruction assertion to the call in `reset`.
+  analysis.addAssertion(Assertion(AssertionType::Instruction), 0x8000, 0x8000);
   analysis.run();
-
+  // Check that it removes the unknown state change status.
   resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.instructions.size() == 2);
   REQUIRE(resetSubroutine.unknownStateChanges.empty());
 
-  analysis.setAssertion(Assertion(AssertionType::Subroutine), 0x8005, 0x8005);
+  // Add a subroutine assertion to the unknown subroutine.
+  analysis.addAssertion(Assertion(AssertionType::Subroutine), 0x8005, 0x8005);
   analysis.run();
-
+  // Check that it removes the unknown state change status.
   unknownSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(unknownSubroutine.unknownStateChanges.empty());
+
+  // Remove the first instruction assertion.
+  analysis.removeAssertion(0x8000, 0x8000);
+  analysis.run();
+  // Check that there's still no unknown status.
+  resetSubroutine = analysis.subroutines.at(0x8000);
+  REQUIRE(resetSubroutine.instructions.size() == 2);
+  REQUIRE(resetSubroutine.unknownStateChanges.empty());
 }
 
 TEST_CASE("State inference correctly simplifies state changes", "[analysis]") {

@@ -6,7 +6,6 @@
  * Type of state assertions.
  */
 enum class AssertionType {
-  None,
   Instruction,
   Subroutine,
 };
