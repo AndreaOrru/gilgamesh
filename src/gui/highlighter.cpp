@@ -13,6 +13,9 @@ Highlighter::Highlighter(QTextDocument* parent) : QSyntaxHighlighter(parent) {
 void Highlighter::setupFormats() {
   argumentAliasFormat.setForeground(Qt::darkRed);
 
+  assertedStateChangeFormat.setBackground(QColor("mediumpurple"));
+  assertedStateChangeFormat.setForeground(Qt::white);
+
   commentFormat.setForeground(Qt::gray);
 
   labelFormat.setForeground(Qt::darkRed);
@@ -64,6 +67,10 @@ void Highlighter::highlightBlock(const QString& text) {
   }
 
   switch (currentBlockState()) {
+    case BlockState::AssertedStateChange:
+      setFormat(0, text.size(), assertedStateChangeFormat);
+      break;
+
     case BlockState::UnknownStateChange:
       setFormat(0, text.size(), unknownStateChangeFormat);
       break;

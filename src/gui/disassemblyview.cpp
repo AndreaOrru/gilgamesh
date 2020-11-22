@@ -81,7 +81,10 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
                  instruction->pc, instruction->comment().c_str()));
 
   auto instructionStateChange = instruction->stateChange();
-  if (instructionStateChange.has_value() && instructionStateChange->unknown()) {
+  if (instruction->assertion().has_value()) {
+    setBlockState(BlockState::AssertedStateChange);
+  } else if (instructionStateChange.has_value() &&
+             instructionStateChange->unknown()) {
     setBlockState(BlockState::UnknownStateChange);
   }
 

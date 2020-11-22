@@ -12,6 +12,7 @@ class Subroutine;
 
 enum BlockState {
   None = -1,
+  AssertedStateChange,
   UnknownStateChange,
 };
 
