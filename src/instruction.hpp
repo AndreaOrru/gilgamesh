@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "assertion.hpp"
 #include "opcodes.hpp"
 #include "state.hpp"
 #include "types.hpp"
@@ -59,6 +60,8 @@ class Instruction {
 
   // Pointer to the subroutine to which the instruction belongs.
   Subroutine* subroutine() const;
+  // Get an assertion for the instruction, if any.
+  Assertion assertion() const;
 
   std::string comment() const;           // Return the instruction's comment.
   void setComment(std::string comment);  // Set the instruction's comment.

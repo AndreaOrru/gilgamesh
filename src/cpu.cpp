@@ -371,20 +371,20 @@ void CPU::propagateSubroutineState(
 void CPU::unknownStateChange(InstructionPC pc, UnknownReason reason) {
   // Check if we have an assertion to specify what the state change is.
   auto assertion = analysis->getAssertion(pc, subroutinePC);
-  if (assertion.has_value()) {
-    switch (assertion->type) {
-      case AssertionType::Instruction:
-        applyStateChange(assertion->stateChange);
-        break;
+  switch (assertion.type) {
+    case AssertionType::None:
+      // No assertions, we need stop here.
+      subroutine()->addStateChange(pc, StateChange(UnknownReason(reason)));
+      stop = true;
+      break;
 
-      case AssertionType::Subroutine:
-        subroutine()->addStateChange(pc, assertion->stateChange);
-        stop = true;
-        break;
-    }
-  } else {
-    // No assertions, we need stop here.
-    subroutine()->addStateChange(pc, StateChange(UnknownReason(reason)));
-    stop = true;
+    case AssertionType::Instruction:
+      applyStateChange(assertion.stateChange);
+      break;
+
+    case AssertionType::Subroutine:
+      subroutine()->addStateChange(pc, assertion.stateChange);
+      stop = true;
+      break;
   }
 }

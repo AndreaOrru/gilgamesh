@@ -289,6 +289,10 @@ Subroutine* Instruction::subroutine() const {
   return &analysis->subroutines.at(subroutinePC);
 }
 
+Assertion Instruction::assertion() const {
+  return analysis->getAssertion(pc, subroutinePC);
+}
+
 // Return the instruction's comment.
 string Instruction::comment() const {
   auto search = analysis->comments.find(pc);

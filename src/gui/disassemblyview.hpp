@@ -35,6 +35,7 @@ class DisassemblyView : public QTextEdit {
 
   void contextMenuEvent(QContextMenuEvent* e);
   void editCommentDialog(Instruction* instruction);
+  void editAssertionDialog(Instruction* instruction);
 
   Highlighter* highlighter;
   QHash<QString, int> labelToBlockNumber;

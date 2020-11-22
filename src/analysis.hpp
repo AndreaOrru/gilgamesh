@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "assertion.hpp"
 #include "instruction.hpp"
 #include "rom.hpp"
 #include "state.hpp"
@@ -42,22 +43,6 @@ struct Reference {
 };
 // Set of References.
 typedef std::unordered_set<Reference, boost::hash<Reference>> ReferenceSet;
-
-/**
- * Type of state assertions.
- */
-enum class AssertionType {
-  Instruction,
-  Subroutine,
-};
-
-/**
- * Structure representing a state assertion.
- */
-struct Assertion {
-  AssertionType type;
-  StateChange stateChange;
-};
 
 // Set of possible jump table statuses.
 enum JumpTableStatus {
@@ -107,13 +92,6 @@ class Analysis {
   void addSubroutine(SubroutinePC pc,
                      std::optional<std::string> label = std::nullopt);
 
-  // Add an instruction state change assertion.
-  void assertInstruction(InstructionPC pc, StateChange stateChange);
-  // Add a subroutine state change assertion.
-  void assertSubroutine(SubroutinePC subroutinePC,
-                        InstructionPC pc,
-                        StateChange stateChange);
-
   // Define a jump table: caller spans a jumptable going from x to y (included).
   void defineJumpTable(InstructionPC callerPC,
                        std::pair<u16, u16> range,
@@ -123,8 +101,11 @@ class Analysis {
   const Instruction* anyInstruction(InstructionPC pc);
 
   // Get an assertion for the current instruction, if any.
-  std::optional<Assertion> getAssertion(InstructionPC pc,
-                                        SubroutinePC subroutinePC) const;
+  Assertion getAssertion(InstructionPC pc, SubroutinePC subroutinePC) const;
+  // Add/remove assertion in the analysis.
+  void setAssertion(Assertion assertion,
+                    InstructionPC pc,
+                    SubroutinePC subroutinePC);
 
   // Return the label associated with an address, if any.
   std::optional<std::string> getLabel(
@@ -145,13 +126,11 @@ class Analysis {
   // Instruction's comments.
   std::unordered_map<InstructionPC, std::string> comments;
 
-  // Assertions on instruction state changes.
-  std::unordered_map<InstructionPC, StateChange> instructionAssertions;
-  // Assertions on subroutine state changes.
-  std::unordered_map<std::pair<SubroutinePC, InstructionPC>,
-                     StateChange,
-                     boost::hash<std::pair<SubroutinePC, InstructionPC>>>
-      subroutineAssertions;
+  // State change assertions.
+  std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
+                     Assertion,
+                     boost::hash<std::pair<InstructionPC, SubroutinePC>>>
+      assertions;
 
   // Map from PC to jump tables.
   std::unordered_map<InstructionPC, JumpTable> jumpTables;

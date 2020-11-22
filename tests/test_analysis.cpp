@@ -1,7 +1,9 @@
 #include <catch2/catch.hpp>
 
-#include "analysis.hpp"
 #include "asar.hpp"
+
+#include "analysis.hpp"
+#include "assertion.hpp"
 
 using namespace std;
 
@@ -20,14 +22,14 @@ TEST_CASE("Assertions work correctly", "[analysis]") {
   REQUIRE(unknownSubroutine.instructions.size() == 1);
   REQUIRE(unknownSubroutine.isUnknownBecauseOf(UnknownReason::IndirectJump));
 
-  analysis.assertInstruction(0x8000, StateChange());
+  analysis.setAssertion(Assertion(AssertionType::Instruction), 0x8000, 0x8000);
   analysis.run();
 
   resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.instructions.size() == 2);
   REQUIRE(resetSubroutine.unknownStateChanges.empty());
 
-  analysis.assertSubroutine(0x8005, 0x8005, StateChange());
+  analysis.setAssertion(Assertion(AssertionType::Subroutine), 0x8005, 0x8005);
   analysis.run();
 
   unknownSubroutine = analysis.subroutines.at(0x8000);

@@ -5,6 +5,7 @@
 #include "gui/disassemblyview.hpp"
 
 #include "analysis.hpp"
+#include "gui/editassertiondialog.hpp"
 #include "highlighter.hpp"
 #include "instruction.hpp"
 #include "subroutine.hpp"
@@ -92,7 +93,13 @@ void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
   QMenu* menu = createStandardContextMenu();
 
   if (auto instruction = getInstructionFromPos(e->pos())) {
-    auto editComment = menu->addAction("Edit Comment");
+    menu->addSeparator();
+
+    auto editAssertion = menu->addAction("Edit Assertion...");
+    connect(editAssertion, &QAction::triggered, this,
+            [=]() { this->editAssertionDialog(instruction); });
+
+    auto editComment = menu->addAction("Edit Comment...");
     connect(editComment, &QAction::triggered, this,
             [=]() { this->editCommentDialog(instruction); });
   }
@@ -112,4 +119,15 @@ void DisassemblyView::editCommentDialog(Instruction* instruction) {
     instruction->setComment(newComment.toStdString());
     renderAnalysis(instruction->analysis);
   }
+}
+
+void DisassemblyView::editAssertionDialog(Instruction* instruction) {
+  EditAssertionDialog dialog(instruction->assertion(), this);
+  if (dialog.exec()) {
+    auto analysis = instruction->analysis;
+    analysis->setAssertion(dialog.assertion, instruction->pc,
+                           instruction->subroutinePC);
+    analysis->run();
+    renderAnalysis(analysis);
+  };
 }

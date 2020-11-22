@@ -22,8 +22,8 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 QT += widgets
 
 # Input
-SOURCES += src/gui/disassemblyview.cpp src/gui/highlighter.cpp src/gui/labelsview.cpp src/gui/mainwindow.cpp
-HEADERS += src/gui/disassemblyview.hpp src/gui/highlighter.hpp src/gui/labelsview.hpp src/gui/mainwindow.hpp
+SOURCES += src/gui/disassemblyview.cpp src/gui/editassertiondialog.cpp src/gui/highlighter.cpp src/gui/labelsview.cpp src/gui/mainwindow.cpp
+HEADERS += src/gui/disassemblyview.hpp src/gui/editassertiondialog.hpp src/gui/highlighter.hpp src/gui/labelsview.hpp src/gui/mainwindow.hpp
 
 SOURCES += src/analysis.cpp src/cpu.cpp src/instruction.cpp src/main.cpp src/rom.cpp src/stack.cpp src/state.cpp src/subroutine.cpp src/utils.cpp
-HEADERS += src/analysis.hpp src/cpu.hpp src/instruction.hpp src/opcodes.hpp src/rom.hpp src/stack.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp
+HEADERS += src/assertion.hpp src/analysis.hpp src/cpu.hpp src/instruction.hpp src/opcodes.hpp src/rom.hpp src/stack.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp

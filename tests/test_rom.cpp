@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include "asar.hpp"
+
 #include "rom.hpp"
 
 TEST_CASE("ROM class can recognize areas of RAM", "[rom]") {
