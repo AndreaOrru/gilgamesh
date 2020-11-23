@@ -41,7 +41,7 @@ void Highlighter::setupFormats() {
 void Highlighter::setupPatterns() {
   Rule rule;
 
-  rule.pattern = QRegularExpression(" \\.?[A-Za-z0-9_]+");
+  rule.pattern = QRegularExpression(" (\\.|!)?[A-Za-z0-9_]+");
   rule.format = argumentAliasFormat;
   rules.append(rule);
 

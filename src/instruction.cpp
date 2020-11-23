@@ -1,6 +1,7 @@
 #include "instruction.hpp"
 
 #include "analysis.hpp"
+#include "hardwareregisters.hpp"
 #include "utils.hpp"
 
 using namespace std;
@@ -257,12 +258,19 @@ string Instruction::argumentString() const {
 
 // Aliased instructions argument, if any.
 string Instruction::argumentAlias() const {
-  if (isControl()) {
-    if (auto arg = absoluteArgument()) {
+  if (auto arg = absoluteArgument()) {
+    // Subroutine / local label.
+    if (isControl()) {
       auto label = analysis->getLabel(*arg, subroutinePC);
       if (label.has_value()) {
         return *label;
       }
+    }
+
+    // Hardware register label.
+    auto hwRegister = HARDWARE_REGISTERS.find(*arg);
+    if (hwRegister != HARDWARE_REGISTERS.end()) {
+      return "!" + hwRegister->second;
     }
   }
   return argumentString();
