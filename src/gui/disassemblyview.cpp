@@ -31,26 +31,37 @@ void DisassemblyView::reset() {
   clear();
   labelToBlockNumber.clear();
   blockNumberToInstruction.clear();
+  instructionToBlockNumber.clear();
 }
 
 void DisassemblyView::renderAnalysis(const Analysis* analysis) {
-  auto savedScroll = verticalScrollBar()->value();
   reset();
-
   for (auto& [pc, subroutine] : analysis->subroutines) {
     renderSubroutine(subroutine);
   }
 
-  verticalScrollBar()->setValue(savedScroll);
+  if (lastClickedInstruction.has_value()) {
+    auto blockNumber = instructionToBlockNumber[*lastClickedInstruction];
+    jumpToPosition(blockNumber, lastClickedVerticalOffset);
+  } else {
+    moveCursor(QTextCursor::Start);
+  }
 }
 
 void DisassemblyView::jumpToLabel(QString label) {
   auto blockNumber = labelToBlockNumber[label];
+  jumpToPosition(blockNumber);
+}
+
+void DisassemblyView::jumpToPosition(int blockNumber, int verticalOffset) {
   auto block = document()->findBlockByNumber(blockNumber);
 
   QTextCursor cursor(block);
   moveCursor(QTextCursor::End);
   setTextCursor(cursor);
+
+  auto verticalBase = verticalScrollBar()->value();
+  verticalScrollBar()->setValue(verticalBase - verticalOffset);
 }
 
 Instruction* DisassemblyView::getInstructionFromPos(const QPoint pos) const {
@@ -103,6 +114,8 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
 
   auto blockNumber = textCursor().blockNumber();
   blockNumberToInstruction[blockNumber] = instruction;
+  instructionToBlockNumber[{instruction->pc, instruction->subroutinePC}] =
+      blockNumber;
 }
 
 void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
@@ -125,6 +138,9 @@ void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
       connect(editJumpTable, &QAction::triggered, this,
               [=]() { this->editJumpTableDialog(instruction); });
     }
+
+    lastClickedInstruction = {instruction->pc, instruction->subroutinePC};
+    lastClickedVerticalOffset = cursorRect(cursorForPosition(e->pos())).y();
   }
 
   menu->exec(e->globalPos());

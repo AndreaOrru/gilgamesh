@@ -2,6 +2,9 @@
 
 #include <QHash>
 #include <QTextEdit>
+#include <optional>
+
+#include "types.hpp"
 
 class Analysis;
 class Highlighter;
@@ -33,6 +36,7 @@ class DisassemblyView : public QTextEdit {
   void reset();
   void setBlockState(BlockState state);
   Instruction* getInstructionFromPos(const QPoint pos) const;
+  void jumpToPosition(int blockNumber, int verticalOffset = 0);
 
   void renderSubroutine(const Subroutine& subroutine);
   void renderInstruction(Instruction* instruction);
@@ -45,4 +49,8 @@ class DisassemblyView : public QTextEdit {
   Highlighter* highlighter;
   QHash<QString, int> labelToBlockNumber;
   QHash<int, Instruction*> blockNumberToInstruction;
+  QHash<std::pair<InstructionPC, SubroutinePC>, int> instructionToBlockNumber;
+
+  std::optional<std::pair<InstructionPC, SubroutinePC>> lastClickedInstruction;
+  int lastClickedVerticalOffset;
 };
