@@ -12,6 +12,7 @@ EditAssertionDialog::EditAssertionDialog(optional<Assertion> assertion,
     : QDialog(parent), assertion{assertion} {
   setWindowTitle("Edit Assertion");
   setupLayout();
+  setFixedSize(sizeHint());
 
   restoreFromAssertion();
 }

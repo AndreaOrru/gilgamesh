@@ -4,6 +4,7 @@
 
 TEMPLATE = app
 TARGET = gilgamesh
+
 INCLUDEPATH += src
 
 DESTDIR = build

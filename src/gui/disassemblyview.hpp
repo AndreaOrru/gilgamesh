@@ -16,6 +16,7 @@ enum BlockState {
   None = -1,
   AssertedStateChange,
   CompleteJumpTable,
+  EntryPointLabel,
   PartialJumpTable,
   UnknownStateChange,
 };
@@ -40,6 +41,7 @@ class DisassemblyView : public QTextEdit {
 
   void renderSubroutine(const Subroutine& subroutine);
   void renderInstruction(Instruction* instruction);
+  std::string instructionComment(const Instruction* instruction);
 
   void contextMenuEvent(QContextMenuEvent* e);
   void editAssertionDialog(Instruction* instruction);

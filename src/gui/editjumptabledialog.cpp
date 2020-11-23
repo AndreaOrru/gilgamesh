@@ -15,6 +15,7 @@ EditJumpTableDialog::EditJumpTableDialog(const JumpTable* jumpTable,
     : QDialog(parent) {
   setWindowTitle("Edit Jump Table");
   setupLayout();
+  setFixedSize(sizeHint());
 
   restoreFromJumpTable(jumpTable);
 }

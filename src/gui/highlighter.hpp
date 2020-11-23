@@ -26,6 +26,7 @@ class Highlighter : public QSyntaxHighlighter {
   QTextCharFormat assertedStateChangeFormat;
   QTextCharFormat commentFormat;
   QTextCharFormat completeJumpTableFormat;
+  QTextCharFormat entryPointFormat;
   QTextCharFormat labelFormat;
   QTextCharFormat localLabelFormat;
   QTextCharFormat opcodeFormat;

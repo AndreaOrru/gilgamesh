@@ -1,8 +1,9 @@
-#include "gui/highlighter.hpp"
 #include <QColor>
 
-#include "gui/disassemblyview.hpp"
+#include "gui/highlighter.hpp"
 
+#include "gui/constants.hpp"
+#include "gui/disassemblyview.hpp"
 #include "opcodes.hpp"
 
 Highlighter::Highlighter(QTextDocument* parent) : QSyntaxHighlighter(parent) {
@@ -13,13 +14,16 @@ Highlighter::Highlighter(QTextDocument* parent) : QSyntaxHighlighter(parent) {
 void Highlighter::setupFormats() {
   argumentAliasFormat.setForeground(Qt::darkRed);
 
-  assertedStateChangeFormat.setBackground(QColor("mediumpurple"));
+  assertedStateChangeFormat.setBackground(ASSERTION_COLOR);
   assertedStateChangeFormat.setForeground(Qt::white);
 
   commentFormat.setForeground(Qt::gray);
 
-  completeJumpTableFormat.setBackground(QColor("royalblue"));
+  completeJumpTableFormat.setBackground(JUMPTABLE_COLOR);
   completeJumpTableFormat.setForeground(Qt::white);
+
+  entryPointFormat.setForeground(ENTRYPOINT_COLOR);
+  entryPointFormat.setFontWeight(QFont::Bold);
 
   labelFormat.setForeground(Qt::darkRed);
   labelFormat.setFontWeight(QFont::Bold);
@@ -28,9 +32,9 @@ void Highlighter::setupFormats() {
 
   opcodeFormat.setForeground(Qt::blue);
 
-  partialJumpTableFormat.setBackground(QColor("gold"));
+  partialJumpTableFormat.setBackground(PARTIAL_JUMPTABLE_COLOR);
 
-  unknownStateChangeFormat.setBackground(QColor("orangered"));
+  unknownStateChangeFormat.setBackground(UNKNOWN_COLOR);
   unknownStateChangeFormat.setForeground(Qt::white);
 }
 
@@ -78,6 +82,10 @@ void Highlighter::highlightBlock(const QString& text) {
 
     case BlockState::CompleteJumpTable:
       setFormat(0, text.size(), completeJumpTableFormat);
+      break;
+
+    case BlockState::EntryPointLabel:
+      setFormat(0, text.size(), entryPointFormat);
       break;
 
     case BlockState::PartialJumpTable:

@@ -5,8 +5,8 @@
 using namespace std;
 
 // Constructor.
-Subroutine::Subroutine(SubroutinePC pc, std::string label)
-    : pc{pc}, label{label} {}
+Subroutine::Subroutine(SubroutinePC pc, std::string label, bool isEntryPoint)
+    : pc{pc}, label{label}, isEntryPoint{isEntryPoint} {}
 
 // Add an instruction.
 void Subroutine::addInstruction(Instruction* instruction) {

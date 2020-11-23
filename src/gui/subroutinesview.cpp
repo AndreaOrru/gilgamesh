@@ -13,7 +13,9 @@ void SubroutinesView::renderAnalysis(const Analysis* analysis) {
     auto item =
         new QListWidgetItem(QString::fromStdString(subroutine.label), this);
 
-    if (subroutine.isResponsibleForUnknown()) {
+    if (subroutine.isEntryPoint) {
+      item->setForeground(ENTRYPOINT_COLOR);
+    } else if (subroutine.isResponsibleForUnknown()) {
       item->setForeground(Qt::red);
     }
 

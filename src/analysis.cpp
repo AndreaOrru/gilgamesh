@@ -62,7 +62,7 @@ void Analysis::run() {
   clear();
 
   for (auto& e : entryPoints) {
-    addSubroutine(e.pc, e.label);
+    addSubroutine(e.pc, e.label, true);
     CPU cpu(this, e.pc, e.pc, e.state);
     cpu.run();
   }
@@ -108,9 +108,11 @@ void Analysis::addReference(InstructionPC source,
 }
 
 // Add a subroutine to the analysis.
-void Analysis::addSubroutine(SubroutinePC pc, optional<string> label) {
+void Analysis::addSubroutine(SubroutinePC pc,
+                             optional<string> label,
+                             bool isEntryPoint) {
   auto labelValue = label.value_or(format("sub_%06X", pc));
-  subroutines.try_emplace(pc, pc, labelValue);
+  subroutines.try_emplace(pc, pc, labelValue, isEntryPoint);
 }
 
 // Get an assertion for an instruction, if any.

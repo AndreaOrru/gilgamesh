@@ -81,6 +81,9 @@ void DisassemblyView::setBlockState(BlockState state) {
 void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
   auto label = qformat("%s:", subroutine.label.c_str());
   append(label);
+  if (subroutine.isEntryPoint) {
+    setBlockState(BlockState::EntryPointLabel);
+  }
 
   auto blockNumber = textCursor().blockNumber();
   labelToBlockNumber[QString::fromStdString(subroutine.label)] = blockNumber;
@@ -96,7 +99,7 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
     append(qformat(".%s:", label->c_str()));
   }
   append(qformat("  %-30s; $%06X | %s", instruction->toString().c_str(),
-                 instruction->pc, instruction->comment().c_str()));
+                 instruction->pc, instructionComment(instruction).c_str()));
 
   auto instructionStateChange = instruction->stateChange();
   if (instruction->assertion().has_value()) {
@@ -116,6 +119,27 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
   blockNumberToInstruction[blockNumber] = instruction;
   instructionToBlockNumber[{instruction->pc, instruction->subroutinePC}] =
       blockNumber;
+}
+
+std::string DisassemblyView::instructionComment(
+    const Instruction* instruction) {
+  if (!instruction->comment().empty()) {
+    return instruction->comment();
+  }
+
+  if (instruction->isSepRep()) {
+    auto size = instruction->operation() == Op::SEP ? 8 : 16;
+    auto arg = *instruction->argument();
+
+    if ((arg & 0x30) == 0x30) {
+      return format("A: %d-bits, X: %d-bits", size, size);
+    } else if ((arg & 0x20) == 0x20) {
+      return format("A: %d-bits", size);
+    } else if ((arg & 0x10) == 0x10) {
+      return format("X: %d-bits", size);
+    }
+  }
+  return "";
 }
 
 void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {

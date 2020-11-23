@@ -12,7 +12,7 @@ class Instruction;
 // Structure representing a subroutine.
 struct Subroutine {
   // Constructor.
-  Subroutine(SubroutinePC pc, std::string label);
+  Subroutine(SubroutinePC pc, std::string label, bool isEntryPoint = false);
 
   // Add an instruction.
   void addInstruction(Instruction* instruction);
@@ -38,6 +38,8 @@ struct Subroutine {
 
   SubroutinePC pc;    // Program Counter.
   std::string label;  // Label.
+  bool isEntryPoint;  // Whether this subroutine is an entry point.
+
   // Map from PC to instructions.
   std::map<InstructionPC, Instruction*> instructions;
 

@@ -18,6 +18,7 @@ class MainWindow : public QMainWindow {
 
  private slots:
   void openROM(const QString& path = QString());
+  void addEntryPointDialog();
   void about();
 
  private:

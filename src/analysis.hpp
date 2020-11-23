@@ -77,7 +77,8 @@ class Analysis {
 
   // Add a subroutine to the analysis.
   void addSubroutine(SubroutinePC pc,
-                     std::optional<std::string> label = std::nullopt);
+                     std::optional<std::string> label = std::nullopt,
+                     bool isEntryPoint = false);
 
   // Define a jump table: caller spans a jumptable going from x to y (included).
   void defineJumpTable(InstructionPC callerPC,
