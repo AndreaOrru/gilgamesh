@@ -6,7 +6,9 @@
 
 #include "analysis.hpp"
 #include "gui/editassertiondialog.hpp"
-#include "highlighter.hpp"
+#include "gui/editjumptabledialog.hpp"
+#include "gui/highlighter.hpp"
+#include "gui/mainwindow.hpp"
 #include "instruction.hpp"
 #include "subroutine.hpp"
 #include "utils.hpp"
@@ -18,6 +20,10 @@ DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
                           Qt::TextSelectableByKeyboard);
 
   highlighter = new Highlighter(document());
+}
+
+MainWindow* DisassemblyView::mainWindow() {
+  return qobject_cast<MainWindow*>(parent());
 }
 
 void DisassemblyView::reset() {
@@ -105,23 +111,17 @@ void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
     auto editComment = menu->addAction("Edit Comment...");
     connect(editComment, &QAction::triggered, this,
             [=]() { this->editCommentDialog(instruction); });
+
+    if (instruction->isControl() &&
+        !instruction->absoluteArgument().has_value()) {
+      auto editJumpTable = menu->addAction("Edit Jump Table...");
+      connect(editJumpTable, &QAction::triggered, this,
+              [=]() { this->editJumpTableDialog(instruction); });
+    }
   }
 
   menu->exec(e->globalPos());
   delete menu;
-}
-
-void DisassemblyView::editCommentDialog(Instruction* instruction) {
-  auto comment = QString::fromStdString(instruction->comment());
-
-  bool ok;
-  QString newComment = QInputDialog::getText(
-      this, "Edit Comment", "Comment:", QLineEdit::Normal, comment, &ok);
-
-  if (ok) {
-    instruction->setComment(newComment.toStdString());
-    renderAnalysis(instruction->analysis);
-  }
 }
 
 void DisassemblyView::editAssertionDialog(Instruction* instruction) {
@@ -137,7 +137,30 @@ void DisassemblyView::editAssertionDialog(Instruction* instruction) {
       analysis->removeAssertion(instruction->pc, instruction->subroutinePC);
     }
 
-    analysis->run();
-    renderAnalysis(analysis);
+    mainWindow()->runAnalysis();
   };
+}
+
+void DisassemblyView::editCommentDialog(Instruction* instruction) {
+  auto comment = QString::fromStdString(instruction->comment());
+
+  bool ok;
+  QString newComment = QInputDialog::getText(
+      this, "Edit Comment", "Comment:", QLineEdit::Normal, comment, &ok);
+
+  if (ok) {
+    instruction->setComment(newComment.toStdString());
+    renderAnalysis(instruction->analysis);
+  }
+}
+
+void DisassemblyView::editJumpTableDialog(Instruction* instruction) {
+  EditJumpTableDialog dialog(this);
+  if (dialog.exec()) {
+    auto analysis = instruction->analysis;
+    auto range = dialog.range;
+
+    analysis->defineJumpTable(instruction->pc, range);
+    mainWindow()->runAnalysis();
+  }
 }

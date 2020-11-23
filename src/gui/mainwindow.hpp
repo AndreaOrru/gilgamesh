@@ -4,13 +4,14 @@
 
 class Analysis;
 class DisassemblyView;
-class LabelsView;
+class SubroutinesView;
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
   MainWindow(QWidget* parent = nullptr);
+  void runAnalysis();
 
  signals:
   void analysisChanged(const Analysis* analysis);
@@ -27,7 +28,10 @@ class MainWindow : public QMainWindow {
   QDockWidget* leftDockWidget;
 
   DisassemblyView* disassemblyView;
-  LabelsView* subroutinesView;
+  SubroutinesView* subroutinesView;
 
   Analysis* analysis = nullptr;
 };
+
+#define ACCESS_MAIN_WINDOW \
+  MainWindow* mainWindow() { return qobject_cast<MainWindow*>(parent()); }

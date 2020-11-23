@@ -4,7 +4,7 @@
 
 #include "analysis.hpp"
 #include "gui/disassemblyview.hpp"
-#include "gui/labelsview.hpp"
+#include "gui/subroutinesview.hpp"
 #include "rom.hpp"
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -34,7 +34,7 @@ void MainWindow::setupWidgets() {
   setCentralWidget(disassemblyView);
 
   leftDockWidget = new QDockWidget("Subroutines", this);
-  subroutinesView = new LabelsView(leftDockWidget);
+  subroutinesView = new SubroutinesView(leftDockWidget);
   leftDockWidget->setWidget(subroutinesView);
   addDockWidget(Qt::LeftDockWidgetArea, leftDockWidget);
 }
@@ -43,10 +43,15 @@ void MainWindow::setupSignals() {
   connect(this, &MainWindow::analysisChanged, disassemblyView,
           &DisassemblyView::renderAnalysis);
   connect(this, &MainWindow::analysisChanged, subroutinesView,
-          &LabelsView::renderAnalysis);
+          &SubroutinesView::renderAnalysis);
 
-  connect(subroutinesView, &LabelsView::itemDoubleClicked, disassemblyView,
+  connect(subroutinesView, &SubroutinesView::itemDoubleClicked, disassemblyView,
           [this](auto item) { disassemblyView->jumpToLabel(item->text()); });
+}
+
+void MainWindow::runAnalysis() {
+  analysis->run();
+  emit analysisChanged(analysis);
 }
 
 void MainWindow::openROM(const QString& path) {
@@ -62,9 +67,7 @@ void MainWindow::openROM(const QString& path) {
       delete analysis;
     }
     analysis = new Analysis(fileName.toStdString());
-    analysis->run();
-
-    emit analysisChanged(analysis);
+    runAnalysis();
   }
 }
 

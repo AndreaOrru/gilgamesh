@@ -1,12 +1,12 @@
-#include "gui/labelsview.hpp"
+#include "gui/subroutinesview.hpp"
 
 #include "analysis.hpp"
 
-LabelsView::LabelsView(QWidget* parent) : QListWidget(parent) {
+SubroutinesView::SubroutinesView(QWidget* parent) : QListWidget(parent) {
   setFont(QFont("Iosevka Fixed SS09 Extended"));
 }
 
-void LabelsView::renderAnalysis(const Analysis* analysis) {
+void SubroutinesView::renderAnalysis(const Analysis* analysis) {
   QStringList labels;
   for (auto& [pc, subroutine] : analysis->subroutines) {
     labels << QString::fromStdString(subroutine.label);

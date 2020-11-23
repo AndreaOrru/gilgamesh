@@ -17,6 +17,9 @@ class EditAssertionDialog : public QDialog {
 
   std::optional<Assertion> assertion;
 
+ private slots:
+  void accept();
+
  private:
   auto createRadioButtons();
   auto createButtonBox();

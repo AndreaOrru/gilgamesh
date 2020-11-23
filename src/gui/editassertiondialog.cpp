@@ -28,7 +28,8 @@ auto EditAssertionDialog::createButtonBox() {
   auto buttonBox = new QDialogButtonBox(
       QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
 
-  connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::accepted, this,
+          &EditAssertionDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
   return buttonBox;
@@ -76,8 +77,6 @@ QGroupBox* EditAssertionDialog::createRegisterAssertionGroup(QString reg) {
 }
 
 void EditAssertionDialog::applyToAssertion() {
-  applyDisabledState();
-
   if (assertionTypeNone->isChecked()) {
     assertion = nullopt;
     return;
@@ -145,6 +144,10 @@ QRadioButton* EditAssertionDialog::createRadioButton(QString title,
                                                      QGroupBox* group) {
   auto radioButton = new QRadioButton(title, group);
   connect(radioButton, &QRadioButton::clicked, this,
-          &EditAssertionDialog::applyToAssertion);
+          &EditAssertionDialog::applyDisabledState);
   return radioButton;
+}
+
+void EditAssertionDialog::accept() {
+  QDialog::accept();
 }

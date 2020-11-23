@@ -4,11 +4,11 @@
 
 class Analysis;
 
-class LabelsView : public QListWidget {
+class SubroutinesView : public QListWidget {
   Q_OBJECT
 
  public:
-  LabelsView(QWidget* parent = nullptr);
+  SubroutinesView(QWidget* parent = nullptr);
 
  public slots:
   void renderAnalysis(const Analysis* analysis);

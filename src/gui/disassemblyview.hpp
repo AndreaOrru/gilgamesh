@@ -3,11 +3,13 @@
 #include <QHash>
 #include <QTextEdit>
 
+#include "gui/mainwindow.hpp"
 #include "types.hpp"
 
 class Analysis;
 class Highlighter;
 class Instruction;
+class MainWindow;
 class Subroutine;
 
 enum BlockState {
@@ -27,6 +29,8 @@ class DisassemblyView : public QTextEdit {
   void jumpToLabel(QString label);
 
  private:
+  MainWindow* mainWindow();
+
   void reset();
   void setBlockState(BlockState state);
   Instruction* getInstructionFromPos(const QPoint pos) const;
@@ -35,8 +39,9 @@ class DisassemblyView : public QTextEdit {
   void renderInstruction(Instruction* instruction);
 
   void contextMenuEvent(QContextMenuEvent* e);
-  void editCommentDialog(Instruction* instruction);
   void editAssertionDialog(Instruction* instruction);
+  void editCommentDialog(Instruction* instruction);
+  void editJumpTableDialog(Instruction* instruction);
 
   Highlighter* highlighter;
   QHash<QString, int> labelToBlockNumber;
