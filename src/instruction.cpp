@@ -284,13 +284,24 @@ string Instruction::toString(bool alias) const {
   return s;
 }
 
+// Get an assertion for the instruction, if any.
+optional<Assertion> Instruction::assertion() const {
+  return analysis->getAssertion(pc, subroutinePC);
+}
+
+// Get the jumptable associated with the instruction, if any.
+const JumpTable* Instruction::jumpTable() const {
+  auto search = analysis->jumpTables.find(pc);
+  if (search != analysis->jumpTables.end()) {
+    return &search->second;
+  } else {
+    return nullptr;
+  }
+}
+
 // Pointer to the subroutine to which the instruction belongs.
 Subroutine* Instruction::subroutine() const {
   return &analysis->subroutines.at(subroutinePC);
-}
-
-optional<Assertion> Instruction::assertion() const {
-  return analysis->getAssertion(pc, subroutinePC);
 }
 
 // Return the instruction's comment.

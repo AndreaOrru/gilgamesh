@@ -10,6 +10,7 @@
 
 #include "assertion.hpp"
 #include "instruction.hpp"
+#include "jumptable.hpp"
 #include "rom.hpp"
 #include "state.hpp"
 #include "subroutine.hpp"
@@ -43,20 +44,6 @@ struct Reference {
 };
 // Set of References.
 typedef std::unordered_set<Reference, boost::hash<Reference>> ReferenceSet;
-
-// Set of possible jump table statuses.
-enum JumpTableStatus {
-  Unknown,
-  Empty,
-  Partial,
-  Complete,
-};
-
-// Structure representing a jump table.
-struct JumpTable {
-  JumpTableStatus status;
-  std::map<std::optional<u16>, InstructionPC> targets;
-};
 
 /**
  * Class holding the state of the ROM's analysis.
@@ -96,6 +83,8 @@ class Analysis {
   void defineJumpTable(InstructionPC callerPC,
                        std::pair<u16, u16> range,
                        JumpTableStatus status = JumpTableStatus::Partial);
+  // Undefine a jump table.
+  void undefineJumpTable(InstructionPC callerPC);
 
   // Return any of the instructions at address PC.
   const Instruction* anyInstruction(InstructionPC pc);

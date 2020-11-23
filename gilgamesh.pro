@@ -26,4 +26,4 @@ SOURCES += src/gui/disassemblyview.cpp src/gui/editassertiondialog.cpp src/gui/e
 HEADERS += src/gui/disassemblyview.hpp src/gui/editassertiondialog.hpp src/gui/editjumptabledialog.hpp src/gui/highlighter.hpp src/gui/subroutinesview.hpp src/gui/mainwindow.hpp
 
 SOURCES += src/analysis.cpp src/cpu.cpp src/instruction.cpp src/main.cpp src/rom.cpp src/stack.cpp src/state.cpp src/subroutine.cpp src/utils.cpp
-HEADERS += src/assertion.hpp src/analysis.hpp src/cpu.hpp src/instruction.hpp src/opcodes.hpp src/rom.hpp src/stack.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp
+HEADERS += src/assertion.hpp src/analysis.hpp src/cpu.hpp src/instruction.hpp src/jumptable.hpp src/opcodes.hpp src/rom.hpp src/stack.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp

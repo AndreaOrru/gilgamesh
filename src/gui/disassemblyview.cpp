@@ -92,6 +92,12 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
   } else if (instructionStateChange.has_value() &&
              instructionStateChange->unknown()) {
     setBlockState(BlockState::UnknownStateChange);
+  } else if (auto jumpTable = instruction->jumpTable()) {
+    if (jumpTable->status == JumpTableStatus::Complete) {
+      setBlockState(BlockState::CompleteJumpTable);
+    } else {
+      setBlockState(BlockState::PartialJumpTable);
+    }
   }
 
   auto blockNumber = textCursor().blockNumber();
@@ -155,12 +161,18 @@ void DisassemblyView::editCommentDialog(Instruction* instruction) {
 }
 
 void DisassemblyView::editJumpTableDialog(Instruction* instruction) {
-  EditJumpTableDialog dialog(this);
+  EditJumpTableDialog dialog(instruction->jumpTable(), this);
   if (dialog.exec()) {
     auto analysis = instruction->analysis;
     auto range = dialog.range;
+    auto status = dialog.status;
 
-    analysis->defineJumpTable(instruction->pc, range);
+    if (range.has_value()) {
+      analysis->defineJumpTable(instruction->pc, *range, status);
+    } else {
+      analysis->undefineJumpTable(instruction->pc);
+    }
+
     mainWindow()->runAnalysis();
   }
 }

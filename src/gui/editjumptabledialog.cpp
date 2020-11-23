@@ -1,14 +1,22 @@
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QValidator>
 
+#include "analysis.hpp"
 #include "editjumptabledialog.hpp"
 
-EditJumpTableDialog::EditJumpTableDialog(QWidget* parent) : QDialog(parent) {
+using namespace std;
+
+EditJumpTableDialog::EditJumpTableDialog(const JumpTable* jumpTable,
+                                         QWidget* parent)
+    : QDialog(parent) {
   setWindowTitle("Edit Jump Table");
   setupLayout();
+
+  restoreFromJumpTable(jumpTable);
 }
 
 auto EditJumpTableDialog::createTextAreas() {
@@ -47,16 +55,40 @@ auto EditJumpTableDialog::createButtonBox() {
   return buttonBox;
 }
 
+auto EditJumpTableDialog::createCheckBox() {
+  completeCheckBox = new QCheckBox("Complete", this);
+  return completeCheckBox;
+}
+
 void EditJumpTableDialog::setupLayout() {
   auto vbox = new QVBoxLayout(this);
   vbox->addLayout(createTextAreas());
+  vbox->addWidget(createCheckBox());
   vbox->addWidget(createButtonBox());
 }
 
+void EditJumpTableDialog::restoreFromJumpTable(const JumpTable* jumpTable) {
+  range = jumpTable->range();
+  if (range.has_value()) {
+    startText->setText(QString::number(range->first));
+    endText->setText(QString::number(range->second));
+  }
+
+  completeCheckBox->setChecked(jumpTable->status == JumpTableStatus::Complete);
+}
+
 void EditJumpTableDialog::accept() {
-  auto start = startText->text().toInt();
-  auto end = endText->text().toInt();
-  range = {start, end};
+  bool ok = true;
+  auto start = startText->text().toInt(&ok);
+  auto end = endText->text().toInt(&ok);
+
+  if (ok) {
+    range = {start, end};
+    status = completeCheckBox->isChecked() ? JumpTableStatus::Complete
+                                           : JumpTableStatus::Partial;
+  } else {
+    range = nullopt;
+  }
 
   QDialog::accept();
 }

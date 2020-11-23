@@ -18,12 +18,17 @@ void Highlighter::setupFormats() {
 
   commentFormat.setForeground(Qt::gray);
 
+  completeJumpTableFormat.setBackground(QColor("royalblue"));
+  completeJumpTableFormat.setForeground(Qt::white);
+
   labelFormat.setForeground(Qt::darkRed);
   labelFormat.setFontWeight(QFont::Bold);
 
   localLabelFormat.setForeground(Qt::darkRed);
 
   opcodeFormat.setForeground(Qt::blue);
+
+  partialJumpTableFormat.setBackground(QColor("gold"));
 
   unknownStateChangeFormat.setBackground(QColor("orangered"));
   unknownStateChangeFormat.setForeground(Qt::white);
@@ -69,6 +74,14 @@ void Highlighter::highlightBlock(const QString& text) {
   switch (currentBlockState()) {
     case BlockState::AssertedStateChange:
       setFormat(0, text.size(), assertedStateChangeFormat);
+      break;
+
+    case BlockState::CompleteJumpTable:
+      setFormat(0, text.size(), completeJumpTableFormat);
+      break;
+
+    case BlockState::PartialJumpTable:
+      setFormat(0, text.size(), partialJumpTableFormat);
       break;
 
     case BlockState::UnknownStateChange:

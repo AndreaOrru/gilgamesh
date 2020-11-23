@@ -144,6 +144,8 @@ void Analysis::defineJumpTable(InstructionPC callerPC,
   auto caller = anyInstruction(callerPC);
 
   // TODO: support stepping by 3 for long addresses.
+  // TODO: should we really clear at the beginning?
+  jumpTable.targets.clear();
   for (int x = range.first; x <= range.second; x += 2) {
     auto offset = *caller->argument() + x;
     auto bank = caller->pc & 0xFF0000;
@@ -151,6 +153,13 @@ void Analysis::defineJumpTable(InstructionPC callerPC,
     jumpTable.targets.insert_or_assign(x, target);
   }
   jumpTable.status = status;
+}
+
+// Undefine a jump table.
+void Analysis::undefineJumpTable(InstructionPC callerPC) {
+  auto& jumpTable = jumpTables.at(callerPC);
+  jumpTable.targets.clear();
+  jumpTable.status = JumpTableStatus::Unknown;
 }
 
 // Return any of the instructions at address PC.

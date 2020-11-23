@@ -3,9 +3,6 @@
 #include <QHash>
 #include <QTextEdit>
 
-#include "gui/mainwindow.hpp"
-#include "types.hpp"
-
 class Analysis;
 class Highlighter;
 class Instruction;
@@ -15,6 +12,8 @@ class Subroutine;
 enum BlockState {
   None = -1,
   AssertedStateChange,
+  CompleteJumpTable,
+  PartialJumpTable,
   UnknownStateChange,
 };
 

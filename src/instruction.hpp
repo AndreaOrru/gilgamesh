@@ -11,6 +11,7 @@
 #include "types.hpp"
 
 class Analysis;
+class JumpTable;
 class Subroutine;
 
 // Categories of instructions.
@@ -58,10 +59,12 @@ class Instruction {
   // Disassemble the instruction.
   std::string toString(bool alias = true) const;
 
-  // Pointer to the subroutine to which the instruction belongs.
-  Subroutine* subroutine() const;
   // Get an assertion for the instruction, if any.
   std::optional<Assertion> assertion() const;
+  // Get the jumptable associated with the instruction, if any.
+  const JumpTable* jumpTable() const;
+  // Pointer to the subroutine to which the instruction belongs.
+  Subroutine* subroutine() const;
 
   std::string comment() const;           // Return the instruction's comment.
   void setComment(std::string comment);  // Set the instruction's comment.
