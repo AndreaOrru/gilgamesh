@@ -23,6 +23,10 @@ struct Subroutine {
   // Whether the subroutine is unknown because of `reason`.
   bool isUnknownBecauseOf(UnknownReason reason) const;
 
+  // Return true if this subroutine is responsible for the unknown state,
+  // false if the unknown state is due to one of the subroutine it calls.
+  bool isResponsibleForUnknown() const;
+
   // Whether the subroutine saves the CPU state at the beginning.
   bool savesStateInIncipit() const;
 

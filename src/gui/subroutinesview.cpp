@@ -8,11 +8,15 @@ SubroutinesView::SubroutinesView(QWidget* parent) : QListWidget(parent) {
 }
 
 void SubroutinesView::renderAnalysis(const Analysis* analysis) {
-  QStringList labels;
-  for (auto& [pc, subroutine] : analysis->subroutines) {
-    labels << QString::fromStdString(subroutine.label);
-  }
-
   clear();
-  addItems(labels);
+  for (auto& [pc, subroutine] : analysis->subroutines) {
+    auto item =
+        new QListWidgetItem(QString::fromStdString(subroutine.label), this);
+
+    if (subroutine.isResponsibleForUnknown()) {
+      item->setForeground(Qt::red);
+    }
+
+    addItem(item);
+  }
 }

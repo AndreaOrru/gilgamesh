@@ -32,6 +32,17 @@ bool Subroutine::isUnknownBecauseOf(UnknownReason reason) const {
   return false;
 }
 
+// Return true if this subroutine is responsible for the unknown state,
+// false if the unknown state is due to one of the subroutine it calls.
+bool Subroutine::isResponsibleForUnknown() const {
+  for (auto& [pc, stateChange] : unknownStateChanges) {
+    if (stateChange.unknownReason != UnknownReason::Unknown) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Whether the subroutine saves the CPU state at the beginning.
 bool Subroutine::savesStateInIncipit() const {
   for (auto& [pc, instruction] : instructions) {

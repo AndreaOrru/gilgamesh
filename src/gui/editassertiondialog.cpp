@@ -149,5 +149,6 @@ QRadioButton* EditAssertionDialog::createRadioButton(QString title,
 }
 
 void EditAssertionDialog::accept() {
+  applyToAssertion();
   QDialog::accept();
 }

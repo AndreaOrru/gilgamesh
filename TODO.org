@@ -2,7 +2,6 @@
 ** Test simplify
 
 * Subroutine
-** isResponsibleForUnknown
 ** Recursive subroutines
 ** Test simplify
 
