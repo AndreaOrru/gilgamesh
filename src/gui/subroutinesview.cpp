@@ -1,9 +1,10 @@
 #include "gui/subroutinesview.hpp"
 
 #include "analysis.hpp"
+#include "gui/constants.hpp"
 
 SubroutinesView::SubroutinesView(QWidget* parent) : QListWidget(parent) {
-  setFont(QFont("Iosevka Fixed SS09 Extended"));
+  setFont(QFont(MONOSPACE_FONT));
 }
 
 void SubroutinesView::renderAnalysis(const Analysis* analysis) {

@@ -22,8 +22,5 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 QT += widgets
 
 # Input
-SOURCES += src/gui/disassemblyview.cpp src/gui/editassertiondialog.cpp src/gui/editjumptabledialog.cpp src/gui/highlighter.cpp src/gui/subroutinesview.cpp src/gui/mainwindow.cpp
-HEADERS += src/gui/disassemblyview.hpp src/gui/editassertiondialog.hpp src/gui/editjumptabledialog.hpp src/gui/highlighter.hpp src/gui/subroutinesview.hpp src/gui/mainwindow.hpp
-
-SOURCES += src/analysis.cpp src/cpu.cpp src/instruction.cpp src/main.cpp src/rom.cpp src/stack.cpp src/state.cpp src/subroutine.cpp src/utils.cpp
-HEADERS += src/assertion.hpp src/analysis.hpp src/cpu.hpp src/instruction.hpp src/jumptable.hpp src/opcodes.hpp src/rom.hpp src/stack.hpp src/state.hpp src/subroutine.hpp src/types.hpp src/utils.hpp
+SOURCES += $$files(src/*.cpp, true)
+HEADERS += $$files(src/*.hpp, true)

@@ -5,6 +5,7 @@
 #include "gui/disassemblyview.hpp"
 
 #include "analysis.hpp"
+#include "gui/constants.hpp"
 #include "gui/editassertiondialog.hpp"
 #include "gui/editjumptabledialog.hpp"
 #include "gui/highlighter.hpp"
@@ -14,7 +15,7 @@
 #include "utils.hpp"
 
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
-  setFontFamily("Iosevka Fixed SS09 Extended");
+  setFontFamily(MONOSPACE_FONT);
   setReadOnly(true);
   setTextInteractionFlags(this->textInteractionFlags() |
                           Qt::TextSelectableByKeyboard);
