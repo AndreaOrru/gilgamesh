@@ -17,10 +17,12 @@
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
   setFontFamily(MONOSPACE_FONT);
   setReadOnly(true);
-  setTextInteractionFlags(this->textInteractionFlags() |
-                          Qt::TextSelectableByKeyboard);
 
   highlighter = new Highlighter(document());
+
+  connect(this, &DisassemblyView::cursorPositionChanged, this,
+          &DisassemblyView::highlightCurrentLine);
+  highlightCurrentLine();
 }
 
 MainWindow* DisassemblyView::mainWindow() {
@@ -58,10 +60,14 @@ void DisassemblyView::jumpToPosition(int blockNumber, int verticalOffset) {
 
   QTextCursor cursor(block);
   moveCursor(QTextCursor::End);
+  auto verticalScrollEnd = verticalScrollBar()->value();
   setTextCursor(cursor);
 
-  auto verticalBase = verticalScrollBar()->value();
-  verticalScrollBar()->setValue(verticalBase - verticalOffset);
+  // Don't change the vertical position if we're at the end of the document.
+  auto verticalScrollBase = verticalScrollBar()->value();
+  if (verticalScrollBase != verticalScrollEnd) {
+    verticalScrollBar()->setValue(verticalScrollBase - verticalOffset);
+  }
 }
 
 Instruction* DisassemblyView::getInstructionFromPos(const QPoint pos) const {
@@ -98,7 +104,7 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
   if (auto label = instruction->label) {
     append(qformat(".%s:", label->c_str()));
   }
-  append(qformat("  %-30s; $%06X | %s", instruction->toString().c_str(),
+  append(qformat("  %-30s; $%06X |%s", instruction->toString().c_str(),
                  instruction->pc, instructionComment(instruction).c_str()));
 
   auto instructionStateChange = instruction->stateChange();
@@ -124,7 +130,7 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
 std::string DisassemblyView::instructionComment(
     const Instruction* instruction) {
   if (!instruction->comment().empty()) {
-    return instruction->comment();
+    return " " + instruction->comment();
   }
 
   if (instruction->isSepRep()) {
@@ -132,17 +138,18 @@ std::string DisassemblyView::instructionComment(
     auto arg = *instruction->argument();
 
     if ((arg & 0x30) == 0x30) {
-      return format("A: %d-bits, X: %d-bits", size, size);
+      return format(" A: %d-bits, X: %d-bits", size, size);
     } else if ((arg & 0x20) == 0x20) {
-      return format("A: %d-bits", size);
+      return format(" A: %d-bits", size);
     } else if ((arg & 0x10) == 0x10) {
-      return format("X: %d-bits", size);
+      return format(" X: %d-bits", size);
     }
   }
   return "";
 }
 
 void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
+  setTextCursor(cursorForPosition(e->pos()));
   QMenu* menu = createStandardContextMenu();
 
   if (auto instruction = getInstructionFromPos(e->pos())) {
@@ -216,4 +223,25 @@ void DisassemblyView::editJumpTableDialog(Instruction* instruction) {
 
     mainWindow()->runAnalysis();
   }
+}
+
+void DisassemblyView::highlightCurrentLine() {
+  QColor lineColor = QColor(Qt::yellow).lighter(160);
+
+  // Reuse background color if there's one.
+  auto formats = textCursor().block().layout()->formats();
+  for (auto& format : formats) {
+    auto background = format.format.background().color();
+    if (background != this->textBackgroundColor()) {
+      lineColor = background;
+    }
+  }
+
+  QTextEdit::ExtraSelection selection;
+  selection.format.setBackground(lineColor);
+  selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+  selection.cursor = textCursor();
+  selection.cursor.clearSelection();
+
+  setExtraSelections({selection});
 }

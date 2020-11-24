@@ -48,6 +48,8 @@ class DisassemblyView : public QTextEdit {
   void editCommentDialog(Instruction* instruction);
   void editJumpTableDialog(Instruction* instruction);
 
+  void highlightCurrentLine();
+
   Highlighter* highlighter;
   QHash<QString, int> labelToBlockNumber;
   QHash<int, Instruction*> blockNumberToInstruction;
