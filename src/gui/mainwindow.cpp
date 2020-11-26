@@ -24,6 +24,8 @@ void MainWindow::setupMenus() {
   menuBar()->addMenu(fileMenu);
   fileMenu->addAction(
       "&Open ROM...", this, [this]() { openROM(); }, QKeySequence::Open);
+  fileMenu->addAction(
+      "&Save Analysis", this, [this]() { saveAnalysis(); }, QKeySequence::Save);
   fileMenu->addSeparator();
   fileMenu->addAction("E&xit", qApp, &QApplication::quit, QKeySequence::Quit);
 
@@ -75,8 +77,13 @@ void MainWindow::openROM(const QString& path) {
       delete analysis;
     }
     analysis = new Analysis(fileName.toStdString());
+    analysis->load();
     runAnalysis();
   }
+}
+
+void MainWindow::saveAnalysis() {
+  analysis->save();
 }
 
 void MainWindow::addEntryPointDialog() {

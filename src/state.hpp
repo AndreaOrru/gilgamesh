@@ -1,10 +1,12 @@
 #pragma once
 
 #include <boost/container_hash/hash.hpp>
+#include <boost/serialization/optional.hpp>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
+#include "boost_serialization_std_optional.hpp"
 #include "types.hpp"
 
 /**
@@ -38,6 +40,11 @@ struct State {
 
   // Comparison function.
   bool operator==(const State& other) const;
+
+  template <class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar& p;
+  }
 };
 
 /**
@@ -81,6 +88,13 @@ struct StateChange {
   std::optional<bool> m;        // Accumulator size flag.
   std::optional<bool> x;        // Index size flag.
   UnknownReason unknownReason;  // Reason for state being unknown, if any.
+
+  template <class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar& m;
+    ar& x;
+    ar& unknownReason;
+  }
 };
 
 // Map from InstructionPC to StateChange.

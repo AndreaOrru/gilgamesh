@@ -33,6 +33,9 @@ class ROM {
   // Construct a ROM from a file path.
   ROM(const std::string& path);
 
+  // Return the path of the save file containing the analysis of the ROM.
+  std::string savePath() const;
+
   u8 readByte(u24 address) const;      // Read a byte.
   u16 readWord(u24 address) const;     // Read a word (16 bits).
   u24 readAddress(u24 address) const;  // Read an address (24 bits).

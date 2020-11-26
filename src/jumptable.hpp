@@ -1,8 +1,10 @@
 #pragma once
 
+#include <boost/serialization/map.hpp>
 #include <map>
 #include <optional>
 
+#include "boost_serialization_std_optional.hpp"
 #include "types.hpp"
 
 // Set of possible jump table statuses.
@@ -26,4 +28,10 @@ struct JumpTable {
 
   JumpTableStatus status;
   std::map<std::optional<u16>, InstructionPC> targets;
+
+  template <class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar& status;
+    ar& targets;
+  }
 };

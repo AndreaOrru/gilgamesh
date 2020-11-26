@@ -1,3 +1,7 @@
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <fstream>
+
 #include "analysis.hpp"
 
 #include "cpu.hpp"
@@ -41,10 +45,7 @@ Analysis::Analysis() {}
 
 // Construct an analysis from a ROM object.
 Analysis::Analysis(const ROM& rom) : rom{rom} {
-  entryPoints = {
-      {"reset", rom.resetVector(), State()},
-      {"nmi", rom.nmiVector(), State()},
-  };
+  reset();
 }
 
 // Construct an analysis from a ROM path.
@@ -55,6 +56,40 @@ void Analysis::clear() {
   instructions.clear();
   subroutines.clear();
   references.clear();
+}
+
+// Reset the analysis (start from scratch).
+void Analysis::reset() {
+  clear();
+
+  comments.clear();
+  assertions.clear();
+  jumpTables.clear();
+
+  entryPoints = {
+      {"reset", rom.resetVector(), State()},
+      {"nmi", rom.nmiVector(), State()},
+  };
+}
+
+// Try to load the analysis from a saved state.
+bool Analysis::load() {
+  try {
+    ifstream file(rom.savePath());
+    boost::archive::text_iarchive archive(file);
+    clear();
+    archive >> *this;
+    return true;
+  } catch (...) {
+    return false;
+  }
+}
+
+// Save the results of the analysis.
+void Analysis::save() {
+  ofstream file(rom.savePath());
+  boost::archive::text_oarchive archive(file);
+  archive << *this;
 }
 
 // Analyze the ROM.

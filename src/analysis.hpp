@@ -1,6 +1,8 @@
 #pragma once
 
 #include <boost/container_hash/hash.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/unordered_set.hpp>
 #include <map>
 #include <optional>
 #include <string>
@@ -27,6 +29,13 @@ struct EntryPoint {
   // Hash table utils.
   bool operator==(const EntryPoint& other) const;
   friend std::size_t hash_value(const EntryPoint& entryPoint);
+
+  template <class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar& label;
+    ar& pc;
+    ar& state;
+  }
 };
 // Set of EntryPoints.
 typedef std::unordered_set<EntryPoint, boost::hash<EntryPoint>> EntryPointSet;
@@ -59,6 +68,9 @@ class Analysis {
 
   // Analyze the ROM.
   void run();
+
+  bool load();  // Try to load the analysis from a saved state.
+  void save();  // Save the results of the analysis.
 
   // Add an entry point to the analysis.
   void addEntryPoint(std::string label, SubroutinePC pc, State state = State());
@@ -107,28 +119,36 @@ class Analysis {
 
   // The ROM being analyzed.
   const ROM rom;
-  // ROM's entry points.
-  EntryPointSet entryPoints;
-
   // Map from PC to the set of instructions at that address.
   std::unordered_map<InstructionPC, InstructionSet> instructions;
   // All the analyzed subroutines.
   std::map<SubroutinePC, Subroutine> subroutines;
   // Instructions referenced by other instructions.
   std::unordered_map<InstructionPC, ReferenceSet> references;
+
+  // ROM's entry points.
+  EntryPointSet entryPoints;
   // Instruction's comments.
   std::unordered_map<InstructionPC, std::string> comments;
-
   // State change assertions.
   std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
                      Assertion,
                      boost::hash<std::pair<InstructionPC, SubroutinePC>>>
       assertions;
-
   // Map from PC to jump tables.
   std::unordered_map<InstructionPC, JumpTable> jumpTables;
 
  private:
   void clear();                // Clear the results of the analysis.
+  void reset();                // Reset the analysis (start from scratch).
   void generateLocalLabels();  // Generate local label names.
+
+  friend class boost::serialization::access;
+  template <class Archive>
+  void serialize(Archive& ar, const unsigned int) {
+    ar& entryPoints;
+    ar& comments;
+    ar& assertions;
+    ar& jumpTables;
+  }
 };

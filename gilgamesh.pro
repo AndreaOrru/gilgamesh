@@ -21,6 +21,7 @@ CONFIG += c++17 debug
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 QT += widgets
+LIBS += -lboost_serialization
 
 # Input
 SOURCES += $$files(src/*.cpp, true)

@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include "rom.hpp"
 
 #include "utils.hpp"
@@ -13,6 +15,13 @@ ROM::ROM(const string& path) : path{path} {
   romType = discoverType();
   romType = discoverSubtype();
 };
+
+// Return the path of the save file containing the analysis of the ROM.
+string ROM::savePath() const {
+  std::filesystem::path p = path;
+  p.replace_extension(".glm");
+  return p.string();
+}
 
 // Read a byte.
 u8 ROM::readByte(u24 address) const {
