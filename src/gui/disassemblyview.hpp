@@ -28,7 +28,7 @@ class DisassemblyView : public QTextEdit {
   DisassemblyView(QWidget* parent = nullptr);
 
  public slots:
-  void renderAnalysis(const Analysis* analysis);
+  void renderAnalysis(Analysis* analysis);
   void jumpToLabel(QString label);
 
  private:
@@ -37,6 +37,8 @@ class DisassemblyView : public QTextEdit {
   void reset();
   void setBlockState(BlockState state);
   Instruction* getInstructionFromPos(const QPoint pos) const;
+  std::optional<std::pair<InstructionPC, QString>> getLabelFromPos(
+      const QPoint pos) const;
   void jumpToPosition(int blockNumber, int verticalOffset = 0);
 
   void renderSubroutine(const Subroutine& subroutine);
@@ -47,11 +49,15 @@ class DisassemblyView : public QTextEdit {
   void editAssertionDialog(Instruction* instruction);
   void editCommentDialog(Instruction* instruction);
   void editJumpTableDialog(Instruction* instruction);
+  void editLabelDialog(InstructionPC pc, QString label);
 
   void highlightCurrentLine();
 
+  Analysis* analysis = nullptr;
   Highlighter* highlighter;
+
   QHash<QString, int> labelToBlockNumber;
+  QHash<int, std::pair<InstructionPC, QString>> blockNumberToLabel;
   QHash<int, Instruction*> blockNumberToInstruction;
   QHash<std::pair<InstructionPC, SubroutinePC>, int> instructionToBlockNumber;
 

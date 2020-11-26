@@ -63,6 +63,7 @@ void Analysis::reset() {
   clear();
 
   comments.clear();
+  customLabels.clear();
   assertions.clear();
   jumpTables.clear();
 
@@ -146,8 +147,23 @@ void Analysis::addReference(InstructionPC source,
 void Analysis::addSubroutine(SubroutinePC pc,
                              optional<string> label,
                              bool isEntryPoint) {
-  auto labelValue = label.value_or(format("sub_%06X", pc));
+  string labelValue;
+
+  auto customLabel = customLabels.find(pc);
+  if (customLabel != customLabels.end()) {
+    labelValue = customLabel->second;
+  } else if (label.has_value()) {
+    labelValue = *label;
+  } else {
+    labelValue = format("sub_%06X", pc);
+  }
+
   subroutines.try_emplace(pc, pc, labelValue, isEntryPoint);
+}
+
+// Rename a subroutine or local label;
+void Analysis::renameLabel(InstructionPC pc, string label) {
+  customLabels[pc] = label;
 }
 
 // Get an assertion for an instruction, if any.
@@ -234,9 +250,18 @@ void Analysis::generateLocalLabels() {
   for (auto& [source, referenceSet] : references) {
     for (auto& [target, subroutinePC] : referenceSet) {
       if (subroutines.count(target) == 0) {
+        string label;
+
+        auto customLabel = customLabels.find(target);
+        if (customLabel != customLabels.end()) {
+          label = customLabel->second;
+        } else {
+          label = format("loc_%06X", target);
+        }
+
         auto& subroutine = subroutines.at(subroutinePC);
         auto& instruction = subroutine.instructions.at(target);
-        instruction->label = format("loc_%06X", target);
+        instruction->label = label;
       }
     }
   }

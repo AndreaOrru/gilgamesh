@@ -14,7 +14,7 @@ class MainWindow : public QMainWindow {
   void runAnalysis();
 
  signals:
-  void analysisChanged(const Analysis* analysis);
+  void analysisChanged(Analysis* analysis);
 
  private slots:
   void openROM(const QString& path = QString());

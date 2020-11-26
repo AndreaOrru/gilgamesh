@@ -92,6 +92,9 @@ class Analysis {
                      std::optional<std::string> label = std::nullopt,
                      bool isEntryPoint = false);
 
+  // Rename a subroutine or local label;
+  void renameLabel(InstructionPC pc, std::string label);
+
   // Define a jump table: caller spans a jumptable going from x to y (included).
   void defineJumpTable(InstructionPC callerPC,
                        std::pair<u16, u16> range,
@@ -130,6 +133,8 @@ class Analysis {
   EntryPointSet entryPoints;
   // Instruction's comments.
   std::unordered_map<InstructionPC, std::string> comments;
+  // Labels set by the user.
+  std::unordered_map<InstructionPC, std::string> customLabels;
   // State change assertions.
   std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
                      Assertion,
@@ -148,6 +153,7 @@ class Analysis {
   void serialize(Archive& ar, const unsigned int) {
     ar& entryPoints;
     ar& comments;
+    ar& customLabels;
     ar& assertions;
     ar& jumpTables;
   }
