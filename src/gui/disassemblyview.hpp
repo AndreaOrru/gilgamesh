@@ -4,6 +4,7 @@
 #include <QTextEdit>
 #include <optional>
 
+#include "label.hpp"
 #include "types.hpp"
 
 class Analysis;
@@ -29,7 +30,7 @@ class DisassemblyView : public QTextEdit {
 
  public slots:
   void renderAnalysis(Analysis* analysis);
-  void jumpToLabel(QString label);
+  void jumpToLabel(Label label);
 
  private:
   MainWindow* mainWindow();
@@ -37,30 +38,37 @@ class DisassemblyView : public QTextEdit {
   void reset();
   void setBlockState(BlockState state);
   Instruction* getInstructionFromPos(const QPoint pos) const;
-  std::optional<std::pair<InstructionPC, QString>> getLabelFromPos(
-      const QPoint pos) const;
-  void jumpToPosition(int blockNumber, int verticalOffset = 0);
+  std::optional<Label> getLabelFromPos(const QPoint pos) const;
+  void jumpToBlock(int block, int verticalOffset = 0);
 
   void renderSubroutine(const Subroutine& subroutine);
   void renderInstruction(Instruction* instruction);
   std::string instructionComment(const Instruction* instruction);
 
-  void contextMenuEvent(QContextMenuEvent* e);
+  void contextMenuEvent(QContextMenuEvent* e) override;
+  void mouseMoveEvent(QMouseEvent* e) override;
+  void mouseDoubleClickEvent(QMouseEvent* e) override;
+
   void editAssertionDialog(Instruction* instruction);
   void editCommentDialog(Instruction* instruction);
   void editJumpTableDialog(Instruction* instruction);
-  void editLabelDialog(InstructionPC pc, QString label);
+  void editLabelDialog(Label label);
 
   void highlightCurrentLine();
 
   Analysis* analysis = nullptr;
   Highlighter* highlighter;
+  QTextCharFormat defaultFormat;
 
-  QHash<QString, int> labelToBlockNumber;
-  QHash<int, std::pair<InstructionPC, QString>> blockNumberToLabel;
-  QHash<int, Instruction*> blockNumberToInstruction;
-  QHash<std::pair<InstructionPC, SubroutinePC>, int> instructionToBlockNumber;
+  QHash<int, Label> blockToLabel;
+  QHash<int, Instruction*> blockToInstruction;
+  QHash<QString, int> labelToBlock;
+  QHash<QString, std::pair<InstructionPC, SubroutinePC>> labelToPC;
 
-  std::optional<std::pair<InstructionPC, SubroutinePC>> lastClickedInstruction;
+  std::optional<int> lastClickedBlock;
   int lastClickedVerticalOffset;
+
+  static const size_t LINE_LEN = 30;
+  static const size_t OP_LEN = 3;
+  static const size_t ARG_LEN = LINE_LEN - OP_LEN - 1;
 };

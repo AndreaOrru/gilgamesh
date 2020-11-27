@@ -92,9 +92,6 @@ class Analysis {
                      std::optional<std::string> label = std::nullopt,
                      bool isEntryPoint = false);
 
-  // Rename a subroutine or local label;
-  void renameLabel(InstructionPC pc, std::string label);
-
   // Define a jump table: caller spans a jumptable going from x to y (included).
   void defineJumpTable(InstructionPC callerPC,
                        std::pair<u16, u16> range,
@@ -116,9 +113,14 @@ class Analysis {
   void removeAssertion(InstructionPC pc, SubroutinePC subroutinePC);
 
   // Return the label associated with an address, if any.
-  std::optional<std::string> getLabel(
+  std::optional<Label> getLabel(
       InstructionPC pc,
       std::optional<SubroutinePC> subroutinePC = std::nullopt) const;
+
+  // Rename a subroutine or local label.
+  void renameLabel(std::string newLabel,
+                   InstructionPC pc,
+                   std::optional<SubroutinePC> subroutinePC = std::nullopt);
 
   // The ROM being analyzed.
   const ROM rom;
@@ -131,15 +133,22 @@ class Analysis {
 
   // ROM's entry points.
   EntryPointSet entryPoints;
+
   // Instruction's comments.
   std::unordered_map<InstructionPC, std::string> comments;
+
   // Labels set by the user.
-  std::unordered_map<InstructionPC, std::string> customLabels;
+  std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
+                     std::string,
+                     boost::hash<std::pair<InstructionPC, SubroutinePC>>>
+      customLabels;
+
   // State change assertions.
   std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
                      Assertion,
                      boost::hash<std::pair<InstructionPC, SubroutinePC>>>
       assertions;
+
   // Map from PC to jump tables.
   std::unordered_map<InstructionPC, JumpTable> jumpTables;
 

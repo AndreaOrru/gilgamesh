@@ -147,9 +147,9 @@ void Analysis::addReference(InstructionPC source,
 void Analysis::addSubroutine(SubroutinePC pc,
                              optional<string> label,
                              bool isEntryPoint) {
-  string labelValue;
+  Label labelValue;
 
-  auto customLabel = customLabels.find(pc);
+  auto customLabel = customLabels.find({pc, pc});
   if (customLabel != customLabels.end()) {
     labelValue = customLabel->second;
   } else if (label.has_value()) {
@@ -159,11 +159,6 @@ void Analysis::addSubroutine(SubroutinePC pc,
   }
 
   subroutines.try_emplace(pc, pc, labelValue, isEntryPoint);
-}
-
-// Rename a subroutine or local label;
-void Analysis::renameLabel(InstructionPC pc, string label) {
-  customLabels[pc] = label;
 }
 
 // Get an assertion for an instruction, if any.
@@ -226,8 +221,8 @@ const Instruction* Analysis::anyInstruction(InstructionPC pc) {
 }
 
 // Return the label associated with an address, if any.
-optional<string> Analysis::getLabel(InstructionPC pc,
-                                    optional<SubroutinePC> subroutinePC) const {
+optional<Label> Analysis::getLabel(InstructionPC pc,
+                                   optional<SubroutinePC> subroutinePC) const {
   // Try to find a subroutine label first.
   auto subroutineSearch = subroutines.find(pc);
   if (subroutineSearch != subroutines.end()) {
@@ -240,9 +235,14 @@ optional<string> Analysis::getLabel(InstructionPC pc,
   }
   auto& subroutine = subroutines.at(*subroutinePC);
   auto* instruction = subroutine.instructions.at(pc);
-  return instruction->label.has_value()
-             ? optional(string(".") + *instruction->label)
-             : nullopt;
+  return instruction->label;
+}
+
+// Rename a subroutine or local label.
+void Analysis::renameLabel(string newLabel,
+                           InstructionPC pc,
+                           optional<SubroutinePC> subroutinePC) {
+  customLabels[{pc, subroutinePC.value_or(pc)}] = newLabel;
 }
 
 // Generate local label names.
@@ -252,7 +252,7 @@ void Analysis::generateLocalLabels() {
       if (subroutines.count(target) == 0) {
         string label;
 
-        auto customLabel = customLabels.find(target);
+        auto customLabel = customLabels.find({target, subroutinePC});
         if (customLabel != customLabels.end()) {
           label = customLabel->second;
         } else {
@@ -261,7 +261,7 @@ void Analysis::generateLocalLabels() {
 
         auto& subroutine = subroutines.at(subroutinePC);
         auto& instruction = subroutine.instructions.at(target);
-        instruction->label = label;
+        instruction->label = Label(subroutine.label, label);
       }
     }
   }

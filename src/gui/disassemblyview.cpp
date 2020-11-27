@@ -19,6 +19,7 @@ using namespace std;
 DisassemblyView::DisassemblyView(QWidget* parent) : QTextEdit(parent) {
   setFontFamily(MONOSPACE_FONT);
   setReadOnly(true);
+  defaultFormat = textCursor().charFormat();
 
   highlighter = new Highlighter(document());
 
@@ -33,10 +34,11 @@ MainWindow* DisassemblyView::mainWindow() {
 
 void DisassemblyView::reset() {
   clear();
-  labelToBlockNumber.clear();
-  blockNumberToLabel.clear();
-  blockNumberToInstruction.clear();
-  instructionToBlockNumber.clear();
+
+  blockToLabel.clear();
+  blockToInstruction.clear();
+  labelToBlock.clear();
+  labelToPC.clear();
 }
 
 void DisassemblyView::renderAnalysis(Analysis* analysis) {
@@ -47,23 +49,19 @@ void DisassemblyView::renderAnalysis(Analysis* analysis) {
     renderSubroutine(subroutine);
   }
 
-  if (lastClickedInstruction.has_value()) {
-    auto blockNumber = instructionToBlockNumber[*lastClickedInstruction];
-    jumpToPosition(blockNumber, lastClickedVerticalOffset);
+  if (lastClickedBlock.has_value()) {
+    jumpToBlock(*lastClickedBlock, lastClickedVerticalOffset);
   } else {
     moveCursor(QTextCursor::Start);
   }
 }
 
-void DisassemblyView::jumpToLabel(QString label) {
-  auto blockNumber = labelToBlockNumber[label];
-  jumpToPosition(blockNumber);
+void DisassemblyView::jumpToLabel(Label label) {
+  jumpToBlock(labelToBlock[label.combinedLabel().c_str()]);
 }
 
-void DisassemblyView::jumpToPosition(int blockNumber, int verticalOffset) {
-  auto block = document()->findBlockByNumber(blockNumber);
-
-  QTextCursor cursor(block);
+void DisassemblyView::jumpToBlock(int block, int verticalOffset) {
+  QTextCursor cursor(document()->findBlockByNumber(block));
   moveCursor(QTextCursor::End);
   auto verticalScrollEnd = verticalScrollBar()->value();
   setTextCursor(cursor);
@@ -77,22 +75,29 @@ void DisassemblyView::jumpToPosition(int blockNumber, int verticalOffset) {
 
 Instruction* DisassemblyView::getInstructionFromPos(const QPoint pos) const {
   auto cursor = cursorForPosition(pos);
-  auto search = blockNumberToInstruction.find(cursor.blockNumber());
-  if (search != blockNumberToInstruction.end()) {
+  auto search = blockToInstruction.find(cursor.blockNumber());
+  if (search != blockToInstruction.end()) {
     return search.value();
   } else {
     return nullptr;
   }
 }
 
-optional<pair<InstructionPC, QString>> DisassemblyView::getLabelFromPos(
-    const QPoint pos) const {
+optional<Label> DisassemblyView::getLabelFromPos(const QPoint pos) const {
   auto cursor = cursorForPosition(pos);
-  auto search = blockNumberToLabel.find(cursor.blockNumber());
-  if (search != blockNumberToLabel.end()) {
-    return search.value();
+  auto search = blockToLabel.find(cursor.blockNumber());
+  if (search != blockToLabel.end()) {
+    // Label.
+    return *search;
   } else {
-    return nullopt;
+    auto label = anchorAt(pos);
+    if (!label.isEmpty()) {
+      // Label argument.
+      return label;
+    } else {
+      // No label.
+      return nullopt;
+    }
   }
 }
 
@@ -101,17 +106,17 @@ void DisassemblyView::setBlockState(BlockState state) {
 }
 
 void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
-  auto label = qformat("%s:", subroutine.label.c_str());
-  append(label);
-  blockNumberToLabel[textCursor().blockNumber()] = {
-      subroutine.pc, QString::fromStdString(subroutine.label)};
+  auto label = subroutine.label;
+  append(qformat("%s:", label.c_str()));
+
+  auto block = textCursor().blockNumber();
+  blockToLabel[block] = label;
+  labelToBlock[label.c_str()] = block;
+  labelToPC[label.c_str()] = {subroutine.pc, subroutine.pc};
 
   if (subroutine.isEntryPoint) {
     setBlockState(BlockState::EntryPointLabel);
   }
-
-  auto blockNumber = textCursor().blockNumber();
-  labelToBlockNumber[QString::fromStdString(subroutine.label)] = blockNumber;
 
   for (auto& [pc, instruction] : subroutine.instructions) {
     renderInstruction(instruction);
@@ -122,11 +127,33 @@ void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
 void DisassemblyView::renderInstruction(Instruction* instruction) {
   if (auto label = instruction->label) {
     append(qformat(".%s:", label->c_str()));
-    blockNumberToLabel[textCursor().blockNumber()] = {
-        instruction->pc, QString::fromStdString(*label)};
+    auto block = textCursor().blockNumber();
+    auto combinedLabel = QString::fromStdString(label->combinedLabel());
+    blockToLabel[block] = combinedLabel;
+    labelToBlock[combinedLabel] = block;
+    labelToPC[combinedLabel] = {instruction->pc, instruction->subroutinePC};
   }
-  append(qformat("  %-30s; $%06X |%s", instruction->toString().c_str(),
-                 instruction->pc, instructionComment(instruction).c_str()));
+
+  // Instruction name.
+  auto cursor = textCursor();
+  auto format = defaultFormat;
+  cursor.insertText("\n  ");
+  cursor.insertText((instruction->name() + " ").c_str());
+
+  // Instruction argument.
+  if (auto argumentLabel = instruction->argumentLabel()) {
+    format.setAnchor(true);
+    format.setAnchorHref(argumentLabel->combinedLabel().c_str());
+  }
+  QString argument = instruction->argumentString().c_str();
+  cursor.insertText(argument, format);
+
+  // Instruction comment.
+  format = defaultFormat;
+  cursor.insertText(QString(ARG_LEN - argument.size(), ' '), format);
+  cursor.insertText(qformat("; $%06X |%s", instruction->pc,
+                            instructionComment(instruction).c_str()),
+                    format);
 
   auto instructionStateChange = instruction->stateChange();
   if (instruction->assertion().has_value()) {
@@ -142,10 +169,8 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
     }
   }
 
-  auto blockNumber = textCursor().blockNumber();
-  blockNumberToInstruction[blockNumber] = instruction;
-  instructionToBlockNumber[{instruction->pc, instruction->subroutinePC}] =
-      blockNumber;
+  auto block = textCursor().blockNumber();
+  blockToInstruction[block] = instruction;
 }
 
 string DisassemblyView::instructionComment(const Instruction* instruction) {
@@ -169,9 +194,12 @@ string DisassemblyView::instructionComment(const Instruction* instruction) {
 }
 
 void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
-  setTextCursor(cursorForPosition(e->pos()));
-  QMenu* menu = createStandardContextMenu();
+  auto cursor = cursorForPosition(e->pos());
+  setTextCursor(cursor);
+  lastClickedBlock = cursor.blockNumber();
+  lastClickedVerticalOffset = cursorRect(cursorForPosition(e->pos())).y();
 
+  QMenu* menu = createStandardContextMenu();
   if (auto instruction = getInstructionFromPos(e->pos())) {
     menu->addSeparator();
 
@@ -189,19 +217,33 @@ void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
       connect(editJumpTable, &QAction::triggered, this,
               [=]() { this->editJumpTableDialog(instruction); });
     }
-
-    lastClickedInstruction = {instruction->pc, instruction->subroutinePC};
-    lastClickedVerticalOffset = cursorRect(cursorForPosition(e->pos())).y();
   }
 
-  if (auto pcLabel = getLabelFromPos(e->pos())) {
+  if (auto label = getLabelFromPos(e->pos())) {
     auto editLabel = menu->addAction("Edit Label...");
     connect(editLabel, &QAction::triggered, this,
-            [=]() { this->editLabelDialog(pcLabel->first, pcLabel->second); });
+            [=]() { this->editLabelDialog(*label); });
   }
 
   menu->exec(e->globalPos());
   delete menu;
+}
+
+void DisassemblyView::mouseMoveEvent(QMouseEvent* e) {
+  QTextEdit::mouseMoveEvent(e);
+
+  if (!anchorAt(e->pos()).isEmpty()) {
+    viewport()->setCursor(Qt::PointingHandCursor);
+  } else {
+    viewport()->setCursor(Qt::IBeamCursor);
+  }
+}
+
+void DisassemblyView::mouseDoubleClickEvent(QMouseEvent* e) {
+  auto label = anchorAt(e->pos());
+  if (!label.isEmpty()) {
+    jumpToLabel(label);
+  }
 }
 
 void DisassemblyView::editAssertionDialog(Instruction* instruction) {
@@ -248,13 +290,14 @@ void DisassemblyView::editJumpTableDialog(Instruction* instruction) {
   }
 }
 
-void DisassemblyView::editLabelDialog(InstructionPC pc, QString label) {
+void DisassemblyView::editLabelDialog(Label label) {
   bool ok;
   QString newLabel = QInputDialog::getText(
       this, "Edit Label", "Label:", QLineEdit::Normal, label, &ok);
 
   if (ok && !newLabel.isEmpty()) {
-    analysis->renameLabel(pc, newLabel.toStdString());
+    auto& [pc, subroutinePC] = labelToPC[label.combinedLabel().c_str()];
+    analysis->renameLabel(newLabel.toStdString(), pc, subroutinePC);
     mainWindow()->runAnalysis();
   }
 }

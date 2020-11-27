@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "assertion.hpp"
+#include "label.hpp"
 #include "opcodes.hpp"
 #include "state.hpp"
 #include "types.hpp"
@@ -52,12 +53,12 @@ class Instruction {
   std::optional<u24> argument() const;
   // Instruction's argument as an absolute value, if possible.
   std::optional<u24> absoluteArgument() const;
-  std::string argumentString() const;  // Instruction's argument as a string.
-  std::string argumentAlias() const;   // Aliased instructions argument, if any.
+  // Instruction argument as a label, if any.
+  std::optional<Label> argumentLabel() const;
+  // Instruction's argument as a string.
+  std::string argumentString(bool aliased = true) const;
   // Return the state change caused by this instruction, if any.
   std::optional<StateChange> stateChange() const;
-  // Disassemble the instruction.
-  std::string toString(bool alias = true) const;
 
   // Get an assertion for the instruction, if any.
   std::optional<Assertion> assertion() const;
@@ -73,13 +74,12 @@ class Instruction {
   bool operator==(const Instruction& other) const;
   friend std::size_t hash_value(const Instruction& instruction);
 
-  Analysis* analysis;         // Pointer to the analysis.
-  InstructionPC pc;           // Instruction's address.
-  SubroutinePC subroutinePC;  // Subroutine to which the instruction belongs.
-  u8 opcode;                  // Opcode byte.
-  State state;                // CPU state in which the instruction is executed.
-  // Instruction's label, if any.
-  std::optional<std::string> label = std::nullopt;
+  Analysis* analysis;          // Pointer to the analysis.
+  InstructionPC pc;            // Instruction's address.
+  SubroutinePC subroutinePC;   // Subroutine to which the instruction belongs.
+  u8 opcode;                   // Opcode byte.
+  State state;                 // State in which the instruction is executed.
+  std::optional<Label> label;  // Instruction's label, if any.
 
  private:
   u24 _argument;  // Argument (if any).

@@ -193,8 +193,33 @@ optional<u24> Instruction::absoluteArgument() const {
   };
 };
 
+// Instruction argument as a label, if any.
+optional<Label> Instruction::argumentLabel() const {
+  if (auto arg = absoluteArgument()) {
+    // Subroutine / local label.
+    if (isControl()) {
+      return analysis->getLabel(*arg, subroutinePC);
+    }
+  }
+  return nullopt;
+}
+
 // Instruction's argument as a string.
-string Instruction::argumentString() const {
+string Instruction::argumentString(bool aliased) const {
+  if (aliased) {
+    if (auto absArg = absoluteArgument()) {
+      auto label = argumentLabel();
+      if (label.has_value()) {
+        return label->asArgument();
+      }
+
+      auto hwRegister = HARDWARE_REGISTERS.find(*absArg);
+      if (hwRegister != HARDWARE_REGISTERS.end()) {
+        return "!" + hwRegister->second;
+      }
+    }
+  }
+
   auto arg = argument();
   auto sz = argumentSize();
 
@@ -256,40 +281,9 @@ string Instruction::argumentString() const {
   };
 }
 
-// Aliased instructions argument, if any.
-string Instruction::argumentAlias() const {
-  if (auto arg = absoluteArgument()) {
-    // Subroutine / local label.
-    if (isControl()) {
-      auto label = analysis->getLabel(*arg, subroutinePC);
-      if (label.has_value()) {
-        return *label;
-      }
-    }
-
-    // Hardware register label.
-    auto hwRegister = HARDWARE_REGISTERS.find(*arg);
-    if (hwRegister != HARDWARE_REGISTERS.end()) {
-      return "!" + hwRegister->second;
-    }
-  }
-  return argumentString();
-}
-
 // Return the state change caused by this instruction, if any.
 optional<StateChange> Instruction::stateChange() const {
   return subroutine()->stateChangeForPC(pc);
-}
-
-// Disassemble the instruction.
-string Instruction::toString(bool alias) const {
-  string s;
-
-  s += name();
-  s += " ";
-  s += alias ? argumentAlias() : argumentString();
-
-  return s;
 }
 
 // Get an assertion for the instruction, if any.
