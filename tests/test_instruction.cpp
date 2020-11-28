@@ -13,7 +13,7 @@ TEST_CASE("LDA instruction is parsed correctly", "[instruction]") {
   REQUIRE(instruction.size() == 3);
   REQUIRE(instruction.argument() == 0x1234);
   REQUIRE(instruction.absoluteArgument() == 0x1234);
-  REQUIRE(instruction.argumentString() == "#$1234");
+  REQUIRE(instruction.argumentString(false) == "#$1234");
   REQUIRE(!instruction.isControl());
 }
 
@@ -28,6 +28,6 @@ TEST_CASE("BRL instruction is parsed correctly", "[instruction]") {
   REQUIRE(instruction.size() == 3);
   REQUIRE(instruction.argument() == 0xFFFD);
   REQUIRE(instruction.absoluteArgument() == 0x8000);
-  REQUIRE(instruction.argumentString() == "$FFFD");
+  REQUIRE(instruction.argumentString(false) == "$FFFD");
   REQUIRE(instruction.isControl());
 }

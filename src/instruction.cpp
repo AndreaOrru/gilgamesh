@@ -301,6 +301,11 @@ const JumpTable* Instruction::jumpTable() const {
   }
 }
 
+// Get the instruction's coordinates (PC, subroutine's PC).
+PCPair Instruction::pcPair() const {
+  return {pc, subroutinePC};
+}
+
 // Pointer to the subroutine to which the instruction belongs.
 Subroutine* Instruction::subroutine() const {
   return &analysis->subroutines.at(subroutinePC);

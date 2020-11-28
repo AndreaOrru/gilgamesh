@@ -138,16 +138,10 @@ class Analysis {
   std::unordered_map<InstructionPC, std::string> comments;
 
   // Labels set by the user.
-  std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
-                     std::string,
-                     boost::hash<std::pair<InstructionPC, SubroutinePC>>>
-      customLabels;
+  std::unordered_map<PCPair, std::string, boost::hash<PCPair>> customLabels;
 
   // State change assertions.
-  std::unordered_map<std::pair<InstructionPC, SubroutinePC>,
-                     Assertion,
-                     boost::hash<std::pair<InstructionPC, SubroutinePC>>>
-      assertions;
+  std::unordered_map<PCPair, Assertion, boost::hash<PCPair>> assertions;
 
   // Map from PC to jump tables.
   std::unordered_map<InstructionPC, JumpTable> jumpTables;

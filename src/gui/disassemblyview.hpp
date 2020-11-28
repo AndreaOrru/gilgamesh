@@ -4,6 +4,7 @@
 #include <QTextEdit>
 #include <optional>
 
+#include "instruction.hpp"
 #include "label.hpp"
 #include "types.hpp"
 
@@ -40,6 +41,7 @@ class DisassemblyView : public QTextEdit {
   Instruction* getInstructionFromPos(const QPoint pos) const;
   std::optional<Label> getLabelFromPos(const QPoint pos) const;
   void jumpToBlock(int block, int verticalOffset = 0);
+  void jumpToPC(PCPair pc, int verticalOffset = 0);
 
   void renderSubroutine(const Subroutine& subroutine);
   void renderInstruction(Instruction* instruction);
@@ -61,12 +63,14 @@ class DisassemblyView : public QTextEdit {
   QTextCharFormat defaultFormat;
 
   QHash<int, Label> blockToLabel;
-  QHash<int, Instruction*> blockToInstruction;
   QHash<QString, int> labelToBlock;
-  QHash<QString, std::pair<InstructionPC, SubroutinePC>> labelToPC;
+  QHash<PCPair, int> pcToBlock;
+  QHash<QString, PCPair> labelToPC;
+  QHash<int, Instruction*> blockToInstruction;
 
   std::optional<int> lastClickedBlock;
   int lastClickedVerticalOffset;
+  std::optional<PCPair> lastClickedPC;
 
   static const size_t LINE_LEN = 30;
   static const size_t OP_LEN = 3;

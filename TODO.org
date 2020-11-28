@@ -6,7 +6,6 @@
 ** Test simplify
 
 * Analysis / CPU
-** Renaming subroutines
 ** `jump_tables` test
 *** missing test cases
 

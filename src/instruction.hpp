@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 #include "assertion.hpp"
 #include "label.hpp"
@@ -14,6 +15,9 @@
 class Analysis;
 class JumpTable;
 class Subroutine;
+
+// Instruction coordinates (PC, subroutine's PC).
+typedef std::pair<InstructionPC, SubroutinePC> PCPair;
 
 // Categories of instructions.
 enum class InstructionType {
@@ -64,6 +68,8 @@ class Instruction {
   std::optional<Assertion> assertion() const;
   // Get the jumptable associated with the instruction, if any.
   const JumpTable* jumpTable() const;
+  // Get the instruction's coordinates (PC, subroutine's PC).
+  PCPair pcPair() const;
   // Pointer to the subroutine to which the instruction belongs.
   Subroutine* subroutine() const;
 

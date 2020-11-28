@@ -36,9 +36,10 @@ void DisassemblyView::reset() {
   clear();
 
   blockToLabel.clear();
-  blockToInstruction.clear();
   labelToBlock.clear();
+  pcToBlock.clear();
   labelToPC.clear();
+  blockToInstruction.clear();
 }
 
 void DisassemblyView::renderAnalysis(Analysis* analysis) {
@@ -49,7 +50,9 @@ void DisassemblyView::renderAnalysis(Analysis* analysis) {
     renderSubroutine(subroutine);
   }
 
-  if (lastClickedBlock.has_value()) {
+  if (lastClickedPC) {
+    jumpToPC(*lastClickedPC, lastClickedVerticalOffset);
+  } else if (lastClickedBlock.has_value()) {
     jumpToBlock(*lastClickedBlock, lastClickedVerticalOffset);
   } else {
     moveCursor(QTextCursor::Start);
@@ -58,6 +61,10 @@ void DisassemblyView::renderAnalysis(Analysis* analysis) {
 
 void DisassemblyView::jumpToLabel(Label label) {
   jumpToBlock(labelToBlock[label.combinedLabel().c_str()]);
+}
+
+void DisassemblyView::jumpToPC(PCPair pc, int verticalOffset) {
+  jumpToBlock(pcToBlock[pc], verticalOffset);
 }
 
 void DisassemblyView::jumpToBlock(int block, int verticalOffset) {
@@ -125,13 +132,14 @@ void DisassemblyView::renderSubroutine(const Subroutine& subroutine) {
 }
 
 void DisassemblyView::renderInstruction(Instruction* instruction) {
+  PCPair pc = {instruction->pc, instruction->subroutinePC};
   if (auto label = instruction->label) {
     append(qformat(".%s:", label->c_str()));
     auto block = textCursor().blockNumber();
     auto combinedLabel = QString::fromStdString(label->combinedLabel());
     blockToLabel[block] = combinedLabel;
     labelToBlock[combinedLabel] = block;
-    labelToPC[combinedLabel] = {instruction->pc, instruction->subroutinePC};
+    labelToPC[combinedLabel] = pc;
   }
 
   // Instruction name.
@@ -171,6 +179,7 @@ void DisassemblyView::renderInstruction(Instruction* instruction) {
 
   auto block = textCursor().blockNumber();
   blockToInstruction[block] = instruction;
+  pcToBlock[pc] = block;
 }
 
 string DisassemblyView::instructionComment(const Instruction* instruction) {
@@ -196,12 +205,13 @@ string DisassemblyView::instructionComment(const Instruction* instruction) {
 void DisassemblyView::contextMenuEvent(QContextMenuEvent* e) {
   auto cursor = cursorForPosition(e->pos());
   setTextCursor(cursor);
+  lastClickedPC = nullopt;
   lastClickedBlock = cursor.blockNumber();
   lastClickedVerticalOffset = cursorRect(cursorForPosition(e->pos())).y();
 
   QMenu* menu = createStandardContextMenu();
   if (auto instruction = getInstructionFromPos(e->pos())) {
-    menu->addSeparator();
+    lastClickedPC = {instruction->pc, instruction->subroutinePC};
 
     auto editAssertion = menu->addAction("Edit Assertion...");
     connect(editAssertion, &QAction::triggered, this,
