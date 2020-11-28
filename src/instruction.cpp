@@ -195,10 +195,12 @@ optional<u24> Instruction::absoluteArgument() const {
 
 // Instruction argument as a label, if any.
 optional<Label> Instruction::argumentLabel() const {
-  if (auto arg = absoluteArgument()) {
-    // Subroutine / local label.
-    if (isControl()) {
-      return analysis->getLabel(*arg, subroutinePC);
+  if (analysis != nullptr) {
+    if (auto arg = absoluteArgument()) {
+      // Subroutine / local label.
+      if (isControl()) {
+        return analysis->getLabel(*arg, subroutinePC);
+      }
     }
   }
   return nullopt;
@@ -288,17 +290,19 @@ optional<StateChange> Instruction::stateChange() const {
 
 // Get an assertion for the instruction, if any.
 optional<Assertion> Instruction::assertion() const {
-  return analysis->getAssertion(pc, subroutinePC);
+  return analysis != nullptr ? analysis->getAssertion(pc, subroutinePC)
+                             : nullopt;
 }
 
 // Get the jumptable associated with the instruction, if any.
 const JumpTable* Instruction::jumpTable() const {
-  auto search = analysis->jumpTables.find(pc);
-  if (search != analysis->jumpTables.end()) {
-    return &search->second;
-  } else {
-    return nullptr;
+  if (analysis != nullptr) {
+    auto search = analysis->jumpTables.find(pc);
+    if (search != analysis->jumpTables.end()) {
+      return &search->second;
+    }
   }
+  return nullptr;
 }
 
 // Get the instruction's coordinates (PC, subroutine's PC).
@@ -308,25 +312,31 @@ PCPair Instruction::pcPair() const {
 
 // Pointer to the subroutine to which the instruction belongs.
 Subroutine* Instruction::subroutine() const {
+  if (analysis == nullptr) {
+    return nullptr;
+  }
   return &analysis->subroutines.at(subroutinePC);
 }
 
 // Return the instruction's comment.
 string Instruction::comment() const {
-  auto search = analysis->comments.find(pc);
-  if (search != analysis->comments.end()) {
-    return search->second;
-  } else {
-    return "";
+  if (analysis != nullptr) {
+    auto search = analysis->comments.find(pc);
+    if (search != analysis->comments.end()) {
+      return search->second;
+    }
   }
+  return "";
 }
 
 // Set the instruction's comment.
 void Instruction::setComment(string comment) {
-  if (comment.empty()) {
-    analysis->comments.erase(pc);
-  } else {
-    analysis->comments.insert_or_assign(pc, comment);
+  if (analysis != nullptr) {
+    if (comment.empty()) {
+      analysis->comments.erase(pc);
+    } else {
+      analysis->comments.insert_or_assign(pc, comment);
+    }
   }
 }
 
