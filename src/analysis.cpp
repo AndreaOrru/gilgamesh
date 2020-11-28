@@ -147,7 +147,7 @@ void Analysis::addReference(InstructionPC source,
 void Analysis::addSubroutine(SubroutinePC pc,
                              optional<string> label,
                              bool isEntryPoint) {
-  Label labelValue;
+  string labelValue;
 
   auto customLabel = customLabels.find({pc, pc});
   if (customLabel != customLabels.end()) {
