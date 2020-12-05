@@ -107,6 +107,16 @@ InstructionType Instruction::type() const {
   }
 }
 
+// Whether the instruction modifies A.
+bool Instruction::changesA() const {
+  auto op = operation();
+  return op == Op::ADC || op == Op::AND || op == Op::ASL || op == Op::DEC ||
+         op == Op::EOR || op == Op::INC || op == Op::LDA || op == Op::LSR ||
+         op == Op::ORA || op == Op::PLA || op == Op::ROL || op == Op::ROR ||
+         op == Op::SBC || op == Op::TDC || op == Op::TSC || op == Op::TXA ||
+         op == Op::TYA || op == Op::XBA;
+}
+
 // Whether this is a control instruction.
 bool Instruction::isControl() const {
   switch (type()) {

@@ -49,6 +49,7 @@ class Instruction {
   Op operation() const;             // Instruction's operation.
   AddressMode addressMode() const;  // Instruction'a address mode.
   InstructionType type() const;     // Category of the instruction.
+  bool changesA() const;            // Whether the instruction modifies A.
   bool isControl() const;           // Whether this is a control instruction.
   bool isSepRep() const;            // Whether this is a SEP/REP instruction.
   size_t size() const;              // Instruction size.

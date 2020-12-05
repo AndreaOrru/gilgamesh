@@ -52,9 +52,10 @@ class Stack {
   // Compare the value at the top of the stack with a given value.
   bool matchValue(size_t size, u24 value) const;
 
+  u16 pointer = 0x100;  // Stack pointer.
+
  private:
   std::unordered_map<u16, StackEntry> memory;  // SNES's RAM.
-  u16 pointer = 0x100;                         // Stack pointer.
   // The last instruction to explicitly change the stack pointer.
   const Instruction* lastManipulator = nullptr;
 };

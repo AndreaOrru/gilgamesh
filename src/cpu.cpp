@@ -11,7 +11,25 @@ CPU::CPU(Analysis* analysis,
          InstructionPC pc,
          SubroutinePC subroutinePC,
          State state)
-    : pc{pc}, subroutinePC{subroutinePC}, state{state}, analysis{analysis} {}
+    : pc{pc},
+      subroutinePC{subroutinePC},
+      state{state},
+      A(this),
+      analysis{analysis} {}
+
+// Copy constructor.
+CPU::CPU(const CPU& cpu)
+    : stop{cpu.stop},
+      pc{cpu.pc},
+      subroutinePC{cpu.subroutinePC},
+      stack{cpu.stack},
+      state{cpu.state},
+      stateChange{cpu.stateChange},
+      stateInference{cpu.stateInference},
+      A{cpu.A},
+      analysis{cpu.analysis} {
+  A.cpu = this;
+}
 
 // Start emulating.
 void CPU::run() {
@@ -66,7 +84,10 @@ void CPU::execute(const Instruction* instruction) {
     case InstructionType::Push:
       return push(instruction);
     default:
-      return;
+      if (instruction->changesA()) {
+        changeA(instruction);
+      }
+      break;
   }
 }
 
@@ -255,6 +276,48 @@ void CPU::push(const Instruction* instruction) {
 
     default:
       __builtin_unreachable();
+  }
+}
+
+// Emulate instructions that modify the value of A.
+void CPU::changeA(const Instruction* instruction) {
+  if (instruction->addressMode() == AddressMode::ImmediateM) {
+    auto arg = *instruction->argument();
+    switch (instruction->operation()) {
+      case Op::LDA:
+        A.set(arg);
+        break;
+
+      case Op::ADC:
+        if (auto a = A.get()) {
+          A.set(*a + arg);
+        }
+        break;
+
+      case Op::SBC:
+        if (auto a = A.get()) {
+          A.set(*a - arg);
+        }
+        break;
+
+      default:
+        A.set(nullopt);
+        break;
+    }
+  } else {
+    switch (instruction->operation()) {
+      case Op::TSC:
+        A.setWhole(stack.pointer);
+        break;
+
+      case Op::PLA:
+        stack.pop(state.sizeA());
+        break;
+
+      default:
+        A.set(nullopt);
+        break;
+    }
   }
 }
 

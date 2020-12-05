@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "register.hpp"
 #include "stack.hpp"
 #include "state.hpp"
 #include "types.hpp"
@@ -19,9 +20,14 @@ class CPU {
       InstructionPC pc,
       SubroutinePC subroutinePC,
       State state);
+  // Copy constructor.
+  CPU(const CPU& cpu);
 
-  // Start emulating.
-  void run();
+  void run();   // Start emulating.
+  void step();  // Fetch and execute the next instruction.
+
+  // Whether we should stop emulating after the current instruction.
+  bool stop = false;
 
   InstructionPC pc;           // Program Counter.
   SubroutinePC subroutinePC;  // Subroutine currently being executed.
@@ -29,13 +35,13 @@ class CPU {
   State state;                // CPU state.
   // CPU state change caused by the execution of the current subroutine.
   StateChange stateChange;
-
-  // Whether we should stop emulating after the current instruction.
-  bool stop = false;
+  // What we know about the CPU state based on the
+  // sequence of instructions we have executed.
+  StateChange stateInference;
+  // Accumulator.
+  Register A;
 
  private:
-  // Fetch and execute the next instruction.
-  void step();
   // Emulate an instruction.
   void execute(const Instruction* instruction);
 
@@ -48,6 +54,9 @@ class CPU {
   void sepRep(const Instruction* instruction);       // SEP/REP emulation.
   void pop(const Instruction* instruction);          // Pop value from stack.
   void push(const Instruction* instruction);         // Push value onto stack.
+
+  // Emulate instructions that modify the value of A.
+  void changeA(const Instruction* instruction);
 
   // Apply a state change to the current CPU instance.
   void applyStateChange(StateChange stateChange);
@@ -78,9 +87,6 @@ class CPU {
 
   // Pointer to the analysis.
   Analysis* analysis;
-  // What we know about the CPU state based on the
-  // sequence of instructions we have executed.
-  StateChange stateInference;
 
   // Test functions.
   friend void runInstruction(CPU& cpu, u8 opcode, u24 argument);

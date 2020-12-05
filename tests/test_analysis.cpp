@@ -4,6 +4,7 @@
 
 #include "analysis.hpp"
 #include "assertion.hpp"
+#include "cpu.hpp"
 
 using namespace std;
 
@@ -48,6 +49,25 @@ TEST_CASE("Assertions work correctly", "[analysis]") {
   resetSubroutine = analysis.subroutines.at(0x8000);
   REQUIRE(resetSubroutine.instructions.size() == 2);
   REQUIRE(resetSubroutine.unknownStateChanges.empty());
+}
+
+TEST_CASE("Instructions that change A work correctly", "[analysis]") {
+  Analysis analysis(*assemble("change_a"));
+  analysis.run();
+  analysis.instructions.clear();
+  CPU cpu(&analysis, 0x8000, 0x8000, State());
+
+  cpu.step();  // rep #$20
+  cpu.step();  // lda #$1234
+  REQUIRE(cpu.A.get() == 0x1234);
+  cpu.step();  // clc
+  cpu.step();  // adc #$0003
+  REQUIRE(cpu.A.get() == 0x1237);
+  cpu.step();  // sei
+  cpu.step();  // sbc #$0002
+  REQUIRE(cpu.A.get() == 0x1235);
+  cpu.step();  // lda $7E0000
+  REQUIRE(cpu.A.get() == nullopt);
 }
 
 TEST_CASE("State inference correctly simplifies state changes", "[analysis]") {
