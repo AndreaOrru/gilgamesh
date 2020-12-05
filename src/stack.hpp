@@ -11,7 +11,7 @@
 class Instruction;
 
 // Optional payload (value pushed onto the stack).
-typedef std::variant<std::nullopt_t, u24, std::pair<State, StateChange>>
+typedef std::variant<std::nullopt_t, u8, std::pair<State, StateChange>>
     StackData;
 
 // Stack entry.
@@ -26,25 +26,28 @@ class Stack {
   // Set a new stack pointer.
   void setPointer(u16 pointer, const Instruction* instruction);
 
-  // Push values onto the stack.
-  void push(size_t size,
-            std::optional<u24> data = std::nullopt,
-            const Instruction* instruction = nullptr);
+  // Push a value onto the stack.
+  void pushValue(size_t size,
+                 std::optional<u24> data = std::nullopt,
+                 const Instruction* instruction = nullptr);
 
   // Push state (PHP) onto the stack.
   void pushState(State state,
                  StateChange stateChange,
                  const Instruction* instruction = nullptr);
 
-  // Push a value onto the stack.
-  void pushOne(std::optional<u24> data,
+  // Push a byte onto the stack.
+  void pushOne(std::optional<u8> data,
                const Instruction* instruction = nullptr);
 
-  // Pop an entry from the stack.
-  StackEntry popOne();
+  // Pop a value from the stack.
+  std::optional<u24> popValue(size_t size);
 
   // Pop one or more entries from the stack.
   std::vector<StackEntry> pop(size_t size);
+
+  // Pop an entry from the stack.
+  StackEntry popOne();
 
   // Return values from the top of the stack without popping.
   std::vector<StackEntry> peek(size_t size) const;

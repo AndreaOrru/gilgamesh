@@ -51,8 +51,8 @@ TEST_CASE("Assertions work correctly", "[analysis]") {
   REQUIRE(resetSubroutine.unknownStateChanges.empty());
 }
 
-TEST_CASE("Instructions that change A work correctly", "[analysis]") {
-  Analysis analysis(*assemble("change_a"));
+TEST_CASE("Instructions that change A/X work correctly", "[analysis]") {
+  Analysis analysis(*assemble("change_registers"));
   analysis.run();
   analysis.instructions.clear();
   CPU cpu(&analysis, 0x8000, 0x8000, State());
@@ -60,6 +60,7 @@ TEST_CASE("Instructions that change A work correctly", "[analysis]") {
   cpu.step();  // rep #$20
   cpu.step();  // lda #$1234
   REQUIRE(cpu.A.get() == 0x1234);
+  cpu.step();  // pha
   cpu.step();  // clc
   cpu.step();  // adc #$0003
   REQUIRE(cpu.A.get() == 0x1237);
@@ -68,6 +69,14 @@ TEST_CASE("Instructions that change A work correctly", "[analysis]") {
   REQUIRE(cpu.A.get() == 0x1235);
   cpu.step();  // lda $7E0000
   REQUIRE(cpu.A.get() == nullopt);
+  cpu.step();  // pla
+  REQUIRE(cpu.A.get() == 0x1234);
+
+  cpu.step();  // sep #$10
+  cpu.step();  // ldx #$91
+  REQUIRE(cpu.X.get() == 0x91);
+  cpu.step();  // tax
+  REQUIRE(cpu.X.getWhole() == 0x1234);
 }
 
 TEST_CASE("State inference correctly simplifies state changes", "[analysis]") {

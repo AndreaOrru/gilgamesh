@@ -9,14 +9,14 @@ void Stack::setPointer(u16 pointer, const Instruction* instruction) {
   lastManipulator = instruction;
 }
 
-// Push values onto the stack.
-void Stack::push(size_t size,
-                 optional<u24> data,
-                 const Instruction* instruction) {
+// Push a value onto the stack.
+void Stack::pushValue(size_t size,
+                      optional<u24> data,
+                      const Instruction* instruction) {
   for (int i = size - 1; i >= 0; i--) {
     StackData stackData = nullopt;
     if (data.has_value()) {
-      stackData = (*data >> (i * 8)) & 0xFF;
+      stackData = (u8)((*data >> (i * 8)) & 0xFF);
     }
     memory[pointer--] = {instruction, stackData};
   }
@@ -30,9 +30,31 @@ void Stack::pushState(State state,
                        pair<State, StateChange>(state, stateChange)};
 }
 
-// Push a value onto the stack.
-void Stack::pushOne(optional<u24> data, const Instruction* instruction) {
-  push(1, data, instruction);
+// Push a byte onto the stack.
+void Stack::pushOne(optional<u8> data, const Instruction* instruction) {
+  pushValue(1, data, instruction);
+}
+
+// Pop a value from the stack.
+optional<u24> Stack::popValue(size_t size) {
+  u24 result = 0;
+  for (size_t i = 0; i < size; i++) {
+    auto data = popOne().data;
+    if (!holds_alternative<u8>(data)) {
+      return nullopt;
+    }
+    result |= get<u8>(data) << (i * 8);
+  }
+  return result;
+}
+
+// Pop one or more entries from the stack.
+vector<StackEntry> Stack::pop(size_t size) {
+  vector<StackEntry> result;
+  for (size_t i = 0; i < size; i++) {
+    result.push_back(popOne());
+  }
+  return result;
 }
 
 // Pop an entry from the stack.
@@ -43,15 +65,6 @@ StackEntry Stack::popOne() {
   } else {
     return StackEntry();
   }
-}
-
-// Pop one or more entries from the stack.
-vector<StackEntry> Stack::pop(size_t size) {
-  vector<StackEntry> result;
-  for (size_t i = 0; i < size; i++) {
-    result.push_back(popOne());
-  }
-  return result;
 }
 
 // Return values from the top of the stack without popping.
@@ -74,10 +87,10 @@ bool Stack::matchValue(size_t size, u24 value) const {
 
   for (size_t i = 0; i < size; i++) {
     auto data = entries[i].data;
-    if (!holds_alternative<u24>(data)) {
+    if (!holds_alternative<u8>(data)) {
       return false;
     }
-    if (get<u24>(data) != ((value >> (i * 8)) & 0xFF)) {
+    if (get<u8>(data) != ((value >> (i * 8)) & 0xFF)) {
       return false;
     }
   }

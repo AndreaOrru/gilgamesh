@@ -117,6 +117,19 @@ bool Instruction::changesA() const {
          op == Op::TYA || op == Op::XBA;
 }
 
+// Whether the instruction modifies X.
+bool Instruction::changesX() const {
+  auto op = operation();
+  return op == Op::DEX || op == Op::INX || op == Op::LDX || op == Op::PLX ||
+         op == Op::TAX || op == Op::TSX || op == Op::TYX;
+}
+
+// Whether the instruction modifies the stack pointer.
+bool Instruction::changesStackPointer() const {
+  auto op = operation();
+  return op == Op::TCS || op == Op::TXS;
+}
+
 // Whether this is a control instruction.
 bool Instruction::isControl() const {
   switch (type()) {

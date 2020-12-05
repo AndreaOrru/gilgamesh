@@ -14,7 +14,8 @@ CPU::CPU(Analysis* analysis,
     : pc{pc},
       subroutinePC{subroutinePC},
       state{state},
-      A(this),
+      A(this, true),
+      X(this, false),
       analysis{analysis} {}
 
 // Copy constructor.
@@ -27,8 +28,10 @@ CPU::CPU(const CPU& cpu)
       stateChange{cpu.stateChange},
       stateInference{cpu.stateInference},
       A{cpu.A},
+      X{cpu.X},
       analysis{cpu.analysis} {
   A.cpu = this;
+  X.cpu = this;
 }
 
 // Start emulating.
@@ -86,6 +89,10 @@ void CPU::execute(const Instruction* instruction) {
     default:
       if (instruction->changesA()) {
         changeA(instruction);
+      } else if (instruction->changesX()) {
+        changeX(instruction);
+      } else if (instruction->changesStackPointer()) {
+        changeStackPointer(instruction);
       }
       break;
   }
@@ -123,10 +130,10 @@ void CPU::call(const Instruction* instruction) {
     // Push the return address on the stack.
     switch (instruction->operation()) {
       case Op::JSR:
-        cpu.stack.push(2, instruction->pc, instruction);
+        cpu.stack.pushValue(2, instruction->pc, instruction);
         break;
       case Op::JSL:
-        cpu.stack.push(3, instruction->pc, instruction);
+        cpu.stack.pushValue(3, instruction->pc, instruction);
         break;
       default:
         __builtin_unreachable();
@@ -230,10 +237,17 @@ void CPU::pop(const Instruction* instruction) {
     } break;
 
     case Op::PLA:
-      stack.pop(state.sizeA());
+      if (auto value = stack.popValue(state.sizeA())) {
+        A.set(*value);
+      }
       break;
 
     case Op::PLX:
+      if (auto value = stack.popValue(state.sizeX())) {
+        X.set(*value);
+      }
+      break;
+
     case Op::PLY:
       stack.pop(state.sizeX());
       break;
@@ -258,11 +272,13 @@ void CPU::push(const Instruction* instruction) {
       return stack.pushState(state, stateChange, instruction);
 
     case Op::PHA:
-      return stack.push(state.sizeA(), nullopt, instruction);
+      return stack.pushValue(state.sizeA(), A.get(), instruction);
 
     case Op::PHX:
+      return stack.pushValue(state.sizeX(), X.get(), instruction);
+
     case Op::PHY:
-      return stack.push(state.sizeX(), nullopt, instruction);
+      return stack.pushValue(state.sizeX(), nullopt, instruction);
 
     case Op::PHB:
     case Op::PHK:
@@ -272,7 +288,7 @@ void CPU::push(const Instruction* instruction) {
     case Op::PEA:
     case Op::PER:
     case Op::PEI:
-      return stack.push(2, nullopt, instruction);
+      return stack.pushValue(2, nullopt, instruction);
 
     default:
       __builtin_unreachable();
@@ -284,14 +300,14 @@ void CPU::changeA(const Instruction* instruction) {
   if (instruction->addressMode() == AddressMode::ImmediateM) {
     auto arg = *instruction->argument();
     switch (instruction->operation()) {
-      case Op::LDA:
-        A.set(arg);
-        break;
-
       case Op::ADC:
         if (auto a = A.get()) {
           A.set(*a + arg);
         }
+        break;
+
+      case Op::LDA:
+        A.set(arg);
         break;
 
       case Op::SBC:
@@ -310,14 +326,64 @@ void CPU::changeA(const Instruction* instruction) {
         A.setWhole(stack.pointer);
         break;
 
-      case Op::PLA:
-        stack.pop(state.sizeA());
+      case Op::TXA:
+        A.setWhole(X.getWhole());
         break;
 
       default:
         A.set(nullopt);
         break;
     }
+  }
+}
+
+// Emulate instructions that modify the value of X.
+void CPU::changeX(const Instruction* instruction) {
+  if (instruction->addressMode() == AddressMode::ImmediateX) {
+    auto arg = *instruction->argument();
+    switch (instruction->operation()) {
+      case Op::LDX:
+        X.set(arg);
+        break;
+
+      default:
+        X.set(nullopt);
+        break;
+    }
+  } else {
+    switch (instruction->operation()) {
+      case Op::TAX:
+        X.setWhole(A.getWhole());
+        break;
+
+      case Op::TSX:
+        X.setWhole(stack.pointer);
+        break;
+
+      default:
+        X.set(nullopt);
+        break;
+    }
+  }
+}
+
+// Emulate instructions that modify the value of the stack pointer.
+void CPU::changeStackPointer(const Instruction* instruction) {
+  switch (instruction->operation()) {
+    case Op::TCS:
+      if (auto a = A.getWhole()) {
+        stack.setPointer(*a, instruction);
+      }
+      break;
+
+    case Op::TXS:
+      if (auto x = X.getWhole()) {
+        stack.setPointer(*x, instruction);
+      }
+      break;
+
+    default:
+      break;
   }
 }
 

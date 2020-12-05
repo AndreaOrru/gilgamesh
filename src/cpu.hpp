@@ -38,8 +38,9 @@ class CPU {
   // What we know about the CPU state based on the
   // sequence of instructions we have executed.
   StateChange stateInference;
-  // Accumulator.
-  Register A;
+
+  Register A;  // Accumulator.
+  Register X;  // Index X.
 
  private:
   // Emulate an instruction.
@@ -57,6 +58,10 @@ class CPU {
 
   // Emulate instructions that modify the value of A.
   void changeA(const Instruction* instruction);
+  // Emulate instructions that modify the value of X.
+  void changeX(const Instruction* instruction);
+  // Emulate instructions that modify the value of the stack pointer.
+  void changeStackPointer(const Instruction* instruction);
 
   // Apply a state change to the current CPU instance.
   void applyStateChange(StateChange stateChange);

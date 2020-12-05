@@ -50,10 +50,13 @@ class Instruction {
   AddressMode addressMode() const;  // Instruction'a address mode.
   InstructionType type() const;     // Category of the instruction.
   bool changesA() const;            // Whether the instruction modifies A.
-  bool isControl() const;           // Whether this is a control instruction.
-  bool isSepRep() const;            // Whether this is a SEP/REP instruction.
-  size_t size() const;              // Instruction size.
-  size_t argumentSize() const;      // Instruction's argument size.
+  bool changesX() const;            // Whether the instruction modifies X.
+  // Whether the instruction modifies the stack pointer.
+  bool changesStackPointer() const;
+  bool isControl() const;       // Whether this is a control instruction.
+  bool isSepRep() const;        // Whether this is a SEP/REP instruction.
+  size_t size() const;          // Instruction size.
+  size_t argumentSize() const;  // Instruction's argument size.
   // Instruction's argument, if any.
   std::optional<u24> argument() const;
   // Instruction's argument as an absolute value, if possible.
