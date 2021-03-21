@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/container_hash/hash.hpp>
-#include <boost/serialization/optional.hpp>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
