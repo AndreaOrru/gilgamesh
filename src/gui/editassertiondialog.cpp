@@ -118,7 +118,7 @@ void EditAssertionDialog::restoreFromAssertion() {
 
   if (!stateChange.m.has_value()) {
     mAssertionNone->setChecked(true);
-  } else if (stateChange.m) {
+  } else if (stateChange.m == true) {
     mAssertionOne->setChecked(true);
   } else {
     mAssertionZero->setChecked(true);
@@ -126,7 +126,7 @@ void EditAssertionDialog::restoreFromAssertion() {
 
   if (!stateChange.x.has_value()) {
     xAssertionNone->setChecked(true);
-  } else if (stateChange.x) {
+  } else if (stateChange.x == true) {
     xAssertionOne->setChecked(true);
   } else {
     xAssertionZero->setChecked(true);

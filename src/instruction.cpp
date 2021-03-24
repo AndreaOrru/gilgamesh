@@ -137,7 +137,6 @@ bool Instruction::isControl() const {
     case InstructionType::Call:
     case InstructionType::Jump:
     case InstructionType::Return:
-    case InstructionType::Interrupt:
       return true;
 
     default:

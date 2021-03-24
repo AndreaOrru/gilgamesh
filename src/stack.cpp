@@ -37,15 +37,19 @@ void Stack::pushOne(optional<u8> data, const Instruction* instruction) {
 
 // Pop a value from the stack.
 optional<u24> Stack::popValue(size_t size) {
+  bool unknownValue = false;
   u24 result = 0;
+
   for (size_t i = 0; i < size; i++) {
     auto data = popOne().data;
-    if (!holds_alternative<u8>(data)) {
-      return nullopt;
+    if (holds_alternative<u8>(data)) {
+      result |= get<u8>(data) << (i * 8);
+    } else {
+      unknownValue = true;
     }
-    result |= get<u8>(data) << (i * 8);
   }
-  return result;
+
+  return unknownValue ? nullopt : optional(result);
 }
 
 // Pop one or more entries from the stack.

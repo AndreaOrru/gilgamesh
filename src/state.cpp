@@ -7,7 +7,7 @@ using namespace std;
  ***********/
 
 // Constructors.
-State::State() : State(true, true) {}
+State::State() : State(false, false) {}
 State::State(u8 p) : p{p} {}
 State::State(bool m, bool x) : p{0} {
   this->m = m;
