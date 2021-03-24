@@ -1,7 +1,19 @@
+* Assertions
+** Always respect assertions
+
+* Entry points
+** Edit entry point state after creation
+
+* Variables
+** Give name to locations in RAM
+
 * StateChange
 ** Test simplify
+** UnknownStateChange
+*** Show reason for unknown state change
 
 * Subroutine
+** Signal processor status at the beginning of each subroutine
 ** Recursive subroutines
 ** Test simplify
 
@@ -13,6 +25,9 @@
 ** Test ExLoROM
 ** Test ExHiROM
 ** Test SDD-1
+
+* Interface
+** Show loading visually
 
 * Misc
 ** Verify there are no memory leaks
