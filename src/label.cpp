@@ -21,14 +21,11 @@ Label::Label(QString label) : Label(string(label.toStdString())) {}
 Label::Label(string subroutineLabel, string localLabel)
     : subroutineLabel{subroutineLabel}, localLabel{localLabel} {}
 
-string Label::asArgument() const {
-  if (localLabel.empty()) {
-    return subroutineLabel;
-  } else {
-    return "." + localLabel;
-  }
-}
-
+// Return the full name of the label.
+//   If the label is global:
+//     globalLabel
+//   If the label is local:
+//     globalLabel.localLabel
 string Label::combinedLabel() const {
   if (localLabel.empty()) {
     return subroutineLabel;
@@ -37,6 +34,11 @@ string Label::combinedLabel() const {
   }
 }
 
+// Return the label as a std::string.
+//   If the label is global:
+//     globalLabel
+//   If the label is local:
+//     localLabel
 Label::operator string() const {
   if (localLabel.empty()) {
     return subroutineLabel;
@@ -45,14 +47,34 @@ Label::operator string() const {
   }
 }
 
+// Return the label as a QString.
+//   If the label is global:
+//     globalLabel
+//   If the label is local:
+//     localLabel
 Label::operator QString() const {
   return QString::fromStdString(*this);
 }
 
+// Return the label as a C string.
+//   If the label is global:
+//     globalLabel
+//   If the label is local:
+//     localLabel
 const char* Label::c_str() const {
   if (localLabel.empty()) {
     return subroutineLabel.c_str();
   } else {
     return localLabel.c_str();
+  }
+}
+
+// Return the name of the label as it would be
+// displayed as an argument to an instruction.
+string Label::asArgument() const {
+  if (localLabel.empty()) {
+    return subroutineLabel;
+  } else {
+    return "." + localLabel;
   }
 }
