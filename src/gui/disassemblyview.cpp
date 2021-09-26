@@ -187,6 +187,32 @@ string DisassemblyView::instructionComment(const Instruction* instruction) {
     return " " + instruction->comment();
   }
 
+  if (auto assertion = instruction->assertion()) {
+    return format(" %s: %s",
+                  assertion->type == AssertionType::Instruction ? "Instruction"
+                                                                : "Subroutine",
+                  ((string)*assertion).c_str());
+  }
+
+  if (auto stateChange = instruction->stateChange()) {
+    switch (stateChange->unknownReason) {
+      case UnknownReason::SuspectInstruction:
+        return " Suspect instruction";
+      case UnknownReason::MultipleReturnStates:
+        return " Multiple return states";
+      case UnknownReason::IndirectJump:
+        return " Indirect jump";
+      case UnknownReason::StackManipulation:
+        return " Stack manipulation";
+      case UnknownReason::Recursion:
+        return " Recursion";
+      case UnknownReason::MutableCode:
+        return " Mutable code";
+      default:
+        break;
+    }
+  }
+
   if (instruction->isSepRep()) {
     auto size = instruction->operation() == Op::SEP ? 8 : 16;
     auto arg = *instruction->argument();

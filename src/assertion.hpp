@@ -1,6 +1,7 @@
 #pragma once
 
 #include "state.hpp"
+#include "utils.hpp"
 
 /**
  * Type of state assertions.
@@ -25,5 +26,28 @@ struct Assertion {
   void serialize(Archive& ar, const unsigned int) {
     ar& type;
     ar& stateChange;
+  }
+
+  operator std::string() const {
+    std::string s;
+    auto m = stateChange.m;
+    auto x = stateChange.x;
+
+    if (!m.has_value() && !x.has_value()) {
+      return "none";
+    }
+
+    if (m.has_value()) {
+      s += format("m=%d", *m);
+    }
+
+    if (x.has_value()) {
+      if (m.has_value()) {
+        s += ',';
+      }
+      s += format("x=%d", *x);
+    }
+
+    return s;
   }
 };

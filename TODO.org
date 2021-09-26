@@ -6,8 +6,6 @@
 
 * StateChange
 ** Test simplify
-** UnknownStateChange
-*** Show reason for unknown state change
 
 * Subroutine
 ** Signal processor status at the beginning of each subroutine
