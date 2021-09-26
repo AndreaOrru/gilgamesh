@@ -59,6 +59,9 @@ void CPU::step() {
   } else {
     execute(instruction);
   }
+
+  // Apply assertions, if any.
+  tryApplyAssertion(pc);
 }
 
 // Emulate an instruction.
@@ -496,9 +499,8 @@ void CPU::propagateSubroutineState(
   applyStateChange(*stateChanges.begin());
 }
 
-// Signal an unknown subroutine state change.
-void CPU::unknownStateChange(InstructionPC pc, UnknownReason reason) {
-  // Check if we have an assertion to specify what the state change is.
+// Apply assertions to the current instruction, if any.
+void CPU::tryApplyAssertion(InstructionPC pc) {
   auto assertion = analysis->getAssertion(pc, subroutinePC);
   if (assertion.has_value()) {
     switch (assertion->type) {
@@ -511,7 +513,14 @@ void CPU::unknownStateChange(InstructionPC pc, UnknownReason reason) {
         stop = true;
         break;
     }
-  } else {
+  }
+}
+
+// Signal an unknown subroutine state change.
+void CPU::unknownStateChange(InstructionPC pc, UnknownReason reason) {
+  // Check if we have an assertion to specify what the state change is.
+  auto assertion = analysis->getAssertion(pc, subroutinePC);
+  if (!assertion.has_value()) {
     // No assertions, we need stop here.
     subroutine()->addStateChange(pc, StateChange(UnknownReason(reason)));
     stop = true;

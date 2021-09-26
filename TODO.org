@@ -1,6 +1,3 @@
-* Assertions
-** Always respect assertions
-
 * Entry points
 ** Edit entry point state after creation
 

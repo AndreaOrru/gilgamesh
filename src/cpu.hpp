@@ -87,6 +87,9 @@ class CPU {
       InstructionPC pc,
       const std::unordered_set<InstructionPC>& target);
 
+  // Apply assertions to the current instruction, if any.
+  void tryApplyAssertion(InstructionPC pc);
+
   // Signal an unknown subroutine state change.
   void unknownStateChange(InstructionPC pc, UnknownReason reason);
 
