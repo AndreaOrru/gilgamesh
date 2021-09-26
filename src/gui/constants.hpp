@@ -5,7 +5,7 @@
 
 const QString APP_TITLE = "Gilgamesh";
 const QString APP_ICON_PATH = "resources/gilgamesh.png";
-const QString MONOSPACE_FONT = "Iosevka Fixed SS09 Extended";
+const QString MONOSPACE_FONT = "Iosevka Fixed SS10 Extended";
 
 const QColor ASSERTION_COLOR = "mediumpurple";
 const QColor ENTRYPOINT_COLOR = "darkmagenta";
